@@ -1,11 +1,23 @@
+[[P4est]]
+arch = "x86_64"
+git-tree-sha1 = "16363fca48e0da737994c3f9b3a7cbebb049a644"
+lazy = true
+libc = "glibc"
+mpi = "mpich"
+os = "linux"
+
+    [[P4est.download]]
+    sha256 = "1fda78659f3436aa7a3ed53d5f8924ed66c4a5e33ceb3558cf7a4ed9cb97cafa"
+    url = "https://github.com/JuliaBinaryWrappers/P4est_jll.jl/releases/download/P4est-v2.8.1+0/P4est.v2.8.1.x86_64-linux-gnu-mpi+mpich.tar.gz"
+
 [[t8code]]
 arch = "x86_64"
-git-tree-sha1 = "712223c887d75654e69405a5c814ea323e16df06"
+git-tree-sha1 = "c270570d7c175e7cca66f6b265c98a0131959bc0"
 lazy = true
 libc = "glibc"
 mpi = "mpich"
 os = "linux"
 
     [[t8code.download]]
-    sha256 = "825c458e2ffb8c093a6ea1464e8fe75adbce3c91506038e1a73bbd4457a634a7"
-    url = "https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases/download/t8code-v1.1.2%2B1/t8code.v1.1.2.x86_64-linux-gnu-mpi+mpich.tar.gz"
+    sha256 = "a4e02c505a4a58ac3f5d94a0a831766ae0865eed809721e18bc58e682218534b"
+    url = "https://github.com/jmark/t8code_jll.jl/releases/download/t8code-v1.1.2+2/t8code.v1.1.2.x86_64-linux-gnu-mpi+mpich.tar.gz"

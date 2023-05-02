@@ -17,11 +17,6 @@ include("Libt8.jl")
 # include("pointerwrappers.jl")
 # @reexport using .PointerWrappers: PointerWrapper
 
-export @t8_adapt_callback
-# export SC_ASSERT
-# export P4_ASSERT
-export @T8_ASSERT
-
 # Higher-level API defined in t8code.jl
 """
     T8code.uses_mpi()
@@ -81,28 +76,5 @@ before calling other functions from `p4est`.
 #     return nothing
 # end
 
-# typedef int         (*t8_forest_adapt_t) (t8_forest_t forest,
-#                                           t8_forest_t forest_from,
-#                                           t8_locidx_t which_tree,
-#                                           t8_locidx_t lelement_id,
-#                                           t8_eclass_scheme_c *ts,
-#                                           const int is_family,
-#                                           const int num_elements,
-#                                           t8_element_t *elements[]);
-macro t8_adapt_callback(callback)
-  :( @cfunction($callback, Cint, (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, Ptr{Ptr{Cvoid}})) )
-end
-
-macro SC_ASSERT(q)
-  :( $(esc(q)) ? nothing : throw(AssertionError($(string(q)))) )
-end
-
-macro P4EST_ASSERT(q)
-  :( @SC_ASSERT($(esc(q)) ) )
-end
-
-macro T8_ASSERT(q)
-  :( @SC_ASSERT($(esc(q)) ) )
-end
 
 end

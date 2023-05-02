@@ -36,8 +36,7 @@ jll_pkg_name = ""
 jll_pkg_extra = []
 
 # identifiers that starts with the string listed in this entry will be exported.
-# export_symbol_prefixes = ["t8_", "p4est_", "p6est_", "p8est_", "sc_", "T8_", "P4EST_", "P6EST_", "P8EST_", "SC_"]
-export_symbol_prefixes = ["t8_", "T8_"]
+export_symbol_prefixes = ["t8_", "p4est_", "p6est_", "p8est_", "sc_", "T8_", "P4EST_", "P6EST_", "P8EST_", "SC_"]
 
 # the code in the following file will be copy-pasted to `output_file_path` before the generated code.
 # this is often used for applying custom patches, e.g. adding missing definitions.

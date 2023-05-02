@@ -192,25 +192,6 @@ function sc_array_new_count(elem_size, elem_count)
 end
 
 """
-    t8_get_package_id()
-
-Query the package identity as registered in libsc.
-
-### Returns
-This is -1 before t8_init has been called and a proper package identifier afterwards.
-### Prototype
-```c
-int t8_get_package_id (void);
-```
-"""
-function t8_get_package_id()
-    @ccall libt8.t8_get_package_id()::Cint
-end
-
-"""A type for processor-local indexing."""
-const t8_locidx_t = Int32
-
-"""
     sc_int32_compare(v1, v2)
 
 ### Prototype
@@ -222,8 +203,14 @@ function sc_int32_compare(v1, v2)
     @ccall libt8.sc_int32_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
-"""A type for global indexing that holds really big numbers."""
-const t8_gloidx_t = Int64
+"""Typedef for quadrant coordinates."""
+const p4est_qcoord_t = Int32
+
+"""Typedef for counting topological entities (trees, tree vertices)."""
+const p4est_topidx_t = Int32
+
+"""Typedef for processor-local indexing of quadrants and nodes."""
+const p4est_locidx_t = Int32
 
 """
     sc_int64_compare(v1, v2)
@@ -236,6 +223,77 @@ int sc_int64_compare (const void *v1, const void *v2);
 function sc_int64_compare(v1, v2)
     @ccall libt8.sc_int64_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
+
+"""Typedef for globally unique indexing of quadrants."""
+const p4est_gloidx_t = Int64
+
+struct p4est_quadrant_data
+    data::NTuple{8, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p4est_quadrant_data}, f::Symbol)
+    f === :user_data && return Ptr{Ptr{Cvoid}}(x + 0)
+    f === :user_long && return Ptr{Clong}(x + 0)
+    f === :user_int && return Ptr{Cint}(x + 0)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :piggy1 && return Ptr{__JL_Ctag_1172}(x + 0)
+    f === :piggy2 && return Ptr{__JL_Ctag_1173}(x + 0)
+    f === :piggy3 && return Ptr{__JL_Ctag_1174}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p4est_quadrant_data, f::Symbol)
+    r = Ref{p4est_quadrant_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p4est_quadrant_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p4est_quadrant_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p4est_quadrant
+
+The 2D quadrant datatype
+
+| Field | Note                                               |
+| :---- | :------------------------------------------------- |
+| x     | coordinates                                        |
+| y     |                                                    |
+| level | level of refinement                                |
+| pad8  | padding                                            |
+| pad16 |                                                    |
+| p     | a union of additional data attached to a quadrant  |
+"""
+struct p4est_quadrant
+    data::NTuple{24, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p4est_quadrant}, f::Symbol)
+    f === :x && return Ptr{p4est_qcoord_t}(x + 0)
+    f === :y && return Ptr{p4est_qcoord_t}(x + 4)
+    f === :level && return Ptr{Int8}(x + 8)
+    f === :pad8 && return Ptr{Int8}(x + 9)
+    f === :pad16 && return Ptr{Int16}(x + 10)
+    f === :p && return Ptr{p4est_quadrant_data}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p4est_quadrant, f::Symbol)
+    r = Ref{p4est_quadrant}(x)
+    ptr = Base.unsafe_convert(Ptr{p4est_quadrant}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p4est_quadrant}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""The 2D quadrant datatype"""
+const p4est_quadrant_t = p4est_quadrant
 
 @cenum sc_tag_t::UInt32 begin
     SC_TAG_FIRST = 214
@@ -414,42 +472,6 @@ int sc_double_compare (const void *v1, const void *v2);
 """
 function sc_double_compare(v1, v2)
     @ccall libt8.sc_double_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
-end
-
-"""
-    sc_atoi(nptr)
-
-Safe version of the standard library atoi (3) function.
-
-### Parameters
-* `nptr`:\\[in\\] NUL-terminated string.
-### Returns
-Converted integer value. 0 if no valid number. INT\\_MAX on overflow, INT\\_MIN on underflow.
-### Prototype
-```c
-int sc_atoi (const char *nptr);
-```
-"""
-function sc_atoi(nptr)
-    @ccall libt8.sc_atoi(nptr::Cstring)::Cint
-end
-
-"""
-    sc_atol(nptr)
-
-Safe version of the standard library atol (3) function.
-
-### Parameters
-* `nptr`:\\[in\\] NUL-terminated string.
-### Returns
-Converted long value. 0 if no valid number. LONG\\_MAX on overflow, LONG\\_MIN on underflow.
-### Prototype
-```c
-long sc_atol (const char *nptr);
-```
-"""
-function sc_atol(nptr)
-    @ccall libt8.sc_atol(nptr::Cstring)::Clong
 end
 
 """
@@ -757,80 +779,7 @@ function sc_is_root()
     @ccall libt8.sc_is_root()::Cint
 end
 
-"""
-    sc_strcopy(dest, size, src)
-
-Provide a string copy function.
-
-### Parameters
-* `dest`:\\[out\\] Buffer of length at least *size*. On output, not touched if NULL or *size* == 0.
-* `size`:\\[in\\] Allocation length of *dest*.
-* `src`:\\[in\\] Null-terminated string.
-### Returns
-Equivalent to sc_snprintf (dest, size, "s", src).
-### Prototype
-```c
-void sc_strcopy (char *dest, size_t size, const char *src);
-```
-"""
-function sc_strcopy(dest, size, src)
-    @ccall libt8.sc_strcopy(dest::Cstring, size::Csize_t, src::Cstring)::Cvoid
-end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_snprintf(str, size, format, va_list...)
-        :(@ccall(libt8.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-"""
-    sc_version()
-
-Return the full version of libsc.
-
-### Returns
-Return the version of libsc using the format `VERSION\\_MAJOR.VERSION\\_MINOR.VERSION\\_POINT`, where `VERSION_POINT` can contain dots and characters, e.g. to indicate the additional number of commits and a git commit hash.
-### Prototype
-```c
-const char *sc_version (void);
-```
-"""
-function sc_version()
-    @ccall libt8.sc_version()::Cstring
-end
-
-"""
-    sc_version_major()
-
-Return the major version of libsc.
-
-### Returns
-Return the major version of libsc.
-### Prototype
-```c
-int sc_version_major (void);
-```
-"""
-function sc_version_major()
-    @ccall libt8.sc_version_major()::Cint
-end
-
-"""
-    sc_version_minor()
-
-Return the minor version of libsc.
-
-### Returns
-Return the minor version of libsc.
-### Prototype
-```c
-int sc_version_minor (void);
-```
-"""
-function sc_version_minor()
-    @ccall libt8.sc_version_minor()::Cint
-end
-
-# typedef unsigned int ( * sc_hash_function_t ) ( const void * v , const void * u )
+# typedef unsigned ( * sc_hash_function_t ) ( const void * v , const void * u )
 """
 Function to compute a hash value of an object.
 
@@ -1373,7 +1322,7 @@ Computes the adler32 checksum of array data (see zlib documentation). This is a 
 
 ### Prototype
 ```c
-unsigned int sc_array_checksum (sc_array_t * array);
+unsigned sc_array_checksum (sc_array_t * array);
 ```
 """
 function sc_array_checksum(array)
@@ -2107,7 +2056,7 @@ Compute a hash value from a null-terminated string. This hash function is NOT cr
 The computed hash value as an unsigned integer.
 ### Prototype
 ```c
-unsigned int sc_hash_function_string (const void *s, const void *u);
+unsigned sc_hash_function_string (const void *s, const void *u);
 ```
 """
 function sc_hash_function_string(s, u)
@@ -2438,7 +2387,7 @@ Check if an object is contained in a hash array.
 Returns true if object is found, false otherwise.
 ### Prototype
 ```c
-int sc_hash_array_lookup (sc_hash_array_t * hash_array, void *v, size_t *position);
+int sc_hash_array_lookup (sc_hash_array_t * hash_array, void *v, size_t * position);
 ```
 """
 function sc_hash_array_lookup(hash_array, v, position)
@@ -2457,7 +2406,7 @@ Insert an object into a hash array if it is not contained already. The object is
 Returns NULL if the object is already contained. Otherwise returns its new address in the array.
 ### Prototype
 ```c
-void *sc_hash_array_insert_unique (sc_hash_array_t * hash_array, void *v, size_t *position);
+void *sc_hash_array_insert_unique (sc_hash_array_t * hash_array, void *v, size_t * position);
 ```
 """
 function sc_hash_array_insert_unique(hash_array, v, position)
@@ -2544,7 +2493,7 @@ Insert an object into the recycle array. The object is not copied into the array
 Returns the new address of the object in the array.
 ### Prototype
 ```c
-void *sc_recycle_array_insert (sc_recycle_array_t * rec_array, size_t *position);
+void *sc_recycle_array_insert (sc_recycle_array_t * rec_array, size_t * position);
 ```
 """
 function sc_recycle_array_insert(rec_array, position)
@@ -2568,6 +2517,8293 @@ void *sc_recycle_array_remove (sc_recycle_array_t * rec_array, size_t position);
 function sc_recycle_array_remove(rec_array, position)
     @ccall libt8.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t}, position::Csize_t)::Ptr{Cvoid}
 end
+
+"""
+    sc_io_error_t
+
+Error values for io.
+
+| Enumerator              | Note                                                                         |
+| :---------------------- | :--------------------------------------------------------------------------- |
+| SC\\_IO\\_ERROR\\_NONE  | The value of zero means no error.                                            |
+| SC\\_IO\\_ERROR\\_FATAL | The io object is now disfunctional.                                          |
+| SC\\_IO\\_ERROR\\_AGAIN | Another io operation may resolve it. The function just returned was a noop.  |
+"""
+@cenum sc_io_error_t::Int32 begin
+    SC_IO_ERROR_NONE = 0
+    SC_IO_ERROR_FATAL = -1
+    SC_IO_ERROR_AGAIN = -2
+end
+
+"""
+    sc_io_mode_t
+
+| Enumerator              | Note                         |
+| :---------------------- | :--------------------------- |
+| SC\\_IO\\_MODE\\_WRITE  | Semantics as "w" in fopen.   |
+| SC\\_IO\\_MODE\\_APPEND | Semantics as "a" in fopen.   |
+| SC\\_IO\\_MODE\\_LAST   | Invalid entry to close list  |
+"""
+@cenum sc_io_mode_t::UInt32 begin
+    SC_IO_MODE_WRITE = 0
+    SC_IO_MODE_APPEND = 1
+    SC_IO_MODE_LAST = 2
+end
+
+"""
+    sc_io_encode_t
+
+| Enumerator              | Note                         |
+| :---------------------- | :--------------------------- |
+| SC\\_IO\\_ENCODE\\_LAST | Invalid entry to close list  |
+"""
+@cenum sc_io_encode_t::UInt32 begin
+    SC_IO_ENCODE_NONE = 0
+    SC_IO_ENCODE_LAST = 1
+end
+
+"""
+    sc_io_type_t
+
+| Enumerator            | Note                         |
+| :-------------------- | :--------------------------- |
+| SC\\_IO\\_TYPE\\_LAST | Invalid entry to close list  |
+"""
+@cenum sc_io_type_t::UInt32 begin
+    SC_IO_TYPE_BUFFER = 0
+    SC_IO_TYPE_FILENAME = 1
+    SC_IO_TYPE_FILEFILE = 2
+    SC_IO_TYPE_LAST = 3
+end
+
+"""
+    sc_io_sink
+
+| Field          | Note                          |
+| :------------- | :---------------------------- |
+| buffer\\_bytes | distinguish from array elems  |
+"""
+struct sc_io_sink
+    iotype::sc_io_type_t
+    mode::sc_io_mode_t
+    encode::sc_io_encode_t
+    buffer::Ptr{sc_array_t}
+    buffer_bytes::Csize_t
+    file::Ptr{Libc.FILE}
+    bytes_in::Csize_t
+    bytes_out::Csize_t
+end
+
+const sc_io_sink_t = sc_io_sink
+
+"""
+    sc_io_source
+
+| Field          | Note                          |
+| :------------- | :---------------------------- |
+| buffer\\_bytes | distinguish from array elems  |
+"""
+struct sc_io_source
+    iotype::sc_io_type_t
+    encode::sc_io_encode_t
+    buffer::Ptr{sc_array_t}
+    buffer_bytes::Csize_t
+    file::Ptr{Libc.FILE}
+    bytes_in::Csize_t
+    bytes_out::Csize_t
+    mirror::Ptr{sc_io_sink_t}
+    mirror_buffer::Ptr{sc_array_t}
+end
+
+const sc_io_source_t = sc_io_source
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_io_sink_new(iotype, mode, encode, va_list...)
+        :(@ccall(libt8.sc_io_sink_new(iotype::sc_io_type_t, mode::sc_io_mode_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
+    end
+
+"""
+    sc_io_sink_destroy(sink)
+
+Free data sink. Calls [`sc_io_sink_complete`](@ref) and discards the final counts. Errors from complete lead to SC\\_IO\\_ERROR\\_FATAL returned from this function. Call [`sc_io_sink_complete`](@ref) yourself if bytes\\_out is of interest.
+
+### Parameters
+* `sink`:\\[in,out\\] The sink object to complete and free.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_sink_destroy (sc_io_sink_t * sink);
+```
+"""
+function sc_io_sink_destroy(sink)
+    @ccall libt8.sc_io_sink_destroy(sink::Ptr{sc_io_sink_t})::Cint
+end
+
+"""
+    sc_io_sink_write(sink, data, bytes_avail)
+
+Write data to a sink. Data may be buffered and sunk in a later call. The internal counters sink->bytes\\_in and sink->bytes\\_out are updated.
+
+### Parameters
+* `sink`:\\[in,out\\] The sink object to write to.
+* `data`:\\[in\\] Data passed into sink.
+* `bytes_avail`:\\[in\\] Number of data bytes passed in.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_sink_write (sc_io_sink_t * sink, const void *data, size_t bytes_avail);
+```
+"""
+function sc_io_sink_write(sink, data, bytes_avail)
+    @ccall libt8.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t)::Cint
+end
+
+"""
+    sc_io_sink_complete(sink, bytes_in, bytes_out)
+
+Flush all buffered output data to sink. This function may return SC\\_IO\\_ERROR\\_AGAIN if another write is required. Currently this may happen if BUFFER requires an integer multiple of bytes. If successful, the updated value of bytes read and written is returned in bytes\\_in/out, and the sink status is reset as if the sink had just been created. In particular, the bytes counters are reset to zero. The internal state of the sink is not changed otherwise. It is legal to continue writing to the sink hereafter. The sink actions taken depend on its type. BUFFER, FILEFILE: none. FILENAME: call fclose on sink->file.
+
+### Parameters
+* `sink`:\\[in,out\\] The sink object to write to.
+* `bytes_in`:\\[in,out\\] Bytes received since the last new or complete call. May be NULL.
+* `bytes_out`:\\[in,out\\] Bytes written since the last new or complete call. May be NULL.
+### Returns
+0 if completed, nonzero on error.
+### Prototype
+```c
+int sc_io_sink_complete (sc_io_sink_t * sink, size_t * bytes_in, size_t * bytes_out);
+```
+"""
+function sc_io_sink_complete(sink, bytes_in, bytes_out)
+    @ccall libt8.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+end
+
+"""
+    sc_io_sink_align(sink, bytes_align)
+
+Align sink to a byte boundary by writing zeros.
+
+### Parameters
+* `sink`:\\[in,out\\] The sink object to align.
+* `bytes_align`:\\[in\\] Byte boundary.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_sink_align (sc_io_sink_t * sink, size_t bytes_align);
+```
+"""
+function sc_io_sink_align(sink, bytes_align)
+    @ccall libt8.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
+end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_io_source_new(iotype, encode, va_list...)
+        :(@ccall(libt8.sc_io_source_new(iotype::sc_io_type_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
+    end
+
+"""
+    sc_io_source_destroy(source)
+
+Free data source. Calls [`sc_io_source_complete`](@ref) and requires it to return no error. This is to avoid discarding buffered data that has not been passed to read.
+
+### Parameters
+* `source`:\\[in,out\\] The source object to free.
+### Returns
+0 on success. Nonzero if an error is encountered or is\\_complete returns one.
+### Prototype
+```c
+int sc_io_source_destroy (sc_io_source_t * source);
+```
+"""
+function sc_io_source_destroy(source)
+    @ccall libt8.sc_io_source_destroy(source::Ptr{sc_io_source_t})::Cint
+end
+
+"""
+    sc_io_source_read(source, data, bytes_avail, bytes_out)
+
+Read data from a source. The internal counters source->bytes\\_in and source->bytes\\_out are updated. Data is read until the data buffer has not enough room anymore, or source becomes empty. It is possible that data already read internally remains in the source object for the next call. Call [`sc_io_source_complete`](@ref) and check its return value to find out. Returns an error if bytes\\_out is NULL and less than bytes\\_avail are read.
+
+### Parameters
+* `source`:\\[in,out\\] The source object to read from.
+* `data`:\\[in\\] Data buffer for reading from sink. If NULL the output data will be thrown away.
+* `bytes_avail`:\\[in\\] Number of bytes available in data buffer.
+* `bytes_out`:\\[in,out\\] If not NULL, byte count read into data buffer. Otherwise, requires to read exactly bytes\\_avail.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
+```
+"""
+function sc_io_source_read(source, data, bytes_avail, bytes_out)
+    @ccall libt8.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+end
+
+"""
+    sc_io_source_complete(source, bytes_in, bytes_out)
+
+Determine whether all data buffered from source has been returned by read. If it returns SC\\_IO\\_ERROR\\_AGAIN, another [`sc_io_source_read`](@ref) is required. If the call returns no error, the internal counters source->bytes\\_in and source->bytes\\_out are returned to the caller if requested, and reset to 0. The internal state of the source is not changed otherwise. It is legal to continue reading from the source hereafter.
+
+### Parameters
+* `source`:\\[in,out\\] The source object to read from.
+* `bytes_in`:\\[in,out\\] If not NULL and true is returned, the total size of the data sourced.
+* `bytes_out`:\\[in,out\\] If not NULL and true is returned, total bytes passed out by source\\_read.
+### Returns
+SC\\_IO\\_ERROR\\_AGAIN if buffered data remaining. Otherwise return ERROR\\_NONE and reset counters.
+### Prototype
+```c
+int sc_io_source_complete (sc_io_source_t * source, size_t * bytes_in, size_t * bytes_out);
+```
+"""
+function sc_io_source_complete(source, bytes_in, bytes_out)
+    @ccall libt8.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+end
+
+"""
+    sc_io_source_align(source, bytes_align)
+
+Align source to a byte boundary by skipping.
+
+### Parameters
+* `source`:\\[in,out\\] The source object to align.
+* `bytes_align`:\\[in\\] Byte boundary.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_source_align (sc_io_source_t * source, size_t bytes_align);
+```
+"""
+function sc_io_source_align(source, bytes_align)
+    @ccall libt8.sc_io_source_align(source::Ptr{sc_io_source_t}, bytes_align::Csize_t)::Cint
+end
+
+"""
+    sc_io_source_activate_mirror(source)
+
+Activate a buffer that mirrors (i.e., stores) the data that was read.
+
+### Parameters
+* `source`:\\[in,out\\] The source object to activate mirror in.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_source_activate_mirror (sc_io_source_t * source);
+```
+"""
+function sc_io_source_activate_mirror(source)
+    @ccall libt8.sc_io_source_activate_mirror(source::Ptr{sc_io_source_t})::Cint
+end
+
+"""
+    sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
+
+Read data from the source's mirror. Same behaviour as [`sc_io_source_read`](@ref).
+
+### Parameters
+* `source`:\\[in,out\\] The source object to read mirror data from.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
+```
+"""
+function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
+    @ccall libt8.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+end
+
+"""
+    sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
+
+This function writes numeric binary data in VTK base64 encoding.
+
+### Parameters
+* `vtkfile`: Stream openened for writing.
+* `numeric_data`: A pointer to a numeric data array.
+* `byte_length`: The length of the data array in bytes.
+### Returns
+Returns 0 on success, -1 on file error.
+### Prototype
+```c
+int sc_vtk_write_binary (FILE * vtkfile, char *numeric_data, size_t byte_length);
+```
+"""
+function sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
+    @ccall libt8.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+end
+
+"""
+    sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
+
+This function writes numeric binary data in VTK compressed format.
+
+### Parameters
+* `vtkfile`: Stream openened for writing.
+* `numeric_data`: A pointer to a numeric data array.
+* `byte_length`: The length of the data array in bytes.
+### Returns
+Returns 0 on success, -1 on file error.
+### Prototype
+```c
+int sc_vtk_write_compressed (FILE * vtkfile, char *numeric_data, size_t byte_length);
+```
+"""
+function sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
+    @ccall libt8.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+end
+
+"""
+    sc_fwrite(ptr, size, nmemb, file, errmsg)
+
+Write memory content to a file.
+
+!!! note
+
+    This function aborts on file errors.
+
+### Parameters
+* `ptr`:\\[in\\] Data array to write to disk.
+* `size`:\\[in\\] Size of one array member.
+* `nmemb`:\\[in\\] Number of array members.
+* `file`:\\[in,out\\] File pointer, must be opened for writing.
+* `errmsg`:\\[in\\] Error message passed to `SC_CHECK_ABORT`.
+### Prototype
+```c
+void sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file, const char *errmsg);
+```
+"""
+function sc_fwrite(ptr, size, nmemb, file, errmsg)
+    @ccall libt8.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+end
+
+"""
+    sc_fread(ptr, size, nmemb, file, errmsg)
+
+Read file content into memory.
+
+!!! note
+
+    This function aborts on file errors.
+
+### Parameters
+* `ptr`:\\[out\\] Data array to read from disk.
+* `size`:\\[in\\] Size of one array member.
+* `nmemb`:\\[in\\] Number of array members.
+* `file`:\\[in,out\\] File pointer, must be opened for reading.
+* `errmsg`:\\[in\\] Error message passed to `SC_CHECK_ABORT`.
+### Prototype
+```c
+void sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file, const char *errmsg);
+```
+"""
+function sc_fread(ptr, size, nmemb, file, errmsg)
+    @ccall libt8.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+end
+
+"""
+    sc_fflush_fsync_fclose(file)
+
+Best effort to flush a file's data to disc and close it.
+
+### Parameters
+* `file`:\\[in,out\\] File open for writing.
+### Prototype
+```c
+void sc_fflush_fsync_fclose (FILE * file);
+```
+"""
+function sc_fflush_fsync_fclose(file)
+    @ccall libt8.sc_fflush_fsync_fclose(file::Ptr{Libc.FILE})::Cvoid
+end
+
+"""
+    sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_mpi_read (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
+    @ccall libt8.sc_mpi_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+end
+
+"""
+    sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_mpi_write (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
+    @ccall libt8.sc_mpi_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+end
+
+"""
+    p4est_comm_tag
+
+Tags for MPI messages
+"""
+@cenum p4est_comm_tag::UInt32 begin
+    P4EST_COMM_TAG_FIRST = 214
+    P4EST_COMM_COUNT_PERTREE = 295
+    P4EST_COMM_BALANCE_FIRST_COUNT = 296
+    P4EST_COMM_BALANCE_FIRST_LOAD = 297
+    P4EST_COMM_BALANCE_SECOND_COUNT = 298
+    P4EST_COMM_BALANCE_SECOND_LOAD = 299
+    P4EST_COMM_PARTITION_GIVEN = 300
+    P4EST_COMM_PARTITION_WEIGHTED_LOW = 301
+    P4EST_COMM_PARTITION_WEIGHTED_HIGH = 302
+    P4EST_COMM_PARTITION_CORRECTION = 303
+    P4EST_COMM_GHOST_COUNT = 304
+    P4EST_COMM_GHOST_LOAD = 305
+    P4EST_COMM_GHOST_EXCHANGE = 306
+    P4EST_COMM_GHOST_EXPAND_COUNT = 307
+    P4EST_COMM_GHOST_EXPAND_LOAD = 308
+    P4EST_COMM_GHOST_SUPPORT_COUNT = 309
+    P4EST_COMM_GHOST_SUPPORT_LOAD = 310
+    P4EST_COMM_GHOST_CHECKSUM = 311
+    P4EST_COMM_NODES_QUERY = 312
+    P4EST_COMM_NODES_REPLY = 313
+    P4EST_COMM_SAVE = 314
+    P4EST_COMM_LNODES_TEST = 315
+    P4EST_COMM_LNODES_PASS = 316
+    P4EST_COMM_LNODES_OWNED = 317
+    P4EST_COMM_LNODES_ALL = 318
+    P4EST_COMM_TAG_LAST = 319
+end
+
+"""Tags for MPI messages"""
+const p4est_comm_tag_t = p4est_comm_tag
+
+# no prototype is found for this function at p4est_base.h:317:1, please use with caution
+"""
+    p4est_log_indent_push()
+
+### Prototype
+```c
+static inline void p4est_log_indent_push ();
+```
+"""
+function p4est_log_indent_push()
+    @ccall libt8.p4est_log_indent_push()::Cvoid
+end
+
+# no prototype is found for this function at p4est_base.h:323:1, please use with caution
+"""
+    p4est_log_indent_pop()
+
+### Prototype
+```c
+static inline void p4est_log_indent_pop ();
+```
+"""
+function p4est_log_indent_pop()
+    @ccall libt8.p4est_log_indent_pop()::Cvoid
+end
+
+"""
+    p4est_init(log_handler, log_threshold)
+
+Registers `p4est` with the SC Library and sets the logging behavior. This function is optional. This function must only be called before additional threads are created. If this function is not called or called with log\\_handler == NULL, the default SC log handler will be used. If this function is not called or called with log\\_threshold == `SC_LP_DEFAULT`, the default SC log threshold will be used. The default SC log settings can be changed with [`sc_set_log_defaults`](@ref) ().
+
+### Prototype
+```c
+void p4est_init (sc_log_handler_t log_handler, int log_threshold);
+```
+"""
+function p4est_init(log_handler, log_threshold)
+    @ccall libt8.p4est_init(log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+end
+
+"""
+    p4est_topidx_hash2(tt)
+
+### Prototype
+```c
+static inline unsigned p4est_topidx_hash2 (const p4est_topidx_t * tt);
+```
+"""
+function p4est_topidx_hash2(tt)
+    @ccall libt8.p4est_topidx_hash2(tt::Ptr{p4est_topidx_t})::Cuint
+end
+
+"""
+    p4est_topidx_hash3(tt)
+
+### Prototype
+```c
+static inline unsigned p4est_topidx_hash3 (const p4est_topidx_t * tt);
+```
+"""
+function p4est_topidx_hash3(tt)
+    @ccall libt8.p4est_topidx_hash3(tt::Ptr{p4est_topidx_t})::Cuint
+end
+
+"""
+    p4est_topidx_hash4(tt)
+
+### Prototype
+```c
+static inline unsigned p4est_topidx_hash4 (const p4est_topidx_t * tt);
+```
+"""
+function p4est_topidx_hash4(tt)
+    @ccall libt8.p4est_topidx_hash4(tt::Ptr{p4est_topidx_t})::Cuint
+end
+
+"""
+    p4est_topidx_is_sorted(t, length)
+
+### Prototype
+```c
+static inline int p4est_topidx_is_sorted (p4est_topidx_t * t, int length);
+```
+"""
+function p4est_topidx_is_sorted(t, length)
+    @ccall libt8.p4est_topidx_is_sorted(t::Ptr{p4est_topidx_t}, length::Cint)::Cint
+end
+
+"""
+    p4est_topidx_bsort(t, length)
+
+### Prototype
+```c
+static inline void p4est_topidx_bsort (p4est_topidx_t * t, int length);
+```
+"""
+function p4est_topidx_bsort(t, length)
+    @ccall libt8.p4est_topidx_bsort(t::Ptr{p4est_topidx_t}, length::Cint)::Cvoid
+end
+
+"""
+    p4est_partition_cut_uint64(global_num, p, num_procs)
+
+### Prototype
+```c
+static inline uint64_t p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs);
+```
+"""
+function p4est_partition_cut_uint64(global_num, p, num_procs)
+    @ccall libt8.p4est_partition_cut_uint64(global_num::UInt64, p::Cint, num_procs::Cint)::UInt64
+end
+
+"""
+    p4est_partition_cut_gloidx(global_num, p, num_procs)
+
+### Prototype
+```c
+static inline p4est_gloidx_t p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs);
+```
+"""
+function p4est_partition_cut_gloidx(global_num, p, num_procs)
+    @ccall libt8.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint, num_procs::Cint)::p4est_gloidx_t
+end
+
+"""
+    p4est_connect_type_t
+
+Characterize a type of adjacency.
+
+Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner. [`p4est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
+"""
+@cenum p4est_connect_type_t::UInt32 begin
+    P4EST_CONNECT_FACE = 21
+    P4EST_CONNECT_CORNER = 22
+    P4EST_CONNECT_FULL = 22
+end
+
+"""
+    p4est_connectivity_encode_t
+
+Typedef for serialization method.
+
+| Enumerator                   | Note                              |
+| :--------------------------- | :-------------------------------- |
+| P4EST\\_CONN\\_ENCODE\\_LAST | Invalid entry to close the list.  |
+"""
+@cenum p4est_connectivity_encode_t::UInt32 begin
+    P4EST_CONN_ENCODE_NONE = 0
+    P4EST_CONN_ENCODE_LAST = 1
+end
+
+"""
+    p4est_connect_type_int(btype)
+
+Convert the [`p4est_connect_type_t`](@ref) into a number.
+
+### Parameters
+* `btype`:\\[in\\] The balance type to convert.
+### Returns
+Returns 1 or 2.
+### Prototype
+```c
+int p4est_connect_type_int (p4est_connect_type_t btype);
+```
+"""
+function p4est_connect_type_int(btype)
+    @ccall libt8.p4est_connect_type_int(btype::p4est_connect_type_t)::Cint
+end
+
+"""
+    p4est_connect_type_string(btype)
+
+Convert the [`p4est_connect_type_t`](@ref) into a const string.
+
+### Parameters
+* `btype`:\\[in\\] The balance type to convert.
+### Returns
+Returns a pointer to a constant string.
+### Prototype
+```c
+const char *p4est_connect_type_string (p4est_connect_type_t btype);
+```
+"""
+function p4est_connect_type_string(btype)
+    @ccall libt8.p4est_connect_type_string(btype::p4est_connect_type_t)::Cstring
+end
+
+"""
+    p4est_connectivity
+
+This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
+
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
+
+The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
+
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+
+The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+
+The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
+
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+
+| Field                | Note                                                                                 |
+| :------------------- | :----------------------------------------------------------------------------------- |
+| num\\_vertices       | the number of vertices that define the *embedding* of the forest (not the topology)  |
+| num\\_trees          | the number of trees                                                                  |
+| num\\_corners        | the number of corners that help define topology                                      |
+| vertices             | an array of size (3 * *num_vertices*)                                                |
+| tree\\_to\\_vertex   | embed each tree into  ```c++ R^3 ```  for e.g. visualization (see p4est\\_vtk.h)     |
+| tree\\_attr\\_bytes  | bytes per tree in tree\\_to\\_attr                                                   |
+| tree\\_to\\_attr     | not touched by `p4est`                                                       |
+| tree\\_to\\_tree     | (4 * *num_trees*) neighbors across faces                                             |
+| tree\\_to\\_face     | (4 * *num_trees*) face to face+orientation (see description)                         |
+| tree\\_to\\_corner   | (4 * *num_trees*) or NULL (see description)                                          |
+| ctt\\_offset         | corner to offset in *corner_to_tree* and *corner_to_corner*                          |
+| corner\\_to\\_tree   | list of trees that meet at a corner                                                  |
+| corner\\_to\\_corner | list of tree-corners that meet at a corner                                           |
+"""
+struct p4est_connectivity
+    num_vertices::p4est_topidx_t
+    num_trees::p4est_topidx_t
+    num_corners::p4est_topidx_t
+    vertices::Ptr{Cdouble}
+    tree_to_vertex::Ptr{p4est_topidx_t}
+    tree_attr_bytes::Csize_t
+    tree_to_attr::Cstring
+    tree_to_tree::Ptr{p4est_topidx_t}
+    tree_to_face::Ptr{Int8}
+    tree_to_corner::Ptr{p4est_topidx_t}
+    ctt_offset::Ptr{p4est_topidx_t}
+    corner_to_tree::Ptr{p4est_topidx_t}
+    corner_to_corner::Ptr{Int8}
+end
+
+"""
+This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
+
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
+
+The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
+
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+
+The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+
+The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
+
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+"""
+const p4est_connectivity_t = p4est_connectivity
+
+"""
+    p4est_connectivity_memory_used(conn)
+
+Calculate memory usage of a connectivity structure.
+
+### Parameters
+* `conn`:\\[in\\] Connectivity structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p4est_connectivity_memory_used (p4est_connectivity_t * conn);
+```
+"""
+function p4est_connectivity_memory_used(conn)
+    @ccall libt8.p4est_connectivity_memory_used(conn::Ptr{p4est_connectivity_t})::Csize_t
+end
+
+struct p4est_corner_transform_t
+    ntree::p4est_topidx_t
+    ncorner::Int8
+end
+
+struct p4est_corner_info_t
+    icorner::p4est_topidx_t
+    corner_transforms::sc_array_t
+end
+
+"""
+    p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
+
+Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `fc`:\\[in\\] A face corner number in 0..1.
+* `f`:\\[in\\] A face that the face corner number *fc* is relative to.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The face corner number relative to the neighbor's face.
+### Prototype
+```c
+int p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
+```
+"""
+function p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
+    @ccall libt8.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p4est_connectivity_face_neighbor_corner(c, f, nf, o)
+
+Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `c`:\\[in\\] A corner number in 0..3.
+* `f`:\\[in\\] A face number that touches the corner *c*.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The number of the corner seen from the neighbor tree.
+### Prototype
+```c
+int p4est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
+```
+"""
+function p4est_connectivity_face_neighbor_corner(c, f, nf, o)
+    @ccall libt8.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
+
+Allocate a connectivity structure. The attribute fields are initialized to NULL.
+
+### Parameters
+* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
+* `num_trees`:\\[in\\] Number of trees in the forest.
+* `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
+### Returns
+A connectivity structure with allocated arrays.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_corners, p4est_topidx_t num_ctt);
+```
+"""
+function p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
+    @ccall libt8.p4est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
+
+Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
+
+### Parameters
+* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
+* `num_trees`:\\[in\\] Number of trees in the forest.
+* `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
+### Returns
+The connectivity is checked for validity.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
+```
+"""
+function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
+    @ccall libt8.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_bcast(conn_in, root, comm)
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+```
+"""
+function p4est_connectivity_bcast(conn_in, root, comm)
+    @ccall libt8.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_destroy(connectivity)
+
+Destroy a connectivity structure. Also destroy all attributes.
+
+### Prototype
+```c
+void p4est_connectivity_destroy (p4est_connectivity_t * connectivity);
+```
+"""
+function p4est_connectivity_destroy(connectivity)
+    @ccall libt8.p4est_connectivity_destroy(connectivity::Ptr{p4est_connectivity_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_set_attr(conn, bytes_per_tree)
+
+Allocate or free the attribute fields in a connectivity.
+
+### Parameters
+* `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
+* `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
+### Prototype
+```c
+void p4est_connectivity_set_attr (p4est_connectivity_t * conn, size_t bytes_per_tree);
+```
+"""
+function p4est_connectivity_set_attr(conn, bytes_per_tree)
+    @ccall libt8.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+end
+
+"""
+    p4est_connectivity_is_valid(connectivity)
+
+Examine a connectivity structure.
+
+### Returns
+Returns true if structure is valid, false otherwise.
+### Prototype
+```c
+int p4est_connectivity_is_valid (p4est_connectivity_t * connectivity);
+```
+"""
+function p4est_connectivity_is_valid(connectivity)
+    @ccall libt8.p4est_connectivity_is_valid(connectivity::Ptr{p4est_connectivity_t})::Cint
+end
+
+"""
+    p4est_connectivity_is_equal(conn1, conn2)
+
+Check two connectivity structures for equality.
+
+### Returns
+Returns true if structures are equal, false otherwise.
+### Prototype
+```c
+int p4est_connectivity_is_equal (p4est_connectivity_t * conn1, p4est_connectivity_t * conn2);
+```
+"""
+function p4est_connectivity_is_equal(conn1, conn2)
+    @ccall libt8.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+end
+
+"""
+    p4est_connectivity_sink(conn, sink)
+
+Write connectivity to a sink object.
+
+### Parameters
+* `conn`:\\[in\\] The connectivity to be written.
+* `sink`:\\[in,out\\] The connectivity is written into this sink.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink);
+```
+"""
+function p4est_connectivity_sink(conn, sink)
+    @ccall libt8.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+end
+
+"""
+    p4est_connectivity_deflate(conn, code)
+
+Allocate memory and store the connectivity information there.
+
+### Parameters
+* `conn`:\\[in\\] The connectivity structure to be exported to memory.
+* `code`:\\[in\\] Encoding and compression method for serialization.
+### Returns
+Newly created array that contains the information.
+### Prototype
+```c
+sc_array_t *p4est_connectivity_deflate (p4est_connectivity_t * conn, p4est_connectivity_encode_t code);
+```
+"""
+function p4est_connectivity_deflate(conn, code)
+    @ccall libt8.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t}, code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
+end
+
+"""
+    p4est_connectivity_save(filename, connectivity)
+
+Save a connectivity structure to disk.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `connectivity`:\\[in\\] Valid connectivity structure.
+### Returns
+Returns 0 on success, nonzero on file error.
+### Prototype
+```c
+int p4est_connectivity_save (const char *filename, p4est_connectivity_t * connectivity);
+```
+"""
+function p4est_connectivity_save(filename, connectivity)
+    @ccall libt8.p4est_connectivity_save(filename::Cstring, connectivity::Ptr{p4est_connectivity_t})::Cint
+end
+
+"""
+    p4est_connectivity_source(source)
+
+Read connectivity from a source object.
+
+### Parameters
+* `source`:\\[in,out\\] The connectivity is read from this source.
+### Returns
+The newly created connectivity, or NULL on error.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_source (sc_io_source_t * source);
+```
+"""
+function p4est_connectivity_source(source)
+    @ccall libt8.p4est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_inflate(buffer)
+
+Create new connectivity from a memory buffer.
+
+### Parameters
+* `buffer`:\\[in\\] The connectivity is created from this memory buffer.
+### Returns
+The newly created connectivity, or NULL on error.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
+```
+"""
+function p4est_connectivity_inflate(buffer)
+    @ccall libt8.p4est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_load(filename, bytes)
+
+Load a connectivity structure from disk.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to read.
+* `bytes`:\\[in,out\\] Size in bytes of connectivity on disk or NULL.
+### Returns
+Returns valid connectivity, or NULL on file error.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_load (const char *filename, size_t * bytes);
+```
+"""
+function p4est_connectivity_load(filename, bytes)
+    @ccall libt8.p4est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_unitsquare()
+
+Create a connectivity structure for the unit square.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
+```
+"""
+function p4est_connectivity_new_unitsquare()
+    @ccall libt8.p4est_connectivity_new_unitsquare()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_periodic()
+
+Create a connectivity structure for an all-periodic unit square.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_periodic (void);
+```
+"""
+function p4est_connectivity_new_periodic()
+    @ccall libt8.p4est_connectivity_new_periodic()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_rotwrap()
+
+Create a connectivity structure for a periodic unit square. The left and right faces are identified, and bottom and top opposite.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
+```
+"""
+function p4est_connectivity_new_rotwrap()
+    @ccall libt8.p4est_connectivity_new_rotwrap()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_twotrees(l_face, r_face, orientation)
+
+Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way
+
+### Parameters
+* `l_face`:\\[in\\] index of left face
+* `r_face`:\\[in\\] index of right face
+* `orientation`:\\[in\\] orientation of trees w.r.t. each other
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face, int r_face, int orientation);
+```
+"""
+function p4est_connectivity_new_twotrees(l_face, r_face, orientation)
+    @ccall libt8.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_corner()
+
+Create a connectivity structure for a three-tree mesh around a corner.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_corner (void);
+```
+"""
+function p4est_connectivity_new_corner()
+    @ccall libt8.p4est_connectivity_new_corner()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_pillow()
+
+Create a connectivity structure for two trees on top of each other.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_pillow (void);
+```
+"""
+function p4est_connectivity_new_pillow()
+    @ccall libt8.p4est_connectivity_new_pillow()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_moebius()
+
+Create a connectivity structure for a five-tree moebius band.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_moebius (void);
+```
+"""
+function p4est_connectivity_new_moebius()
+    @ccall libt8.p4est_connectivity_new_moebius()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_star()
+
+Create a connectivity structure for a six-tree star.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_star (void);
+```
+"""
+function p4est_connectivity_new_star()
+    @ccall libt8.p4est_connectivity_new_star()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_cubed()
+
+Create a connectivity structure for the six sides of a unit cube. The ordering of the trees is as follows: 0 1 2 3 <-- 3: axis-aligned top side 4 5. This choice has been made for maximum symmetry (see tree\\_to\\_* in .c file).
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_cubed (void);
+```
+"""
+function p4est_connectivity_new_cubed()
+    @ccall libt8.p4est_connectivity_new_cubed()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_disk(periodic_a, periodic_b)
+
+Create a connectivity structure for a five-tree flat spherical disk. This disk can just as well be used as a square to test non-Cartesian maps. Without any mapping this connectivity covers the square [-3, 3]**2.
+
+!!! note
+
+    The API of this function has changed to accept two arguments. You can query the #define `P4EST_CONN_DISK_PERIODIC` to check whether the new version with the argument is in effect.
+
+The ordering of the trees is as follows: 4 1 2 3 0.
+
+The outside x faces may be identified topologically. The outside y faces may be identified topologically. Both identifications may be specified simultaneously. The general shape and periodicity are the same as those obtained with p4est_connectivity_new_brick (1, 1, periodic\\_a, periodic\\_b).
+
+### Parameters
+* `periodic_a`:\\[in\\] Bool to make disk periodic in x direction.
+* `periodic_b`:\\[in\\] Bool to make disk periodic in y direction.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a, int periodic_b);
+```
+"""
+function p4est_connectivity_new_disk(periodic_a, periodic_b)
+    @ccall libt8.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
+
+A rectangular m by n array of trees with configurable periodicity. The brick is periodic in x and y if periodic\\_a and periodic\\_b are true, respectively.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b);
+```
+"""
+function p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
+    @ccall libt8.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_byname(name)
+
+Create connectivity structure from predefined catalogue.
+
+### Parameters
+* `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick23 brick (2, 3, 0, 0) corner corner cubed cubed disk disk moebius moebius periodic periodic pillow pillow rotwrap rotwrap star star unit unitsquare
+### Returns
+An initialized connectivity if name is defined, NULL else.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
+```
+"""
+function p4est_connectivity_new_byname(name)
+    @ccall libt8.p4est_connectivity_new_byname(name::Cstring)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_refine(conn, num_per_edge)
+
+Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
+
+### Parameters
+* `conn`:\\[in\\] a valid connectivity
+* `num_per_edge`:\\[in\\] the number of new trees in each direction
+### Returns
+a refined connectivity.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, int num_per_edge);
+```
+"""
+function p4est_connectivity_refine(conn, num_per_edge)
+    @ccall libt8.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_edge::Cint)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_expand_face_transform(iface, nface, ftransform)
+
+Fill an array with the axis combination of a face neighbor transform.
+
+### Parameters
+* `iface`:\\[in\\] The number of the originating face.
+* `nface`:\\[in\\] Encoded as nface = r * 4 + nf, where nf = 0..3 is the neigbbor's connecting face number and r = 0..1 is the relative orientation to the neighbor's face. This encoding matches [`p4est_connectivity_t`](@ref).
+* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face, the first referring to the tangential and the second to the normal. A permutation of (0, 1). [3,5] The coordinate axis sequence of the target face. [6,8] Edge reversal flag for tangential axis (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q [1,4,7] 0 (unused for compatibility with 3D).
+### Prototype
+```c
+void p4est_expand_face_transform (int iface, int nface, int ftransform[]);
+```
+"""
+function p4est_expand_face_transform(iface, nface, ftransform)
+    @ccall libt8.p4est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+end
+
+"""
+    p4est_find_face_transform(connectivity, itree, iface, ftransform)
+
+Fill an array with the axis combinations of a tree neighbor transform.
+
+### Parameters
+* `itree`:\\[in\\] The number of the originating tree.
+* `iface`:\\[in\\] The number of the originating tree's face.
+* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face. [3,5] The coordinate axis sequence of the target face. [6,8] Edge reverse flag for axis t; face code for axis n. [1,4,7] 0 (unused for compatibility with 3D).
+### Returns
+The face neighbor tree if it exists, -1 otherwise.
+### Prototype
+```c
+p4est_topidx_t p4est_find_face_transform (p4est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
+```
+"""
+function p4est_find_face_transform(connectivity, itree, iface, ftransform)
+    @ccall libt8.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+end
+
+"""
+    p4est_find_corner_transform(connectivity, itree, icorner, ci)
+
+Fills an array with information about corner neighbors.
+
+### Parameters
+* `itree`:\\[in\\] The number of the originating tree.
+* `icorner`:\\[in\\] The number of the originating corner.
+* `ci`:\\[in,out\\] A `p4est_corner_info_t` structure with initialized array.
+### Prototype
+```c
+void p4est_find_corner_transform (p4est_connectivity_t * connectivity, p4est_topidx_t itree, int icorner, p4est_corner_info_t * ci);
+```
+"""
+function p4est_find_corner_transform(connectivity, itree, icorner, ci)
+    @ccall libt8.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p4est_corner_info_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_complete(conn)
+
+Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p4est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The corner fields will be freed and allocated anew.
+### Prototype
+```c
+void p4est_connectivity_complete (p4est_connectivity_t * conn);
+```
+"""
+function p4est_connectivity_complete(conn)
+    @ccall libt8.p4est_connectivity_complete(conn::Ptr{p4est_connectivity_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_reduce(conn)
+
+Removes corner information of a connectivity such that enough information is left to run [`p4est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p4est_connectivity_is_valid`](@ref).
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity to be reduced.
+### Prototype
+```c
+void p4est_connectivity_reduce (p4est_connectivity_t * conn);
+```
+"""
+function p4est_connectivity_reduce(conn)
+    @ccall libt8.p4est_connectivity_reduce(conn::Ptr{p4est_connectivity_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_permute(conn, perm, is_current_to_new)
+
+[`p4est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity whose trees are permuted.
+* `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
+* `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
+### Prototype
+```c
+void p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * perm, int is_current_to_new);
+```
+"""
+function p4est_connectivity_permute(conn, perm, is_current_to_new)
+    @ccall libt8.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+end
+
+"""
+    p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
+
+[`p4est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
+
+### Parameters
+* `conn`:\\[in,out\\] connectivity that will be altered.
+* `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
+* `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
+* `face_left`:\\[in\\] face of *tree_left* that will be joined.
+* `face_right`:\\[in\\] face of *tree_right* that will be joined.
+* `orientation`:\\[in\\] the orientation of *face_left* and *face_right* once joined (see the description of [`p4est_connectivity_t`](@ref) to understand orientation).
+### Prototype
+```c
+void p4est_connectivity_join_faces (p4est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
+```
+"""
+function p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
+    @ccall libt8.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+end
+
+"""
+    p4est_connectivity_is_equivalent(conn1, conn2)
+
+[`p4est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
+
+### Parameters
+* `conn1`:\\[in\\] a valid connectivity
+* `conn2`:\\[out\\] a valid connectivity
+### Prototype
+```c
+int p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1, p4est_connectivity_t * conn2);
+```
+"""
+function p4est_connectivity_is_equivalent(conn1, conn2)
+    @ccall libt8.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+end
+
+"""
+    p4est_corner_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_corner_transform_t * p4est_corner_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p4est_corner_array_index(array, it)
+    @ccall libt8.p4est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_corner_transform_t}
+end
+
+"""
+    p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
+
+Read an ABAQUS input file from a file stream.
+
+This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
+
+A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
+
+4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
+
+and in 3D they are given as:
+
+8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
+
+```c++
+ *Heading
+  box.inp
+ *Node
+ 1,  -5, -5, 0
+ 2,   5, -5, 0
+ 3,   5,  5, 0
+ 4,  -5,  5, 0
+ 5,   0, -5, 0
+ 6,   5,  0, 0
+ 7,   0,  5, 0
+ 8,  -5,  0, 0
+ 9,   1, -1, 0
+ 10,  0,  0, 0
+ 11, -2,  1, 0
+ *Element, type=CPS4, ELSET=Surface1
+ 1,  1, 10, 11, 8
+ 2,  3, 10, 9,  6
+ 3,  9, 10, 1,  5
+ 4,  7,  4, 8, 11
+ 5, 11, 10, 3,  7
+ 6,  2,  6, 9,  5
+```
+
+This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
+
+### Parameters
+* `stream`:\\[in,out\\] file stream to read the connectivity from
+* `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
+* `num_trees`:\\[in,out\\] the number of trees in the connectivity
+* `vertices`:\\[out\\] the list of `vertices` of the connectivity
+* `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
+### Returns
+0 if successful and nonzero if not
+### Prototype
+```c
+int p4est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
+```
+"""
+function p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
+    @ccall libt8.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+end
+
+"""
+    p4est_connectivity_read_inp(filename)
+
+Create a `p4est` connectivity from an ABAQUS input file.
+
+This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
+
+A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
+
+4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
+
+and in 3D they are given as:
+
+8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
+
+```c++
+ *Heading
+  box.inp
+ *Node
+ 1,  -5, -5, 0
+ 2,   5, -5, 0
+ 3,   5,  5, 0
+ 4,  -5,  5, 0
+ 5,   0, -5, 0
+ 6,   5,  0, 0
+ 7,   0,  5, 0
+ 8,  -5,  0, 0
+ 9,   1, -1, 0
+ 10,  0,  0, 0
+ 11, -2,  1, 0
+ *Element, type=CPS4, ELSET=Surface1
+ 1,  1, 10, 11, 8
+ 2,  3, 10, 9,  6
+ 3,  9, 10, 1,  5
+ 4,  7,  4, 8, 11
+ 5, 11, 10, 3,  7
+ 6,  2,  6, 9,  5
+```
+
+This function reads a mesh from *filename* and returns an associated `p4est` connectivity.
+
+### Parameters
+* `filename`:\\[in\\] file to read the connectivity from
+### Returns
+an allocated connectivity associated with the mesh in *filename* or NULL if an error occurred.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
+```
+"""
+function p4est_connectivity_read_inp(filename)
+    @ccall libt8.p4est_connectivity_read_inp(filename::Cstring)::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_tree
+
+The `p4est` tree datatype
+
+| Field              | Note                                                               |
+| :----------------- | :----------------------------------------------------------------- |
+| quadrants          | locally stored quadrants                                           |
+| first\\_desc       | first local descendant                                             |
+| last\\_desc        | last local descendant                                              |
+| quadrants\\_offset | cumulative sum over earlier trees on this processor (locals only)  |
+| maxlevel           | highest local quadrant level                                       |
+"""
+struct p4est_tree
+    quadrants::sc_array_t
+    first_desc::p4est_quadrant_t
+    last_desc::p4est_quadrant_t
+    quadrants_offset::p4est_locidx_t
+    quadrants_per_level::NTuple{31, p4est_locidx_t}
+    maxlevel::Int8
+end
+
+"""The `p4est` tree datatype"""
+const p4est_tree_t = p4est_tree
+
+"""
+    p4est_inspect
+
+Data pertaining to selecting, inspecting, and profiling algorithms. A pointer to this structure is hooked into the `p4est` main structure.
+
+The balance\\_ranges and balance\\_notify* times are collected whenever an inspect structure is present in `p4est`.
+
+| Field                           | Note                                                                                                                                        |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| use\\_balance\\_ranges          | Use sc\\_ranges to determine the asymmetric communication pattern. If *use_balance_ranges* is false (the default), sc\\_notify is used.     |
+| use\\_balance\\_ranges\\_notify | If true, call both sc\\_ranges and sc\\_notify and verify consistency. Which is actually used is still determined by *use_balance_ranges*.  |
+| use\\_balance\\_verify          | Verify sc\\_ranges and/or sc\\_notify as applicable.                                                                                        |
+| balance\\_max\\_ranges          | If positive and smaller than p4est\\_num ranges, overrides it                                                                               |
+| balance\\_ranges                | time spent in sc\\_ranges                                                                                                                   |
+| balance\\_notify                | time spent in sc\\_notify                                                                                                                   |
+| balance\\_notify\\_allgather    | time spent in sc\\_notify\\_allgather                                                                                                       |
+"""
+struct p4est_inspect
+    use_balance_ranges::Cint
+    use_balance_ranges_notify::Cint
+    use_balance_verify::Cint
+    balance_max_ranges::Cint
+    balance_A_count_in::Csize_t
+    balance_A_count_out::Csize_t
+    balance_comm_sent::Csize_t
+    balance_comm_nzpeers::Csize_t
+    balance_B_count_in::Csize_t
+    balance_B_count_out::Csize_t
+    balance_zero_sends::NTuple{2, Csize_t}
+    balance_zero_receives::NTuple{2, Csize_t}
+    balance_A::Cdouble
+    balance_comm::Cdouble
+    balance_B::Cdouble
+    balance_ranges::Cdouble
+    balance_notify::Cdouble
+    balance_notify_allgather::Cdouble
+    use_B::Cint
+end
+
+"""Data pertaining to selecting, inspecting, and profiling algorithms. A pointer to this structure is hooked into the `p4est` main structure. Declared in p4est\\_extended.h. Used to profile important algorithms."""
+const p4est_inspect_t = p4est_inspect
+
+"""
+    p4est
+
+| Field                     | Note                                                                                                             |
+| :------------------------ | :--------------------------------------------------------------------------------------------------------------- |
+| mpisize                   | number of MPI processes                                                                                          |
+| mpirank                   | this process's MPI rank                                                                                          |
+| mpicomm\\_owned           | flag if communicator is owned                                                                                    |
+| data\\_size               | size of per-quadrant p.user\\_data (see [`p4est_quadrant_t`](@ref)::[`p4est_quadrant_data`](@ref)::user\\_data)  |
+| user\\_pointer            | convenience pointer for users, never touched by `p4est`                                                  |
+| revision                  | Gets bumped on mesh change                                                                                       |
+| first\\_local\\_tree      | 0-based index of first local tree, must be -1 for an empty processor                                             |
+| last\\_local\\_tree       | 0-based index of last local tree, must be -2 for an empty processor                                              |
+| local\\_num\\_quadrants   | number of quadrants on all trees on this processor                                                               |
+| global\\_num\\_quadrants  | number of quadrants on all trees on all processors                                                               |
+| global\\_first\\_quadrant | first global quadrant index for each process and 1 beyond                                                        |
+| global\\_first\\_position | first smallest possible quad for each process and 1 beyond                                                       |
+| connectivity              | connectivity structure, not owned                                                                                |
+| trees                     | array of all trees                                                                                               |
+| user\\_data\\_pool        | memory allocator for user data                                                                                   |
+| quadrant\\_pool           | memory allocator for temporary quadrants                                                                         |
+| inspect                   | algorithmic switches                                                                                             |
+"""
+struct p4est
+    mpicomm::MPI_Comm
+    mpisize::Cint
+    mpirank::Cint
+    mpicomm_owned::Cint
+    data_size::Csize_t
+    user_pointer::Ptr{Cvoid}
+    revision::Clong
+    first_local_tree::p4est_topidx_t
+    last_local_tree::p4est_topidx_t
+    local_num_quadrants::p4est_locidx_t
+    global_num_quadrants::p4est_gloidx_t
+    global_first_quadrant::Ptr{p4est_gloidx_t}
+    global_first_position::Ptr{p4est_quadrant_t}
+    connectivity::Ptr{p4est_connectivity_t}
+    trees::Ptr{sc_array_t}
+    user_data_pool::Ptr{sc_mempool_t}
+    quadrant_pool::Ptr{sc_mempool_t}
+    inspect::Ptr{p4est_inspect_t}
+end
+
+"""The `p4est` forest datatype"""
+const p4est_t = p4est
+
+"""
+    p4est_memory_used(p4est_)
+
+Calculate local memory usage of a forest structure. Not collective. The memory used on the current rank is returned. The connectivity structure is not counted since it is not owned; use p4est\\_connectivity\\_memory\\_usage (`p4est`->connectivity).
+
+### Parameters
+* `p4est`:\\[in\\] Valid forest structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p4est_memory_used (p4est_t * p4est);
+```
+"""
+function p4est_memory_used(p4est_)
+    @ccall libt8.p4est_memory_used(p4est_::Ptr{p4est_t})::Csize_t
+end
+
+"""
+    p4est_revision(p4est_)
+
+Return the revision counter of the forest. Not collective, even though the revision value is the same on all ranks. A newly created forest starts with a revision counter of zero. Every refine, coarsen, partition, and balance that actually changes the mesh increases the counter by one. Operations with no effect keep the old value.
+
+### Parameters
+* `p8est`:\\[in\\] The forest must be valid.
+### Returns
+Non-negative number.
+### Prototype
+```c
+long p4est_revision (p4est_t * p4est);
+```
+"""
+function p4est_revision(p4est_)
+    @ccall libt8.p4est_revision(p4est_::Ptr{p4est_t})::Clong
+end
+
+# typedef void ( * p4est_init_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant )
+"""
+Callback function prototype to initialize the quadrant's user data.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrant`:\\[in,out\\] the quadrant to be initialized: if data\\_size > 0, the data to be initialized is at *quadrant*->p.user_data; otherwise, the non-pointer user data (such as *quadrant*->p.user_int) can be initialized
+"""
+const p4est_init_t = Ptr{Cvoid}
+
+# typedef int ( * p4est_refine_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant )
+"""
+Callback function prototype to decide for refinement.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrant`:\\[in\\] the quadrant that may be refined
+### Returns
+nonzero if the quadrant shall be refined.
+"""
+const p4est_refine_t = Ptr{Cvoid}
+
+# typedef int ( * p4est_coarsen_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrants [ ] )
+"""
+Callback function prototype to decide for coarsening.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrants`:\\[in\\] Pointers to 4 siblings in Morton ordering.
+### Returns
+nonzero if the quadrants shall be replaced with their parent.
+"""
+const p4est_coarsen_t = Ptr{Cvoid}
+
+# typedef int ( * p4est_weight_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant )
+"""
+Callback function prototype to calculate weights for partitioning.
+
+!!! note
+
+    Global sum of weights must fit into a 64bit integer.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+### Returns
+a 32bit integer >= 0 as the quadrant weight.
+"""
+const p4est_weight_t = Ptr{Cvoid}
+
+"""
+    p4est_qcoord_to_vertex(connectivity, treeid, x, y, vxyz)
+
+Transform a quadrant coordinate into the space spanned by tree vertices.
+
+### Parameters
+* `connectivity`:\\[in\\] Connectivity must provide the vertices.
+* `treeid`:\\[in\\] Identify the tree that contains x, y.
+* `x,`:\\[in\\] y Quadrant coordinates relative to treeid.
+* `vxyz`:\\[out\\] Transformed coordinates in vertex space.
+### Prototype
+```c
+void p4est_qcoord_to_vertex (p4est_connectivity_t * connectivity, p4est_topidx_t treeid, p4est_qcoord_t x, p4est_qcoord_t y, double vxyz[3]);
+```
+"""
+function p4est_qcoord_to_vertex(connectivity, treeid, x, y, vxyz)
+    @ccall libt8.p4est_qcoord_to_vertex(connectivity::Ptr{p4est_connectivity_t}, treeid::p4est_topidx_t, x::p4est_qcoord_t, y::p4est_qcoord_t, vxyz::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    p4est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p4est_t *p4est_new (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity, size_t data_size, p4est_init_t init_fn, void *user_pointer);
+```
+"""
+function p4est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+    @ccall libt8.p4est_new(mpicomm::MPI_Comm, connectivity::Ptr{p4est_connectivity_t}, data_size::Csize_t, init_fn::p4est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p4est_t}
+end
+
+"""
+    p4est_destroy(p4est_)
+
+Destroy a `p4est`.
+
+!!! note
+
+    The connectivity structure is not destroyed with the `p4est`.
+
+### Prototype
+```c
+void p4est_destroy (p4est_t * p4est);
+```
+"""
+function p4est_destroy(p4est_)
+    @ccall libt8.p4est_destroy(p4est_::Ptr{p4est_t})::Cvoid
+end
+
+"""
+    p4est_copy(input, copy_data)
+
+Make a deep copy of a `p4est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless. The inspect member of the copy is set to NULL. The revision counter of the copy is set to zero.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+### Returns
+Returns a valid `p4est` that does not depend on the input, except for borrowing the same connectivity. Its revision counter is 0.
+### Prototype
+```c
+p4est_t *p4est_copy (p4est_t * input, int copy_data);
+```
+"""
+function p4est_copy(input, copy_data)
+    @ccall libt8.p4est_copy(input::Ptr{p4est_t}, copy_data::Cint)::Ptr{p4est_t}
+end
+
+"""
+    p4est_reset_data(p4est_, data_size, init_fn, user_pointer)
+
+Reset user pointer and element data. When the data size is changed the quadrant data is freed and allocated. The initialization callback is invoked on each quadrant. Old user\\_data content is disregarded.
+
+### Parameters
+* `data_size`:\\[in\\] This is the size of data for each quadrant which can be zero. Then user\\_data\\_pool is set to NULL.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically. May be NULL.
+* `user_pointer`:\\[in\\] Assign to the user\\_pointer member of the `p4est` before init\\_fn is called the first time.
+### Prototype
+```c
+void p4est_reset_data (p4est_t * p4est, size_t data_size, p4est_init_t init_fn, void *user_pointer);
+```
+"""
+function p4est_reset_data(p4est_, data_size, init_fn, user_pointer)
+    @ccall libt8.p4est_reset_data(p4est_::Ptr{p4est_t}, data_size::Csize_t, init_fn::p4est_init_t, user_pointer::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p4est_refine(p4est_, refine_recursive, refine_fn, init_fn)
+
+Refine a forest.
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn gets called, or use [`p4est_refine_ext`](@ref) in p4est\\_extended.h and examine whether replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data of newly created quadrants, which is already allocated. This function pointer may be NULL.
+### Prototype
+```c
+void p4est_refine (p4est_t * p4est, int refine_recursive, p4est_refine_t refine_fn, p4est_init_t init_fn);
+```
+"""
+function p4est_refine(p4est_, refine_recursive, refine_fn, init_fn)
+    @ccall libt8.p4est_refine(p4est_::Ptr{p4est_t}, refine_recursive::Cint, refine_fn::p4est_refine_t, init_fn::p4est_init_t)::Cvoid
+end
+
+"""
+    p4est_coarsen(p4est_, coarsen_recursive, coarsen_fn, init_fn)
+
+Coarsen a forest.
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p4est_coarsen (p4est_t * p4est, int coarsen_recursive, p4est_coarsen_t coarsen_fn, p4est_init_t init_fn);
+```
+"""
+function p4est_coarsen(p4est_, coarsen_recursive, coarsen_fn, init_fn)
+    @ccall libt8.p4est_coarsen(p4est_::Ptr{p4est_t}, coarsen_recursive::Cint, coarsen_fn::p4est_coarsen_t, init_fn::p4est_init_t)::Cvoid
+end
+
+"""
+    p4est_balance(p4est_, btype, init_fn)
+
+2:1 balance the size differences of neighboring elements in a forest.
+
+### Parameters
+* `p4est`:\\[in,out\\] The `p4est` to be worked on.
+* `btype`:\\[in\\] Balance type (face or corner/full). Corner balance is almost never required when discretizing a PDE; just causes smoother mesh grading.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p4est_balance (p4est_t * p4est, p4est_connect_type_t btype, p4est_init_t init_fn);
+```
+"""
+function p4est_balance(p4est_, btype, init_fn)
+    @ccall libt8.p4est_balance(p4est_::Ptr{p4est_t}, btype::p4est_connect_type_t, init_fn::p4est_init_t)::Cvoid
+end
+
+"""
+    p4est_partition(p4est_, allow_for_coarsening, weight_fn)
+
+Equally partition the forest. The partition can be by element count or by a user-defined weight.
+
+The forest will be partitioned between processors such that they have an approximately equal number of quadrants (or sum of weights).
+
+On one process, the function noops and does not call the weight callback. Otherwise, the weight callback is called once per quadrant in order.
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest that will be partitioned.
+* `allow_for_coarsening`:\\[in\\] Slightly modify partition such that quadrant families are not split between ranks.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning. When running with mpisize == 1, never called. Otherwise, called in order for all quadrants if not NULL.
+### Prototype
+```c
+void p4est_partition (p4est_t * p4est, int allow_for_coarsening, p4est_weight_t weight_fn);
+```
+"""
+function p4est_partition(p4est_, allow_for_coarsening, weight_fn)
+    @ccall libt8.p4est_partition(p4est_::Ptr{p4est_t}, allow_for_coarsening::Cint, weight_fn::p4est_weight_t)::Cvoid
+end
+
+"""
+    p4est_checksum(p4est_)
+
+Compute the checksum for a forest. Based on quadrant arrays only. It is independent of partition and mpisize.
+
+### Returns
+Returns the checksum on processor 0 only. 0 on other processors.
+### Prototype
+```c
+unsigned p4est_checksum (p4est_t * p4est);
+```
+"""
+function p4est_checksum(p4est_)
+    @ccall libt8.p4est_checksum(p4est_::Ptr{p4est_t})::Cuint
+end
+
+"""
+    p4est_save(filename, p4est_, save_data)
+
+Save the complete connectivity/`p4est` data to disk.
+
+This is a collective operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations.
+
+By default, we write the current processor count and partition into the file header. This makes the file depend on mpisize. For changing this see [`p4est_save_ext`](@ref)() in p4est\\_extended.h.
+
+The revision counter is not saved to the file, since that would make files different that come from different revisions but store the same mesh.
+
+!!! note
+
+    Aborts on file errors.
+
+!!! note
+
+    If `p4est` is not configured to use MPI-IO, some processes return from this function before the file is complete, in which case immediate read-access to the file may require a call to `sc_MPI_Barrier`.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p4est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+### Prototype
+```c
+void p4est_save (const char *filename, p4est_t * p4est, int save_data);
+```
+"""
+function p4est_save(filename, p4est_, save_data)
+    @ccall libt8.p4est_save(filename::Cstring, p4est_::Ptr{p4est_t}, save_data::Cint)::Cvoid
+end
+
+"""
+    p4est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+
+### Prototype
+```c
+p4est_t *p4est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, void *user_pointer, p4est_connectivity_t ** connectivity);
+```
+"""
+function p4est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+    @ccall libt8.p4est_load(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p4est_connectivity_t}})::Ptr{p4est_t}
+end
+
+"""
+    p4est_tree_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_tree_t * p4est_tree_array_index (sc_array_t * array, p4est_topidx_t it);
+```
+"""
+function p4est_tree_array_index(array, it)
+    @ccall libt8.p4est_tree_array_index(array::Ptr{sc_array_t}, it::p4est_topidx_t)::Ptr{p4est_tree_t}
+end
+
+"""
+    p4est_quadrant_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_quadrant_t * p4est_quadrant_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p4est_quadrant_array_index(array, it)
+    @ccall libt8.p4est_quadrant_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_quadrant_array_push(array)
+
+### Prototype
+```c
+static inline p4est_quadrant_t * p4est_quadrant_array_push (sc_array_t * array);
+```
+"""
+function p4est_quadrant_array_push(array)
+    @ccall libt8.p4est_quadrant_array_push(array::Ptr{sc_array_t})::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_quadrant_mempool_alloc(mempool)
+
+### Prototype
+```c
+static inline p4est_quadrant_t * p4est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+```
+"""
+function p4est_quadrant_mempool_alloc(mempool)
+    @ccall libt8.p4est_quadrant_mempool_alloc(mempool::Ptr{sc_mempool_t})::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_quadrant_list_pop(list)
+
+### Prototype
+```c
+static inline p4est_quadrant_t * p4est_quadrant_list_pop (sc_list_t * list);
+```
+"""
+function p4est_quadrant_list_pop(list)
+    @ccall libt8.p4est_quadrant_list_pop(list::Ptr{sc_list_t})::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_ghost_t
+
+quadrants that neighbor the local domain
+
+| Field                           | Note                                                                                                                           |
+| :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------- |
+| btype                           | which neighbors are in the ghost layer                                                                                         |
+| ghosts                          | array of [`p4est_quadrant_t`](@ref) type                                                                                       |
+| tree\\_offsets                  | num\\_trees + 1 ghost indices                                                                                                  |
+| proc\\_offsets                  | mpisize + 1 ghost indices                                                                                                      |
+| mirrors                         | array of [`p4est_quadrant_t`](@ref) type                                                                                       |
+| mirror\\_tree\\_offsets         | num\\_trees + 1 mirror indices                                                                                                 |
+| mirror\\_proc\\_mirrors         | indices into mirrors grouped by outside processor rank and ascending within each rank                                          |
+| mirror\\_proc\\_offsets         | mpisize + 1 indices into  mirror\\_proc\\_mirrors                                                                              |
+| mirror\\_proc\\_fronts          | like mirror\\_proc\\_mirrors, but limited to the outermost octants. This is NULL until [`p4est_ghost_expand`](@ref) is called  |
+| mirror\\_proc\\_front\\_offsets | NULL until [`p4est_ghost_expand`](@ref) is called                                                                              |
+"""
+struct p4est_ghost_t
+    mpisize::Cint
+    num_trees::p4est_topidx_t
+    btype::p4est_connect_type_t
+    ghosts::sc_array_t
+    tree_offsets::Ptr{p4est_locidx_t}
+    proc_offsets::Ptr{p4est_locidx_t}
+    mirrors::sc_array_t
+    mirror_tree_offsets::Ptr{p4est_locidx_t}
+    mirror_proc_mirrors::Ptr{p4est_locidx_t}
+    mirror_proc_offsets::Ptr{p4est_locidx_t}
+    mirror_proc_fronts::Ptr{p4est_locidx_t}
+    mirror_proc_front_offsets::Ptr{p4est_locidx_t}
+end
+
+"""
+    p4est_ghost_is_valid(p4est_, ghost)
+
+Examine if a ghost structure is valid. Test if within a ghost-structure the array ghosts is in p4est\\_quadrant\\_compare\\_piggy order. Test if local\\_num in piggy3 data member of the quadrants in ghosts and mirrors are in ascending order (ascending within each rank for ghost).
+
+Test if the [`p4est_locidx_t`](@ref) arrays are in ascending order (for mirror\\_proc\\_mirrors ascending within each rank)
+
+### Parameters
+* `p4est`:\\[in\\] the forest.
+* `ghost`:\\[in\\] Ghost layer structure.
+### Returns
+true if *ghost* is valid
+### Prototype
+```c
+int p4est_ghost_is_valid (p4est_t * p4est, p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_is_valid(p4est_, ghost)
+    @ccall libt8.p4est_ghost_is_valid(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t})::Cint
+end
+
+"""
+    p4est_ghost_memory_used(ghost)
+
+Calculate the memory usage of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] Ghost layer structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p4est_ghost_memory_used (p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_memory_used(ghost)
+    @ccall libt8.p4est_ghost_memory_used(ghost::Ptr{p4est_ghost_t})::Csize_t
+end
+
+"""
+    p4est_quadrant_find_owner(p4est_, treeid, face, q)
+
+Gets the processor id of a quadrant's owner. The quadrant can lie outside of a tree across faces (and only faces).
+
+!!! warning
+
+    Does not work for tree edge or corner neighbors.
+
+### Parameters
+* `p4est`:\\[in\\] The forest in which to search for a quadrant.
+* `treeid`:\\[in\\] The tree to which the quadrant belongs.
+* `face`:\\[in\\] Supply a face direction if known, or -1 otherwise.
+* `q`:\\[in\\] The quadrant that is being searched for.
+### Returns
+Processor id of the owner or -1 if the quadrant lies outside of the mesh.
+### Prototype
+```c
+int p4est_quadrant_find_owner (p4est_t * p4est, p4est_topidx_t treeid, int face, const p4est_quadrant_t * q);
+```
+"""
+function p4est_quadrant_find_owner(p4est_, treeid, face, q)
+    @ccall libt8.p4est_quadrant_find_owner(p4est_::Ptr{p4est_t}, treeid::p4est_topidx_t, face::Cint, q::Ptr{p4est_quadrant_t})::Cint
+end
+
+"""
+    p4est_ghost_new(p4est_, btype)
+
+Builds the ghost layer.
+
+This will gather the quadrants from each neighboring proc to build one layer of face and corner based ghost elements around the ones they own.
+
+### Parameters
+* `p4est`:\\[in\\] The forest for which the ghost layer will be generated.
+* `btype`:\\[in\\] Which ghosts to include (across face, corner or full).
+### Returns
+A fully initialized ghost layer.
+### Prototype
+```c
+p4est_ghost_t *p4est_ghost_new (p4est_t * p4est, p4est_connect_type_t btype);
+```
+"""
+function p4est_ghost_new(p4est_, btype)
+    @ccall libt8.p4est_ghost_new(p4est_::Ptr{p4est_t}, btype::p4est_connect_type_t)::Ptr{p4est_ghost_t}
+end
+
+"""
+    p4est_ghost_destroy(ghost)
+
+Frees all memory used for the ghost layer.
+
+### Prototype
+```c
+void p4est_ghost_destroy (p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_destroy(ghost)
+    @ccall libt8.p4est_ghost_destroy(ghost::Ptr{p4est_ghost_t})::Cvoid
+end
+
+"""
+    p4est_ghost_bsearch(ghost, which_proc, which_tree, q)
+
+Conduct binary search for exact match on a range of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] The ghost layer.
+* `which_proc`:\\[in\\] The owner of the searched quadrant. Can be -1.
+* `which_tree`:\\[in\\] The tree of the searched quadrant. Can be -1.
+* `q`:\\[in\\] Valid quadrant is searched in the ghost layer.
+### Returns
+Offset in the ghost layer, or -1 if not found.
+### Prototype
+```c
+ssize_t p4est_ghost_bsearch (p4est_ghost_t * ghost, int which_proc, p4est_topidx_t which_tree, const p4est_quadrant_t * q);
+```
+"""
+function p4est_ghost_bsearch(ghost, which_proc, which_tree, q)
+    @ccall libt8.p4est_ghost_bsearch(ghost::Ptr{p4est_ghost_t}, which_proc::Cint, which_tree::p4est_topidx_t, q::Ptr{p4est_quadrant_t})::Cssize_t
+end
+
+"""
+    p4est_ghost_contains(ghost, which_proc, which_tree, q)
+
+Conduct binary search for ancestor on range of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] The ghost layer.
+* `which_proc`:\\[in\\] The owner of the searched quadrant. Can be -1.
+* `which_tree`:\\[in\\] The tree of the searched quadrant. Can be -1.
+* `q`:\\[in\\] Valid quadrant's ancestor is searched.
+### Returns
+Offset in the ghost layer, or -1 if not found.
+### Prototype
+```c
+ssize_t p4est_ghost_contains (p4est_ghost_t * ghost, int which_proc, p4est_topidx_t which_tree, const p4est_quadrant_t * q);
+```
+"""
+function p4est_ghost_contains(ghost, which_proc, which_tree, q)
+    @ccall libt8.p4est_ghost_contains(ghost::Ptr{p4est_ghost_t}, which_proc::Cint, which_tree::p4est_topidx_t, q::Ptr{p4est_quadrant_t})::Cssize_t
+end
+
+"""
+    p4est_face_quadrant_exists(p4est_, ghost, treeid, q, face, hang, owner_rank)
+
+Checks if quadrant exists in the local forest or the ghost layer.
+
+For quadrants across tree boundaries it checks if the quadrant exists across any face, but not across corners.
+
+### Parameters
+* `p4est`:\\[in\\] The forest in which to search for *q*.
+* `ghost`:\\[in\\] The ghost layer in which to search for *q*.
+* `treeid`:\\[in\\] The tree to which *q* belongs.
+* `q`:\\[in\\] The quadrant that is being searched for.
+* `face`:\\[in,out\\] On input, face id across which *q* was created. On output, the neighbor's face number augmented by orientation, so face is in 0..7.
+* `hang`:\\[in,out\\] If not NULL, signals that q is bigger than the quadrant it came from. The child id of that originating quadrant is passed into hang. On output, hang holds the hanging face number of *q* that is in contact with its originator.
+* `owner_rank`:\\[out\\] Filled with the rank of the owner if it is found and undefined otherwise.
+### Returns
+Returns the local number of *q* if the quadrant exists in the local forest or in the ghost\\_layer. Otherwise, returns -2 for a domain boundary and -1 if not found.
+### Prototype
+```c
+p4est_locidx_t p4est_face_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost, p4est_topidx_t treeid, const p4est_quadrant_t * q, int *face, int *hang, int *owner_rank);
+```
+"""
+function p4est_face_quadrant_exists(p4est_, ghost, treeid, q, face, hang, owner_rank)
+    @ccall libt8.p4est_face_quadrant_exists(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, treeid::p4est_topidx_t, q::Ptr{p4est_quadrant_t}, face::Ptr{Cint}, hang::Ptr{Cint}, owner_rank::Ptr{Cint})::p4est_locidx_t
+end
+
+"""
+    p4est_quadrant_exists(p4est_, ghost, treeid, q, exists_arr, rproc_arr, rquad_arr)
+
+Checks if quadrant exists in the local forest or the ghost layer.
+
+For quadrants across tree corners it checks if the quadrant exists in any of the corner neighbors, thus it can execute multiple queries.
+
+### Parameters
+* `p4est`:\\[in\\] The forest in which to search for *q*
+* `ghost`:\\[in\\] The ghost layer in which to search for *q*
+* `treeid`:\\[in\\] The tree to which *q* belongs (can be extended).
+* `q`:\\[in\\] The quadrant that is being searched for.
+* `exists_arr`:\\[in,out\\] Must exist and be of of elem\\_size = sizeof (int) for inter-tree corner cases. Is resized by this function to one entry for each corner search and set to true/false depending on its existence in the local forest or ghost\\_layer.
+* `rproc_arr`:\\[in,out\\] If not NULL is filled with one rank per query.
+* `rquad_arr`:\\[in,out\\] If not NULL is filled with one quadrant per query. Its piggy3 member is defined as well.
+### Returns
+true if the quadrant exists in the local forest or in the ghost\\_layer, and false if doesn't exist in either.
+### Prototype
+```c
+int p4est_quadrant_exists (p4est_t * p4est, p4est_ghost_t * ghost, p4est_topidx_t treeid, const p4est_quadrant_t * q, sc_array_t * exists_arr, sc_array_t * rproc_arr, sc_array_t * rquad_arr);
+```
+"""
+function p4est_quadrant_exists(p4est_, ghost, treeid, q, exists_arr, rproc_arr, rquad_arr)
+    @ccall libt8.p4est_quadrant_exists(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, treeid::p4est_topidx_t, q::Ptr{p4est_quadrant_t}, exists_arr::Ptr{sc_array_t}, rproc_arr::Ptr{sc_array_t}, rquad_arr::Ptr{sc_array_t})::Cint
+end
+
+"""
+    p4est_is_balanced(p4est_, btype)
+
+Check a forest to see if it is balanced.
+
+This function builds the ghost layer and discards it when done.
+
+### Parameters
+* `p4est`:\\[in\\] The `p4est` to be tested.
+* `btype`:\\[in\\] Balance type (face, corner or default, full).
+### Returns
+Returns true if balanced, false otherwise.
+### Prototype
+```c
+int p4est_is_balanced (p4est_t * p4est, p4est_connect_type_t btype);
+```
+"""
+function p4est_is_balanced(p4est_, btype)
+    @ccall libt8.p4est_is_balanced(p4est_::Ptr{p4est_t}, btype::p4est_connect_type_t)::Cint
+end
+
+"""
+    p4est_ghost_checksum(p4est_, ghost)
+
+Compute the parallel checksum of a ghost layer.
+
+### Parameters
+* `p4est`:\\[in\\] The MPI information of this `p4est` will be used.
+* `ghost`:\\[in\\] A ghost layer obtained from the `p4est`.
+### Returns
+Parallel checksum on rank 0, 0 otherwise.
+### Prototype
+```c
+unsigned p4est_ghost_checksum (p4est_t * p4est, p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_checksum(p4est_, ghost)
+    @ccall libt8.p4est_ghost_checksum(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t})::Cuint
+end
+
+"""
+    p4est_ghost_exchange_data(p4est_, ghost, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. Send the data stored in the quadrant's user\\_data. This is either the pointer variable itself if `p4est`->data_size is 0, or the content of the referenced memory field if `p4est`->data\\_size is positive.
+
+### Parameters
+* `p4est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghost quadrants in sequence. If `p4est`->data\\_size is 0, must at least hold sizeof (void *) bytes for each, otherwise `p4est`->data\\_size each.
+### Prototype
+```c
+void p4est_ghost_exchange_data (p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_data(p4est_, ghost, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_data(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p4est_ghost_exchange
+
+Transient storage for asynchronous ghost exchange.
+
+| Field       | Note                                           |
+| :---------- | :--------------------------------------------- |
+| is\\_custom | False for [`p4est_ghost_exchange_data`](@ref)  |
+| is\\_levels | Are we restricted to levels or not             |
+| minlevel    | Meaningful with is\\_levels                    |
+| maxlevel    |                                                |
+"""
+struct p4est_ghost_exchange
+    is_custom::Cint
+    is_levels::Cint
+    p4est::Ptr{p4est_t}
+    ghost::Ptr{p4est_ghost_t}
+    minlevel::Cint
+    maxlevel::Cint
+    data_size::Csize_t
+    ghost_data::Ptr{Cvoid}
+    qactive::Ptr{Cint}
+    qbuffer::Ptr{Cint}
+    requests::sc_array_t
+    sbuffers::sc_array_t
+    rrequests::sc_array_t
+    rbuffers::sc_array_t
+end
+
+"""Transient storage for asynchronous ghost exchange."""
+const p4est_ghost_exchange_t = p4est_ghost_exchange
+
+"""
+    p4est_ghost_exchange_data_begin(p4est_, ghost, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p4est_ghost_exchange_data`](@ref). The return type is always non-NULL and must be passed to [`p4est_ghost_exchange_data_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion.
+
+### Parameters
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p4est_ghost_exchange_t *p4est_ghost_exchange_data_begin (p4est_t * p4est, p4est_ghost_t * ghost, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_data_begin(p4est_, ghost, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_data_begin(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, ghost_data::Ptr{Cvoid})::Ptr{p4est_ghost_exchange_t}
+end
+
+"""
+    p4est_ghost_exchange_data_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p4est_ghost_exchange_data_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p4est_ghost_exchange_data_end (p4est_ghost_exchange_t * exc);
+```
+"""
+function p4est_ghost_exchange_data_end(exc)
+    @ccall libt8.p4est_ghost_exchange_data_end(exc::Ptr{p4est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p4est_ghost_exchange_custom(p4est_, ghost, data_size, mirror_data, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. The data size is the same for all quadrants and can be chosen arbitrarily.
+
+### Parameters
+* `p4est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `data_size`:\\[in\\] The data size to transfer per quadrant.
+* `mirror_data`:\\[in\\] One data pointer per mirror quadrant as input.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghosts in sequence, which must hold at least `data_size` for each ghost.
+### Prototype
+```c
+void p4est_ghost_exchange_custom (p4est_t * p4est, p4est_ghost_t * ghost, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_custom(p4est_, ghost, data_size, mirror_data, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_custom(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p4est_ghost_exchange_custom_begin(p4est_, ghost, data_size, mirror_data, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p4est_ghost_exchange_custom`](@ref). The return type is always non-NULL and must be passed to [`p4est_ghost_exchange_custom_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion. The mirror data can be safely discarded right after this function returns since it is copied into internal send buffers.
+
+### Parameters
+* `mirror_data`:\\[in\\] Not required to stay alive any longer.
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p4est_ghost_exchange_t *p4est_ghost_exchange_custom_begin (p4est_t * p4est, p4est_ghost_t * ghost, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_custom_begin(p4est_, ghost, data_size, mirror_data, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_custom_begin(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Ptr{p4est_ghost_exchange_t}
+end
+
+"""
+    p4est_ghost_exchange_custom_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p4est_ghost_exchange_custom_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p4est_ghost_exchange_custom_end (p4est_ghost_exchange_t * exc);
+```
+"""
+function p4est_ghost_exchange_custom_end(exc)
+    @ccall libt8.p4est_ghost_exchange_custom_end(exc::Ptr{p4est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p4est_ghost_exchange_custom_levels(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. The data size is the same for all quadrants and can be chosen arbitrarily. This function restricts the transfer to a range of refinement levels. The memory for quadrants outside the level range is not dereferenced.
+
+### Parameters
+* `p4est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `minlevel`:\\[in\\] Level of the largest quads to be exchanged. Use <= 0 for no restriction.
+* `maxlevel`:\\[in\\] Level of the smallest quads to be exchanged. Use >= `P4EST_QMAXLEVEL` for no restriction.
+* `data_size`:\\[in\\] The data size to transfer per quadrant.
+* `mirror_data`:\\[in\\] One data pointer per mirror quadrant as input.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghosts in sequence, which must hold at least `data_size` for each ghost.
+### Prototype
+```c
+void p4est_ghost_exchange_custom_levels (p4est_t * p4est, p4est_ghost_t * ghost, int minlevel, int maxlevel, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_custom_levels(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_custom_levels(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, minlevel::Cint, maxlevel::Cint, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p4est_ghost_exchange_custom_levels_begin(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p4est_ghost_exchange_custom_levels`](@ref). The return type is always non-NULL and must be passed to [`p4est_ghost_exchange_custom_levels_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion. The mirror data can be safely discarded right after this function returns since it is copied into internal send buffers.
+
+### Parameters
+* `mirror_data`:\\[in\\] Not required to stay alive any longer.
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p4est_ghost_exchange_t *p4est_ghost_exchange_custom_levels_begin (p4est_t * p4est, p4est_ghost_t * ghost, int minlevel, int maxlevel, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p4est_ghost_exchange_custom_levels_begin(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+    @ccall libt8.p4est_ghost_exchange_custom_levels_begin(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, minlevel::Cint, maxlevel::Cint, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Ptr{p4est_ghost_exchange_t}
+end
+
+"""
+    p4est_ghost_exchange_custom_levels_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p4est_ghost_exchange_custom_levels_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p4est_ghost_exchange_custom_levels_end (p4est_ghost_exchange_t * exc);
+```
+"""
+function p4est_ghost_exchange_custom_levels_end(exc)
+    @ccall libt8.p4est_ghost_exchange_custom_levels_end(exc::Ptr{p4est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p4est_ghost_expand(p4est_, ghost)
+
+Expand the size of the ghost layer and mirrors by one additional layer of adjacency.
+
+### Parameters
+* `p4est`:\\[in\\] The forest from which the ghost layer was generated.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p4est_ghost_expand (p4est_t * p4est, p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_expand(p4est_, ghost)
+    @ccall libt8.p4est_ghost_expand(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t})::Cvoid
+end
+
+"""
+    p4est_mesh_t
+
+This structure contains complete mesh information on the forest. It stores the locally relevant neighborhood, that is, all locally owned quadrants and one layer of adjacent ghost quadrants and their owners.
+
+For each local quadrant, its tree number is stored in quad\\_to\\_tree. The quad\\_to\\_tree array is NULL by default and can be enabled using [`p4est_mesh_new_ext`](@ref). For each ghost quadrant, its owner rank is stored in ghost\\_to\\_proc. For each level, an array of local quadrant numbers is stored in quad\\_level. The quad\\_level array is NULL by default and can be enabled using [`p4est_mesh_new_ext`](@ref).
+
+The quad\\_to\\_quad list stores one value for each local quadrant's face. This value is in 0..local\\_num\\_quadrants-1 for local quadrants, or in local\\_num\\_quadrants + (0..ghost\\_num\\_quadrants-1) for ghost quadrants. The quad\\_to\\_face list has equally many entries which are either: 1. A value of v = 0..7 indicates one same-size neighbor. This value is decoded as v = r * 4 + nf, where nf = 0..3 is the neighbor's connecting face number and r = 0..1 is the relative orientation of the neighbor's face, see [`p4est_connectivity`](@ref).h. 2. A value of v = 8..23 indicates a double-size neighbor. This value is decoded as v = 8 + h * 8 + r * 4 + nf, where r and nf are as above and h = 0..1 is the number of the subface. 3. A value of v = -8..-1 indicates two half-size neighbors. In this case the corresponding quad\\_to\\_quad index points into the quad\\_to\\_half array which stores two quadrant numbers per index, and the orientation of the smaller faces follows from 8 + v. The entries of quad\\_to\\_half encode between local and ghost quadrant in the same way as the quad\\_to\\_quad values described above. A quadrant on the boundary of the forest sees itself and its face number.
+
+The quad\\_to\\_corner list stores corner neighbors that are not face neighbors. On the inside of a tree, there is precisely one such neighbor per corner. In this case, its index is encoded as described above for quad\\_to\\_quad. The neighbor's matching corner number is always diagonally opposite.
+
+On the inside of an inter-tree face, we have precisely one corner neighbor. If a corner is an inter-tree corner, then the number of corner neighbors may be any non-negative number. In both cases, the quad\\_to\\_corner value is in local\\_num\\_quadrants + local\\_num\\_ghosts + [0 .. local\\_num\\_corners - 1] where the offset by local quadrants and ghosts is implicitly substracted. It indexes into corner\\_offset, which encodes a group of corner neighbors. Each group contains the quadrant numbers encoded as usual for quad\\_to\\_quad in corner\\_quad, and the corner number from the neighbor as corner\\_corner.
+
+Corners with no diagonal neighbor at all are assigned the value -1.
+
+| Field             | Note                                              |
+| :---------------- | :------------------------------------------------ |
+| quad\\_to\\_tree  | tree index for each local quad, NULL by default   |
+| ghost\\_to\\_proc | processor for each ghost quad                     |
+| quad\\_to\\_quad  | one index for each of the 4 faces                 |
+| quad\\_to\\_face  | encodes orientation/2:1 status                    |
+| quad\\_to\\_half  | stores half-size neighbors                        |
+| quad\\_level      | stores lists of per-level quads, NULL by default  |
+"""
+struct p4est_mesh_t
+    local_num_quadrants::p4est_locidx_t
+    ghost_num_quadrants::p4est_locidx_t
+    quad_to_tree::Ptr{p4est_topidx_t}
+    ghost_to_proc::Ptr{Cint}
+    quad_to_quad::Ptr{p4est_locidx_t}
+    quad_to_face::Ptr{Int8}
+    quad_to_half::Ptr{sc_array_t}
+    quad_level::Ptr{sc_array_t}
+    local_num_corners::p4est_locidx_t
+    quad_to_corner::Ptr{p4est_locidx_t}
+    corner_offset::Ptr{sc_array_t}
+    corner_quad::Ptr{sc_array_t}
+    corner_corner::Ptr{sc_array_t}
+end
+
+"""
+    p4est_mesh_face_neighbor_t
+
+This structure can be used as the status of a face neighbor iterator. It always contains the face and subface of the neighbor to be processed.
+"""
+struct p4est_mesh_face_neighbor_t
+    p4est::Ptr{p4est_t}
+    ghost::Ptr{p4est_ghost_t}
+    mesh::Ptr{p4est_mesh_t}
+    which_tree::p4est_topidx_t
+    quadrant_id::p4est_locidx_t
+    quadrant_code::p4est_locidx_t
+    face::Cint
+    subface::Cint
+    current_qtq::p4est_locidx_t
+end
+
+"""
+    p4est_mesh_memory_used(mesh)
+
+Calculate the memory usage of the mesh structure.
+
+### Parameters
+* `mesh`:\\[in\\] Mesh structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p4est_mesh_memory_used (p4est_mesh_t * mesh);
+```
+"""
+function p4est_mesh_memory_used(mesh)
+    @ccall libt8.p4est_mesh_memory_used(mesh::Ptr{p4est_mesh_t})::Csize_t
+end
+
+"""
+    p4est_mesh_new(p4est_, ghost, btype)
+
+Create a p4est\\_mesh structure.
+
+### Parameters
+* `p4est`:\\[in\\] A forest that is fully 2:1 balanced.
+* `ghost`:\\[in\\] The ghost layer created from the provided `p4est`.
+* `btype`:\\[in\\] Determines the highest codimension of neighbors.
+### Returns
+A fully allocated mesh structure.
+### Prototype
+```c
+p4est_mesh_t *p4est_mesh_new (p4est_t * p4est, p4est_ghost_t * ghost, p4est_connect_type_t btype);
+```
+"""
+function p4est_mesh_new(p4est_, ghost, btype)
+    @ccall libt8.p4est_mesh_new(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, btype::p4est_connect_type_t)::Ptr{p4est_mesh_t}
+end
+
+"""
+    p4est_mesh_destroy(mesh)
+
+Destroy a p4est\\_mesh structure.
+
+### Parameters
+* `mesh`:\\[in\\] Mesh structure previously created by [`p4est_mesh_new`](@ref).
+### Prototype
+```c
+void p4est_mesh_destroy (p4est_mesh_t * mesh);
+```
+"""
+function p4est_mesh_destroy(mesh)
+    @ccall libt8.p4est_mesh_destroy(mesh::Ptr{p4est_mesh_t})::Cvoid
+end
+
+"""
+    p4est_mesh_quadrant_cumulative(p4est_, cumulative_id, which_tree, quadrant_id)
+
+Find a quadrant based on its cumulative number in the local forest.
+
+### Parameters
+* `p4est`:\\[in\\] Forest to be worked with.
+* `cumulative_id`:\\[in\\] Cumulative index over all trees of quadrant.
+* `which_tree`:\\[in,out\\] If not NULL, the input value can be -1 or an initial guess for the quadrant's tree and output is the tree of returned quadrant.
+* `quadrant_id`:\\[out\\] If not NULL, the number of quadrant in tree.
+### Returns
+The identified quadrant.
+### Prototype
+```c
+p4est_quadrant_t *p4est_mesh_quadrant_cumulative (p4est_t * p4est, p4est_locidx_t cumulative_id, p4est_topidx_t * which_tree, p4est_locidx_t * quadrant_id);
+```
+"""
+function p4est_mesh_quadrant_cumulative(p4est_, cumulative_id, which_tree, quadrant_id)
+    @ccall libt8.p4est_mesh_quadrant_cumulative(p4est_::Ptr{p4est_t}, cumulative_id::p4est_locidx_t, which_tree::Ptr{p4est_topidx_t}, quadrant_id::Ptr{p4est_locidx_t})::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_mesh_face_neighbor_init2(mfn, p4est_, ghost, mesh, which_tree, quadrant_id)
+
+Initialize a mesh neighbor iterator by quadrant index.
+
+### Parameters
+* `mfn`:\\[out\\] A [`p4est_mesh_face_neighbor_t`](@ref) to be initialized.
+* `which_tree`:\\[in\\] Tree of quadrant whose neighbors are looped over.
+* `quadrant_id`:\\[in\\] Index relative to which\\_tree of quadrant.
+### Prototype
+```c
+void p4est_mesh_face_neighbor_init2 (p4est_mesh_face_neighbor_t * mfn, p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh, p4est_topidx_t which_tree, p4est_locidx_t quadrant_id);
+```
+"""
+function p4est_mesh_face_neighbor_init2(mfn, p4est_, ghost, mesh, which_tree, quadrant_id)
+    @ccall libt8.p4est_mesh_face_neighbor_init2(mfn::Ptr{p4est_mesh_face_neighbor_t}, p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, mesh::Ptr{p4est_mesh_t}, which_tree::p4est_topidx_t, quadrant_id::p4est_locidx_t)::Cvoid
+end
+
+"""
+    p4est_mesh_face_neighbor_init(mfn, p4est_, ghost, mesh, which_tree, quadrant)
+
+Initialize a mesh neighbor iterator by quadrant pointer.
+
+### Parameters
+* `mfn`:\\[out\\] A [`p4est_mesh_face_neighbor_t`](@ref) to be initialized.
+* `which_tree`:\\[in\\] Tree of quadrant whose neighbors are looped over.
+* `quadrant`:\\[in\\] Pointer to quadrant contained in which\\_tree.
+### Prototype
+```c
+void p4est_mesh_face_neighbor_init (p4est_mesh_face_neighbor_t * mfn, p4est_t * p4est, p4est_ghost_t * ghost, p4est_mesh_t * mesh, p4est_topidx_t which_tree, p4est_quadrant_t * quadrant);
+```
+"""
+function p4est_mesh_face_neighbor_init(mfn, p4est_, ghost, mesh, which_tree, quadrant)
+    @ccall libt8.p4est_mesh_face_neighbor_init(mfn::Ptr{p4est_mesh_face_neighbor_t}, p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, mesh::Ptr{p4est_mesh_t}, which_tree::p4est_topidx_t, quadrant::Ptr{p4est_quadrant_t})::Cvoid
+end
+
+"""
+    p4est_mesh_face_neighbor_next(mfn, ntree, nquad, nface, nrank)
+
+Move the iterator forward to loop around neighbors of the quadrant.
+
+### Parameters
+* `mfn`:\\[in,out\\] Internal status of the iterator.
+* `ntree`:\\[out\\] If not NULL, the tree number of the neighbor.
+* `nquad`:\\[out\\] If not NULL, the quadrant number within tree. For ghosts instead the number in ghost layer.
+* `nface`:\\[out\\] If not NULL, neighbor's face as in [`p4est_mesh_t`](@ref).
+* `nrank`:\\[out\\] If not NULL, the owner process of the neighbor.
+### Returns
+Either a real quadrant or one from the ghost layer. Returns NULL when the iterator is done.
+### Prototype
+```c
+p4est_quadrant_t *p4est_mesh_face_neighbor_next (p4est_mesh_face_neighbor_t * mfn, p4est_topidx_t * ntree, p4est_locidx_t * nquad, int *nface, int *nrank);
+```
+"""
+function p4est_mesh_face_neighbor_next(mfn, ntree, nquad, nface, nrank)
+    @ccall libt8.p4est_mesh_face_neighbor_next(mfn::Ptr{p4est_mesh_face_neighbor_t}, ntree::Ptr{p4est_topidx_t}, nquad::Ptr{p4est_locidx_t}, nface::Ptr{Cint}, nrank::Ptr{Cint})::Ptr{p4est_quadrant_t}
+end
+
+"""
+    p4est_mesh_face_neighbor_data(mfn, ghost_data)
+
+Get the user data for the current face neighbor.
+
+### Parameters
+* `mfn`:\\[in\\] Internal status of the iterator.
+* `ghost_data`:\\[in\\] Data for the ghost quadrants that has been synchronized with [`p4est_ghost_exchange_data`](@ref).
+### Returns
+A pointer to the user data for the current neighbor.
+### Prototype
+```c
+void *p4est_mesh_face_neighbor_data (p4est_mesh_face_neighbor_t * mfn, void *ghost_data);
+```
+"""
+function p4est_mesh_face_neighbor_data(mfn, ghost_data)
+    @ccall libt8.p4est_mesh_face_neighbor_data(mfn::Ptr{p4est_mesh_face_neighbor_t}, ghost_data::Ptr{Cvoid})::Ptr{Cvoid}
+end
+
+"""
+    p4est_iter_volume_info
+
+The information that is available to the user-defined [`p4est_iter_volume_t`](@ref) callback function.
+
+*treeid* gives the index in `p4est`->trees of the tree to which *quad* belongs. *quadid* gives the index of *quad* within *tree*'s quadrants array.
+
+| Field  | Note                                                    |
+| :----- | :------------------------------------------------------ |
+| quad   | the quadrant of the callback                            |
+| quadid | id in *quad*'s tree array (see [`p4est_tree_t`](@ref))  |
+| treeid | the tree containing *quad*                              |
+"""
+struct p4est_iter_volume_info
+    p4est::Ptr{p4est_t}
+    ghost_layer::Ptr{p4est_ghost_t}
+    quad::Ptr{p4est_quadrant_t}
+    quadid::p4est_locidx_t
+    treeid::p4est_topidx_t
+end
+
+"""
+The information that is available to the user-defined [`p4est_iter_volume_t`](@ref) callback function.
+
+*treeid* gives the index in `p4est`->trees of the tree to which *quad* belongs. *quadid* gives the index of *quad* within *tree*'s quadrants array.
+"""
+const p4est_iter_volume_info_t = p4est_iter_volume_info
+
+# typedef void ( * p4est_iter_volume_t ) ( p4est_iter_volume_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p4est_iterate`](@ref) will execute at every quadrant local to the current process.
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p4est_iterate`](@ref)()
+"""
+const p4est_iter_volume_t = Ptr{Cvoid}
+
+struct p4est_iter_face_side_data
+    data::NTuple{32, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p4est_iter_face_side_data}, f::Symbol)
+    f === :full && return Ptr{__JL_Ctag_1175}(x + 0)
+    f === :hanging && return Ptr{__JL_Ctag_1176}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p4est_iter_face_side_data, f::Symbol)
+    r = Ref{p4est_iter_face_side_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p4est_iter_face_side_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p4est_iter_face_side_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p4est_iter_face_side
+
+Information about one side of a face in the forest.
+
+If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If the face is hanging, then the quadrants are listed in z-order. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1.
+
+| Field        | Note                                                 |
+| :----------- | :--------------------------------------------------- |
+| treeid       | the tree on this side                                |
+| face         | which quadrant side the face touches                 |
+| is\\_hanging | boolean: one full quad (0) or two smaller quads (1)  |
+"""
+struct p4est_iter_face_side
+    data::NTuple{40, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p4est_iter_face_side}, f::Symbol)
+    f === :treeid && return Ptr{p4est_topidx_t}(x + 0)
+    f === :face && return Ptr{Int8}(x + 4)
+    f === :is_hanging && return Ptr{Int8}(x + 5)
+    f === :is && return Ptr{p4est_iter_face_side_data}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p4est_iter_face_side, f::Symbol)
+    r = Ref{p4est_iter_face_side}(x)
+    ptr = Base.unsafe_convert(Ptr{p4est_iter_face_side}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p4est_iter_face_side}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+Information about one side of a face in the forest.
+
+If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If the face is hanging, then the quadrants are listed in z-order. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1.
+"""
+const p4est_iter_face_side_t = p4est_iter_face_side
+
+"""
+    p4est_iter_face_info
+
+The information that is available to the user-defined [`p4est_iter_face_t`](@ref) callback.
+
+The orientation is 0 if the face is within one tree; otherwise, it is the same as the orientation value between the two trees given in the connectivity. If the face is on the outside boundary of the forest, then there is only one side. If tree\\_boundary is false, the face is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the face. When tree\\_boundary is true, its value is P4EST\\_CONNECT\\_FACE.
+
+| Field           | Note                                                                                                |
+| :-------------- | :-------------------------------------------------------------------------------------------------- |
+| orientation     | the orientation of the sides to each other, as in the definition of [`p4est_connectivity_t`](@ref)  |
+| tree\\_boundary | boolean: interior face (0), tree boundary face (true)                                               |
+"""
+struct p4est_iter_face_info
+    p4est::Ptr{p4est_t}
+    ghost_layer::Ptr{p4est_ghost_t}
+    orientation::Int8
+    tree_boundary::Int8
+    sides::sc_array_t
+end
+
+"""
+The information that is available to the user-defined [`p4est_iter_face_t`](@ref) callback.
+
+The orientation is 0 if the face is within one tree; otherwise, it is the same as the orientation value between the two trees given in the connectivity. If the face is on the outside boundary of the forest, then there is only one side. If tree\\_boundary is false, the face is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the face. When tree\\_boundary is true, its value is P4EST\\_CONNECT\\_FACE.
+"""
+const p4est_iter_face_info_t = p4est_iter_face_info
+
+# typedef void ( * p4est_iter_face_t ) ( p4est_iter_face_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p4est_iterate`](@ref) will execute wherever two quadrants share a face: the face can be a 2:1 hanging face, it does not have to be conformal.
+
+!!! note
+
+    the forest must be face balanced for [`p4est_iterate`](@ref)() to execute a callback function on faces (see [`p4est_balance`](@ref)()).
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p4est_iterate`](@ref)()
+"""
+const p4est_iter_face_t = Ptr{Cvoid}
+
+"""
+    p4est_iter_corner_side
+
+Information about one side of a corner in the forest. If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1.
+
+the *faces* field provides some additional information about the local topology: if side[i]->faces[j] == side[k]->faces[l], this indicates that there is a common face between these two sides of the corner.
+
+| Field      | Note                                                 |
+| :--------- | :--------------------------------------------------- |
+| treeid     | the tree that contains *quad*                        |
+| corner     | which of the quadrant's corners touches this corner  |
+| is\\_ghost | boolean: local (0) or ghost (1)                      |
+| quadid     | the index in the tree or ghost array                 |
+| faces      | internal work data                                   |
+"""
+struct p4est_iter_corner_side
+    treeid::p4est_topidx_t
+    corner::Int8
+    is_ghost::Int8
+    quad::Ptr{p4est_quadrant_t}
+    quadid::p4est_locidx_t
+    faces::NTuple{2, Int8}
+end
+
+"""
+Information about one side of a corner in the forest. If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1.
+
+the *faces* field provides some additional information about the local topology: if side[i]->faces[j] == side[k]->faces[l], this indicates that there is a common face between these two sides of the corner.
+"""
+const p4est_iter_corner_side_t = p4est_iter_corner_side
+
+"""
+    p4est_iter_corner_info
+
+The information that is available to the user-defined [`p4est_iter_corner_t`](@ref) callback.
+
+If tree\\_boundary is false, the corner is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the corner. When tree\\_boundary is true, its value is P4EST\\_CONNECT\\_FACE/CORNER depending on the location of the corner relative to the tree.
+
+| Field           | Note                                                   |
+| :-------------- | :----------------------------------------------------- |
+| tree\\_boundary | boolean: interior face (0), tree boundary face (true)  |
+| sides           | array of type [`p4est_iter_corner_side_t`](@ref) type  |
+"""
+struct p4est_iter_corner_info
+    p4est::Ptr{p4est_t}
+    ghost_layer::Ptr{p4est_ghost_t}
+    tree_boundary::Int8
+    sides::sc_array_t
+end
+
+"""
+The information that is available to the user-defined [`p4est_iter_corner_t`](@ref) callback.
+
+If tree\\_boundary is false, the corner is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the corner. When tree\\_boundary is true, its value is P4EST\\_CONNECT\\_FACE/CORNER depending on the location of the corner relative to the tree.
+"""
+const p4est_iter_corner_info_t = p4est_iter_corner_info
+
+# typedef void ( * p4est_iter_corner_t ) ( p4est_iter_corner_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p4est_iterate`](@ref) will execute wherever quadrants meet at a conformal corner
+
+i.e. the callback will not execute on a hanging corner.
+
+!!! note
+
+    the forest does not need to be corner balanced for [`p4est_iterate`](@ref)() to correctly execute a callback function at corners, only face balanced (see [`p4est_balance`](@ref)()).
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p4est_iterate`](@ref)()
+"""
+const p4est_iter_corner_t = Ptr{Cvoid}
+
+"""
+    p4est_iterate(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_corner)
+
+Execute user supplied callbacks at every volume, face, and corner in the local forest.
+
+[`p4est_iterate`](@ref) executes the user-supplied callback functions at every volume, face, and corner in the local forest. The ghost\\_layer may be NULL. The *user_data* pointer is not touched by [`p4est_iterate`](@ref), but is passed to each of the callbacks. Any of the callbacks may be NULL. The callback functions are interspersed with each other, i.e. some face callbacks will occur between volume callbacks, and some corner callbacks will occur between face callbacks:
+
+1) volume callbacks occur in the sorted Morton-index order. 2) a face callback is not executed until after the volume callbacks have been executed for the quadrants that share it. 3) a corner callback is not executed until the face callbacks have been executed for all faces that touch the corner. 4) it is not always the case that every face callback for a given quadrant is executed before any of the corner callbacks. 5) callbacks are not executed at faces or corners that only involve ghost quadrants, i.e. that are not adjacent in the local section of the forest.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `ghost_layer`:\\[in\\] optional: when not given, callbacks at the boundaries of the local partition cannot provide quadrant data about ghost quadrants: missing ([`p4est_quadrant_t`](@ref) *) pointers are set to NULL, missing indices are set to -1.
+* `user_data`:\\[in,out\\] optional context to supply to each callback
+* `iter_volume`:\\[in\\] callback function for every quadrant's interior
+* `iter_face`:\\[in\\] callback function for every face between quadrants
+* `iter_corner`:\\[in\\] callback function for every corner between quadrants
+### Prototype
+```c
+void p4est_iterate (p4est_t * p4est, p4est_ghost_t * ghost_layer, void *user_data, p4est_iter_volume_t iter_volume, p4est_iter_face_t iter_face, p4est_iter_corner_t iter_corner);
+```
+"""
+function p4est_iterate(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_corner)
+    @ccall libt8.p4est_iterate(p4est_::Ptr{p4est_t}, ghost_layer::Ptr{p4est_ghost_t}, user_data::Ptr{Cvoid}, iter_volume::p4est_iter_volume_t, iter_face::p4est_iter_face_t, iter_corner::p4est_iter_corner_t)::Cvoid
+end
+
+"""
+    p4est_iter_cside_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p4est_iter_corner_side_t * p4est_iter_cside_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p4est_iter_cside_array_index_int(array, it)
+    @ccall libt8.p4est_iter_cside_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p4est_iter_corner_side_t}
+end
+
+"""
+    p4est_iter_cside_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_iter_corner_side_t * p4est_iter_cside_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p4est_iter_cside_array_index(array, it)
+    @ccall libt8.p4est_iter_cside_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_iter_corner_side_t}
+end
+
+"""
+    p4est_iter_fside_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p4est_iter_face_side_t * p4est_iter_fside_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p4est_iter_fside_array_index_int(array, it)
+    @ccall libt8.p4est_iter_fside_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p4est_iter_face_side_t}
+end
+
+"""
+    p4est_iter_fside_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_iter_face_side_t * p4est_iter_fside_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p4est_iter_fside_array_index(array, it)
+    @ccall libt8.p4est_iter_fside_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_iter_face_side_t}
+end
+
+const p4est_lnodes_code_t = Int8
+
+struct p4est_lnodes
+    mpicomm::MPI_Comm
+    num_local_nodes::p4est_locidx_t
+    owned_count::p4est_locidx_t
+    global_offset::p4est_gloidx_t
+    nonlocal_nodes::Ptr{p4est_gloidx_t}
+    sharers::Ptr{sc_array_t}
+    global_owned_count::Ptr{p4est_locidx_t}
+    degree::Cint
+    vnodes::Cint
+    num_local_elements::p4est_locidx_t
+    face_code::Ptr{p4est_lnodes_code_t}
+    element_nodes::Ptr{p4est_locidx_t}
+end
+
+"""
+Store a parallel numbering of Lobatto points of a given degree > 0.
+
+Each element has degree+1 nodes per face and vnodes = (degree+1)^2 nodes per volume. num\\_local\\_elements is the number of local quadrants in the `p4est`. element\\_nodes is of dimension vnodes * num\\_local\\_elements and lists the nodes of each element in lexicographic yx-order (x varies fastest); so for degree == 2, this is the layout of nodes:
+
+f\\_3 c\\_2 c\\_3 6---7---8 | | f\\_0 3 4 5 f\\_1 | | 0---1---2 c\\_0 c\\_1 f\\_2
+
+element\\_nodes indexes into the set of local nodes, layed out as follows: local nodes = [<-----owned\\_count----->|<-----nonlocal\\_nodes----->] = [<----------------num\\_local\\_nodes----------------->] nonlocal\\_nodes contains the globally unique numbers for independent nodes that are owned by other processes; for local nodes, the globally unique numbers are given by i + global\\_offset, where i is the local number. Hanging nodes are always local and don't have a global number. They index the geometrically corresponding independent nodes of a neighbor.
+
+Whether nodes are hanging or not is decided based on the element faces. This information is encoded in face\\_code with one int8\\_t per element. If no faces are hanging, the value is zero, otherwise the face\\_code is interpreted by [`p4est_lnodes_decode`](@ref).
+
+Independent nodes can be shared by multiple MPI ranks. The owner rank of a node is the one from the lowest numbered element on the lowest numbered octree *touching* the node.
+
+What is meant by *touching*? A quadrant is said to touch all faces/corners that are incident on it, and by extension all nodes that are contained in those faces/corners.
+
+X +-----------+ o | | o | | +-----+ o | p | | q | o | | | | o | | +-----+ O +-----------+
+
+In this example degree = 6. There are 5 nodes that live on the face between q and p, and one at each corner of that face. The face is incident on q, so q owns the nodes on the face (provided q is from a lower tree or has a lower index than p). The lower corner is incident on q, so q owns it as well. The upper corner is not incident on q, so q cannot own it.
+
+global\\_owned\\_count contains the number of independent nodes owned by each process.
+
+The sharers array contains items of type [`p4est_lnodes_rank_t`](@ref) that hold the ranks that own or share independent local nodes. If there are no shared nodes on this processor, it is empty. Otherwise, it is sorted by rank and the current process is included.
+
+degree < 0 indicates that the lnodes data structure is being used to number the quadrant boundary object (faces and corners) rather than the \$C^0\$ Lobatto nodes:
+
+if degree == -1, then one node is assigned per face, and no nodes are assigned per volume or per corner: this numbering can be used for low-order Raviart-Thomas elements. In this case, vnodes == 4, and the nodes are listed in face-order:
+
+f\\_3 c\\_2 c\\_3 +---3---+ | | f\\_0 0 1 f\\_1 | | +---2---+ c\\_0 c\\_1 f\\_2
+
+if degree == -2, then one node is assigned per face and per corner and no nodes are assigned per volume. In this case, vnodes == 8, and the nodes are listed in face-order, followed by corner-order:
+
+f\\_3 c\\_2 c\\_3 6---3---7 | | f\\_0 0 1 f\\_1 | | 4---2---5 c\\_0 c\\_1 f\\_2
+"""
+const p4est_lnodes_t = p4est_lnodes
+
+"""
+    p4est_lnodes_rank
+
+The structure stored in the sharers array.
+
+shared\\_nodes is a sorted array of [`p4est_locidx_t`](@ref) that indexes into local nodes. The shared\\_nodes array has a contiguous (or empty) section of nodes owned by the current rank. shared\\_mine\\_offset and shared\\_mine\\_count identify this section by indexing the shared\\_nodes array, not the local nodes array. owned\\_offset and owned\\_count define the section of local nodes that is owned by the listed rank (the section may be empty). For the current process these coincide with those in [`p4est_lnodes_t`](@ref).
+"""
+struct p4est_lnodes_rank
+    rank::Cint
+    shared_nodes::sc_array_t
+    shared_mine_offset::p4est_locidx_t
+    shared_mine_count::p4est_locidx_t
+    owned_offset::p4est_locidx_t
+    owned_count::p4est_locidx_t
+end
+
+"""
+The structure stored in the sharers array.
+
+shared\\_nodes is a sorted array of [`p4est_locidx_t`](@ref) that indexes into local nodes. The shared\\_nodes array has a contiguous (or empty) section of nodes owned by the current rank. shared\\_mine\\_offset and shared\\_mine\\_count identify this section by indexing the shared\\_nodes array, not the local nodes array. owned\\_offset and owned\\_count define the section of local nodes that is owned by the listed rank (the section may be empty). For the current process these coincide with those in [`p4est_lnodes_t`](@ref).
+"""
+const p4est_lnodes_rank_t = p4est_lnodes_rank
+
+"""
+    p4est_lnodes_decode(face_code, hanging_face)
+
+### Prototype
+```c
+static inline int p4est_lnodes_decode (p4est_lnodes_code_t face_code, int hanging_face[4]);
+```
+"""
+function p4est_lnodes_decode(face_code, hanging_face)
+    @ccall libt8.p4est_lnodes_decode(face_code::p4est_lnodes_code_t, hanging_face::Ptr{Cint})::Cint
+end
+
+"""
+    p4est_lnodes_new(p4est_, ghost_layer, degree)
+
+### Prototype
+```c
+p4est_lnodes_t *p4est_lnodes_new (p4est_t * p4est, p4est_ghost_t * ghost_layer, int degree);
+```
+"""
+function p4est_lnodes_new(p4est_, ghost_layer, degree)
+    @ccall libt8.p4est_lnodes_new(p4est_::Ptr{p4est_t}, ghost_layer::Ptr{p4est_ghost_t}, degree::Cint)::Ptr{p4est_lnodes_t}
+end
+
+"""
+    p4est_lnodes_destroy(lnodes)
+
+### Prototype
+```c
+void p4est_lnodes_destroy (p4est_lnodes_t * lnodes);
+```
+"""
+function p4est_lnodes_destroy(lnodes)
+    @ccall libt8.p4est_lnodes_destroy(lnodes::Ptr{p4est_lnodes_t})::Cvoid
+end
+
+"""
+    p4est_ghost_support_lnodes(p4est_, lnodes, ghost)
+
+Expand the ghost layer to include the support of all nodes supported on the local partition.
+
+### Parameters
+* `p4est`:\\[in\\] The forest from which the ghost layer was generated.
+* `lnodes`:\\[in\\] The nodes to support.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p4est_ghost_support_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes, p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_support_lnodes(p4est_, lnodes, ghost)
+    @ccall libt8.p4est_ghost_support_lnodes(p4est_::Ptr{p4est_t}, lnodes::Ptr{p4est_lnodes_t}, ghost::Ptr{p4est_ghost_t})::Cvoid
+end
+
+"""
+    p4est_ghost_expand_by_lnodes(p4est_, lnodes, ghost)
+
+Expand the ghost layer as in [`p4est_ghost_expand`](@ref)(), but use node support to define adjacency instead of geometric adjacency.
+
+### Parameters
+* `p4est`:\\[in\\] The forest from which the ghost layer was generated.
+* `lnodes`:\\[in\\] The nodes to support.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p4est_ghost_expand_by_lnodes (p4est_t * p4est, p4est_lnodes_t * lnodes, p4est_ghost_t * ghost);
+```
+"""
+function p4est_ghost_expand_by_lnodes(p4est_, lnodes, ghost)
+    @ccall libt8.p4est_ghost_expand_by_lnodes(p4est_::Ptr{p4est_t}, lnodes::Ptr{p4est_lnodes_t}, ghost::Ptr{p4est_ghost_t})::Cvoid
+end
+
+"""
+    p4est_partition_lnodes(p4est_, ghost, degree, partition_for_coarsening)
+
+Partition using weights based on the number of nodes assigned to each element in lnodes
+
+### Parameters
+* `p4est`:\\[in,out\\] the forest to be repartitioned
+* `ghost`:\\[in\\] the ghost layer
+* `degree`:\\[in\\] the degree that would be passed to [`p4est_lnodes_new`](@ref)()
+* `partition_for_coarsening`:\\[in\\] whether the partition should allow coarsening (i.e. group siblings who might merge)
+### Prototype
+```c
+void p4est_partition_lnodes (p4est_t * p4est, p4est_ghost_t * ghost, int degree, int partition_for_coarsening);
+```
+"""
+function p4est_partition_lnodes(p4est_, ghost, degree, partition_for_coarsening)
+    @ccall libt8.p4est_partition_lnodes(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, degree::Cint, partition_for_coarsening::Cint)::Cvoid
+end
+
+"""
+    p4est_partition_lnodes_detailed(p4est_, ghost, nodes_per_volume, nodes_per_face, nodes_per_corner, partition_for_coarsening)
+
+Partition using weights that are broken down by where they reside: in volumes, on faces, or on corners.
+
+### Prototype
+```c
+void p4est_partition_lnodes_detailed (p4est_t * p4est, p4est_ghost_t * ghost, int nodes_per_volume, int nodes_per_face, int nodes_per_corner, int partition_for_coarsening);
+```
+"""
+function p4est_partition_lnodes_detailed(p4est_, ghost, nodes_per_volume, nodes_per_face, nodes_per_corner, partition_for_coarsening)
+    @ccall libt8.p4est_partition_lnodes_detailed(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, nodes_per_volume::Cint, nodes_per_face::Cint, nodes_per_corner::Cint, partition_for_coarsening::Cint)::Cvoid
+end
+
+"""
+    p4est_lnodes_buffer
+
+[`p4est_lnodes_buffer_t`](@ref) handles the communication of data associated with nodes.
+
+*send_buffers* is an array of arrays: one buffer for each process to which the current process sends node-data. It should not be altered between a shared\\_*\\_begin and a shared\\_*\\_end call.
+
+*recv_buffers* is an array of arrays that is used in lnodes\\_share\\_all\\_*. *recv_buffers*[j] corresponds with lnodes->sharers[j]: it is the same length as *lnodes*->sharers[j]->shared_nodes. At the completion of lnodes\\_share\\_all or lnodes\\_share\\_all\\_end, recv\\_buffers[j] contains the node-data from the process lnodes->sharers[j]->rank (unless j is the current rank, in which case recv\\_buffers[j] is empty).
+"""
+struct p4est_lnodes_buffer
+    requests::Ptr{sc_array_t}
+    send_buffers::Ptr{sc_array_t}
+    recv_buffers::Ptr{sc_array_t}
+end
+
+"""
+[`p4est_lnodes_buffer_t`](@ref) handles the communication of data associated with nodes.
+
+*send_buffers* is an array of arrays: one buffer for each process to which the current process sends node-data. It should not be altered between a shared\\_*\\_begin and a shared\\_*\\_end call.
+
+*recv_buffers* is an array of arrays that is used in lnodes\\_share\\_all\\_*. *recv_buffers*[j] corresponds with lnodes->sharers[j]: it is the same length as *lnodes*->sharers[j]->shared_nodes. At the completion of lnodes\\_share\\_all or lnodes\\_share\\_all\\_end, recv\\_buffers[j] contains the node-data from the process lnodes->sharers[j]->rank (unless j is the current rank, in which case recv\\_buffers[j] is empty).
+"""
+const p4est_lnodes_buffer_t = p4est_lnodes_buffer
+
+"""
+    p4est_lnodes_share_owned_begin(node_data, lnodes)
+
+[`p4est_lnodes_share_owned_begin`](@ref)
+
+*node_data* is a user-defined array of arbitrary type, where each entry is associated with the *lnodes* local nodes entry of matching index. For every local nodes entry that is owned by a process other than the current one, the value in the *node_data* array of the owning process is written directly into the *node_data* array of the current process. Values of *node_data* are not guaranteed to be sent or received until the *buffer* created by [`p4est_lnodes_share_owned_begin`](@ref) is passed to [`p4est_lnodes_share_owned_end`](@ref).
+
+To be memory neutral, the *buffer* created by [`p4est_lnodes_share_owned_begin`](@ref) must be destroying with [`p4est_lnodes_buffer_destroy`](@ref) (it is not destroyed by [`p4est_lnodes_share_owned_end`](@ref)).
+
+### Prototype
+```c
+p4est_lnodes_buffer_t *p4est_lnodes_share_owned_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes);
+```
+"""
+function p4est_lnodes_share_owned_begin(node_data, lnodes)
+    @ccall libt8.p4est_lnodes_share_owned_begin(node_data::Ptr{sc_array_t}, lnodes::Ptr{p4est_lnodes_t})::Ptr{p4est_lnodes_buffer_t}
+end
+
+"""
+    p4est_lnodes_share_owned_end(buffer)
+
+### Prototype
+```c
+void p4est_lnodes_share_owned_end (p4est_lnodes_buffer_t * buffer);
+```
+"""
+function p4est_lnodes_share_owned_end(buffer)
+    @ccall libt8.p4est_lnodes_share_owned_end(buffer::Ptr{p4est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p4est_lnodes_share_owned(node_data, lnodes)
+
+Equivalent to calling [`p4est_lnodes_share_owned_end`](@ref) directly after [`p4est_lnodes_share_owned_begin`](@ref). Use if there is no local work that can be done to mask the communication cost.
+
+### Prototype
+```c
+void p4est_lnodes_share_owned (sc_array_t * node_data, p4est_lnodes_t * lnodes);
+```
+"""
+function p4est_lnodes_share_owned(node_data, lnodes)
+    @ccall libt8.p4est_lnodes_share_owned(node_data::Ptr{sc_array_t}, lnodes::Ptr{p4est_lnodes_t})::Cvoid
+end
+
+"""
+    p4est_lnodes_share_all_begin(node_data, lnodes)
+
+[`p4est_lnodes_share_all_begin`](@ref)
+
+*node_data* is a user\\_defined array of arbitrary type, where each entry is associated with the lnodes local nodes entry of matching index. For every process that shares an entry with the current one, the value in the *node_data* array of that process is written into a *buffer*->recv_buffers entry as described above. The user can then perform some arbitrary work that requires the data from all processes that share a node (such as reduce, max, min, etc.). When the work concludes, the *buffer* should be destroyed with [`p4est_lnodes_buffer_destroy`](@ref).
+
+Values of *node_data* are not guaranteed to be sent, and *buffer*->recv_buffer entries are not guaranteed to be received until the *buffer* created by [`p4est_lnodes_share_all_begin`](@ref) is passed to [`p4est_lnodes_share_all_end`](@ref).
+
+### Prototype
+```c
+p4est_lnodes_buffer_t *p4est_lnodes_share_all_begin (sc_array_t * node_data, p4est_lnodes_t * lnodes);
+```
+"""
+function p4est_lnodes_share_all_begin(node_data, lnodes)
+    @ccall libt8.p4est_lnodes_share_all_begin(node_data::Ptr{sc_array_t}, lnodes::Ptr{p4est_lnodes_t})::Ptr{p4est_lnodes_buffer_t}
+end
+
+"""
+    p4est_lnodes_share_all_end(buffer)
+
+### Prototype
+```c
+void p4est_lnodes_share_all_end (p4est_lnodes_buffer_t * buffer);
+```
+"""
+function p4est_lnodes_share_all_end(buffer)
+    @ccall libt8.p4est_lnodes_share_all_end(buffer::Ptr{p4est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p4est_lnodes_share_all(node_data, lnodes)
+
+Equivalent to calling [`p4est_lnodes_share_all_end`](@ref) directly after [`p4est_lnodes_share_all_begin`](@ref). Use if there is no local work that can be done to mask the communication cost.
+
+### Returns
+A fully initialized buffer that contains the received data. After processing this data, the buffer must be freed with [`p4est_lnodes_buffer_destroy`](@ref).
+### Prototype
+```c
+p4est_lnodes_buffer_t *p4est_lnodes_share_all (sc_array_t * node_data, p4est_lnodes_t * lnodes);
+```
+"""
+function p4est_lnodes_share_all(node_data, lnodes)
+    @ccall libt8.p4est_lnodes_share_all(node_data::Ptr{sc_array_t}, lnodes::Ptr{p4est_lnodes_t})::Ptr{p4est_lnodes_buffer_t}
+end
+
+"""
+    p4est_lnodes_buffer_destroy(buffer)
+
+### Prototype
+```c
+void p4est_lnodes_buffer_destroy (p4est_lnodes_buffer_t * buffer);
+```
+"""
+function p4est_lnodes_buffer_destroy(buffer)
+    @ccall libt8.p4est_lnodes_buffer_destroy(buffer::Ptr{p4est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p4est_lnodes_rank_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p4est_lnodes_rank_t * p4est_lnodes_rank_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p4est_lnodes_rank_array_index_int(array, it)
+    @ccall libt8.p4est_lnodes_rank_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p4est_lnodes_rank_t}
+end
+
+"""
+    p4est_lnodes_rank_array_index(array, it)
+
+### Prototype
+```c
+static inline p4est_lnodes_rank_t * p4est_lnodes_rank_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p4est_lnodes_rank_array_index(array, it)
+    @ccall libt8.p4est_lnodes_rank_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_lnodes_rank_t}
+end
+
+"""
+    p4est_lnodes_global_index(lnodes, lidx)
+
+### Prototype
+```c
+static inline p4est_gloidx_t p4est_lnodes_global_index (p4est_lnodes_t * lnodes, p4est_locidx_t lidx);
+```
+"""
+function p4est_lnodes_global_index(lnodes, lidx)
+    @ccall libt8.p4est_lnodes_global_index(lnodes::Ptr{p4est_lnodes_t}, lidx::p4est_locidx_t)::p4est_gloidx_t
+end
+
+# typedef void ( * p4est_replace_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , int num_outgoing , p4est_quadrant_t * outgoing [ ] , int num_incoming , p4est_quadrant_t * incoming [ ] )
+"""
+Callback function prototype to replace one set of quadrants with another.
+
+This is used by extended routines when the quadrants of an existing, valid `p4est` are changed. The callback allows the user to make changes to newly initialized quadrants before the quadrants that they replace are destroyed.
+
+If the mesh is being refined, num\\_outgoing will be 1 and num\\_incoming will be 4, and vice versa if the mesh is being coarsened.
+
+### Parameters
+* `num_outgoing`:\\[in\\] The number of outgoing quadrants.
+* `outgoing`:\\[in\\] The outgoing quadrants: after the callback, the user\\_data, if `p4est`->data_size is nonzero, will be destroyed.
+* `num_incoming`:\\[in\\] The number of incoming quadrants.
+* `incoming`:\\[in,out\\] The incoming quadrants: prior to the callback, the user\\_data, if `p4est`->data_size is nonzero, is allocated, and the [`p4est_init_t`](@ref) callback, if it has been provided, will be called.
+"""
+const p4est_replace_t = Ptr{Cvoid}
+
+"""
+    p4est_new_ext(mpicomm, connectivity, min_quadrants, min_level, fill_uniform, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p4est_t *p4est_new_ext (sc_MPI_Comm mpicomm, p4est_connectivity_t * connectivity, p4est_locidx_t min_quadrants, int min_level, int fill_uniform, size_t data_size, p4est_init_t init_fn, void *user_pointer);
+```
+"""
+function p4est_new_ext(mpicomm, connectivity, min_quadrants, min_level, fill_uniform, data_size, init_fn, user_pointer)
+    @ccall libt8.p4est_new_ext(mpicomm::MPI_Comm, connectivity::Ptr{p4est_connectivity_t}, min_quadrants::p4est_locidx_t, min_level::Cint, fill_uniform::Cint, data_size::Csize_t, init_fn::p4est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p4est_t}
+end
+
+"""
+    p4est_mesh_new_ext(p4est_, ghost, compute_tree_index, compute_level_lists, btype)
+
+Create a new mesh.
+
+### Parameters
+* `p4est`:\\[in\\] A forest that is fully 2:1 balanced.
+* `ghost`:\\[in\\] The ghost layer created from the provided `p4est`.
+* `compute_tree_index`:\\[in\\] Boolean to decide whether to allocate and compute the quad\\_to\\_tree list.
+* `compute_level_lists`:\\[in\\] Boolean to decide whether to compute the level lists in quad\\_level.
+* `btype`:\\[in\\] Currently ignored, only face neighbors are stored.
+### Returns
+A fully allocated mesh structure.
+### Prototype
+```c
+p4est_mesh_t *p4est_mesh_new_ext (p4est_t * p4est, p4est_ghost_t * ghost, int compute_tree_index, int compute_level_lists, p4est_connect_type_t btype);
+```
+"""
+function p4est_mesh_new_ext(p4est_, ghost, compute_tree_index, compute_level_lists, btype)
+    @ccall libt8.p4est_mesh_new_ext(p4est_::Ptr{p4est_t}, ghost::Ptr{p4est_ghost_t}, compute_tree_index::Cint, compute_level_lists::Cint, btype::p4est_connect_type_t)::Ptr{p4est_mesh_t}
+end
+
+"""
+    p4est_copy_ext(input, copy_data, duplicate_mpicomm)
+
+Make a deep copy of a `p4est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless. The inspect member of the copy is set to NULL. The revision counter of the copy is set to zero.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+* `duplicate_mpicomm`:\\[in\\] If true, MPI communicator is copied.
+### Returns
+Returns a valid `p4est` that does not depend on the input, except for borrowing the same connectivity. Its revision counter is 0.
+### Prototype
+```c
+p4est_t *p4est_copy_ext (p4est_t * input, int copy_data, int duplicate_mpicomm);
+```
+"""
+function p4est_copy_ext(input, copy_data, duplicate_mpicomm)
+    @ccall libt8.p4est_copy_ext(input::Ptr{p4est_t}, copy_data::Cint, duplicate_mpicomm::MPI_Comm)::Ptr{p4est_t}
+end
+
+"""
+    p4est_refine_ext(p4est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+
+Refine a forest with a bounded refinement level and a replace option.
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `maxlevel`:\\[in\\] Maximum allowed refinement level (inclusive). If this is negative the level is restricted only by the compile-time constant QMAXLEVEL in `p4est.h`.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn or replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data for newly created quadrants, which is guaranteed to be allocated. This function pointer may be NULL.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace; may be NULL.
+### Prototype
+```c
+void p4est_refine_ext (p4est_t * p4est, int refine_recursive, int maxlevel, p4est_refine_t refine_fn, p4est_init_t init_fn, p4est_replace_t replace_fn);
+```
+"""
+function p4est_refine_ext(p4est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+    @ccall libt8.p4est_refine_ext(p4est_::Ptr{p4est_t}, refine_recursive::Cint, maxlevel::Cint, refine_fn::p4est_refine_t, init_fn::p4est_init_t, replace_fn::p4est_replace_t)::Cvoid
+end
+
+"""
+    p4est_coarsen_ext(p4est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+
+Coarsen a forest.
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `callback_orphans`:\\[in\\] Boolean to enable calling coarsen\\_fn even on non-families. In this case, the second quadrant pointer in the argument list of the callback is NULL, subsequent pointers are undefined, and the return value is ignored. If coarsen\\_recursive is true, it is possible that a quadrant is called once or more as an orphan and eventually becomes part of a family. With coarsen\\_recursive false and callback\\_orphans true, it is guaranteed that every quadrant is passed exactly once into the coarsen\\_fn callback.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p4est_coarsen_ext (p4est_t * p4est, int coarsen_recursive, int callback_orphans, p4est_coarsen_t coarsen_fn, p4est_init_t init_fn, p4est_replace_t replace_fn);
+```
+"""
+function p4est_coarsen_ext(p4est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+    @ccall libt8.p4est_coarsen_ext(p4est_::Ptr{p4est_t}, coarsen_recursive::Cint, callback_orphans::Cint, coarsen_fn::p4est_coarsen_t, init_fn::p4est_init_t, replace_fn::p4est_replace_t)::Cvoid
+end
+
+"""
+    p4est_balance_ext(p4est_, btype, init_fn, replace_fn)
+
+2:1 balance the size differences of neighboring elements in a forest.
+
+### Parameters
+* `p4est`:\\[in,out\\] The `p4est` to be worked on.
+* `btype`:\\[in\\] Balance type (face or corner/full). Corner balance is almost never required when discretizing a PDE; just causes smoother mesh grading.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p4est_balance_ext (p4est_t * p4est, p4est_connect_type_t btype, p4est_init_t init_fn, p4est_replace_t replace_fn);
+```
+"""
+function p4est_balance_ext(p4est_, btype, init_fn, replace_fn)
+    @ccall libt8.p4est_balance_ext(p4est_::Ptr{p4est_t}, btype::p4est_connect_type_t, init_fn::p4est_init_t, replace_fn::p4est_replace_t)::Cvoid
+end
+
+"""
+    p4est_balance_subtree_ext(p4est_, btype, which_tree, init_fn, replace_fn)
+
+### Prototype
+```c
+void p4est_balance_subtree_ext (p4est_t * p4est, p4est_connect_type_t btype, p4est_topidx_t which_tree, p4est_init_t init_fn, p4est_replace_t replace_fn);
+```
+"""
+function p4est_balance_subtree_ext(p4est_, btype, which_tree, init_fn, replace_fn)
+    @ccall libt8.p4est_balance_subtree_ext(p4est_::Ptr{p4est_t}, btype::p4est_connect_type_t, which_tree::p4est_topidx_t, init_fn::p4est_init_t, replace_fn::p4est_replace_t)::Cvoid
+end
+
+"""
+    p4est_partition_ext(p4est_, partition_for_coarsening, weight_fn)
+
+Repartition the forest.
+
+The forest is partitioned between processors such that each processor has an approximately equal number of quadrants (or weight).
+
+### Parameters
+* `p4est`:\\[in,out\\] The forest that will be partitioned.
+* `partition_for_coarsening`:\\[in\\] If true, the partition is modified to allow one level of coarsening.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning.
+### Returns
+The global number of shipped quadrants
+### Prototype
+```c
+p4est_gloidx_t p4est_partition_ext (p4est_t * p4est, int partition_for_coarsening, p4est_weight_t weight_fn);
+```
+"""
+function p4est_partition_ext(p4est_, partition_for_coarsening, weight_fn)
+    @ccall libt8.p4est_partition_ext(p4est_::Ptr{p4est_t}, partition_for_coarsening::Cint, weight_fn::p4est_weight_t)::p4est_gloidx_t
+end
+
+"""
+    p4est_partition_for_coarsening(p4est_, num_quadrants_in_proc)
+
+Correct partition to allow one level of coarsening.
+
+### Parameters
+* `p4est`:\\[in\\] forest whose partition is corrected
+* `num_quadrants_in_proc`:\\[in,out\\] partition that will be corrected
+### Returns
+absolute number of moved quadrants
+### Prototype
+```c
+p4est_gloidx_t p4est_partition_for_coarsening (p4est_t * p4est, p4est_locidx_t * num_quadrants_in_proc);
+```
+"""
+function p4est_partition_for_coarsening(p4est_, num_quadrants_in_proc)
+    @ccall libt8.p4est_partition_for_coarsening(p4est_::Ptr{p4est_t}, num_quadrants_in_proc::Ptr{p4est_locidx_t})::p4est_gloidx_t
+end
+
+"""
+    p4est_iterate_ext(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_corner, remote)
+
+[`p4est_iterate_ext`](@ref) adds the option *remote*: if this is false, then it is the same as [`p4est_iterate`](@ref); if this is true, then corner callbacks are also called on corners for hanging faces touched by local quadrants.
+
+### Prototype
+```c
+void p4est_iterate_ext (p4est_t * p4est, p4est_ghost_t * ghost_layer, void *user_data, p4est_iter_volume_t iter_volume, p4est_iter_face_t iter_face, p4est_iter_corner_t iter_corner, int remote);
+```
+"""
+function p4est_iterate_ext(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_corner, remote)
+    @ccall libt8.p4est_iterate_ext(p4est_::Ptr{p4est_t}, ghost_layer::Ptr{p4est_ghost_t}, user_data::Ptr{Cvoid}, iter_volume::p4est_iter_volume_t, iter_face::p4est_iter_face_t, iter_corner::p4est_iter_corner_t, remote::Cint)::Cvoid
+end
+
+"""
+    p4est_save_ext(filename, p4est_, save_data, save_partition)
+
+Save the complete connectivity/`p4est` data to disk. This is a collective operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations. See [`p4est_load_ext`](@ref) for information on the autopartition parameter.
+
+!!! note
+
+    Aborts on file errors.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p4est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+* `save_partition`:\\[in\\] If false, save file as if 1 core was used. If true, save core count and partition. Advantage: Partition can be recovered on loading with same mpisize and autopartition false. Disadvantage: Makes the file depend on mpisize. Either way the file can be loaded with autopartition true.
+### Prototype
+```c
+void p4est_save_ext (const char *filename, p4est_t * p4est, int save_data, int save_partition);
+```
+"""
+function p4est_save_ext(filename, p4est_, save_data, save_partition)
+    @ccall libt8.p4est_save_ext(filename::Cstring, p4est_::Ptr{p4est_t}, save_data::Cint, save_partition::Cint)::Cvoid
+end
+
+"""
+    p4est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+
+### Prototype
+```c
+p4est_t *p4est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, int autopartition, int broadcasthead, void *user_pointer, p4est_connectivity_t ** connectivity);
+```
+"""
+function p4est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+    @ccall libt8.p4est_load_ext(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, autopartition::Cint, broadcasthead::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p4est_connectivity_t}})::Ptr{p4est_t}
+end
+
+"""
+    p4est_source_ext(src, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+
+### Prototype
+```c
+p4est_t *p4est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size, int load_data, int autopartition, int broadcasthead, void *user_pointer, p4est_connectivity_t ** connectivity);
+```
+"""
+function p4est_source_ext(src, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+    @ccall libt8.p4est_source_ext(src::Ptr{sc_io_source_t}, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, autopartition::Cint, broadcasthead::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p4est_connectivity_t}})::Ptr{p4est_t}
+end
+
+"""
+    p4est_get_plex_data_ext(p4est_, ghost, lnodes, ctype, overlap, first_local_quad, out_points_per_dim, out_cone_sizes, out_cones, out_cone_orientations, out_vertex_coords, out_children, out_parents, out_childids, out_leaves, out_remotes, custom_numbering)
+
+Create the data necessary to create a PETsc DMPLEX representation of a forest, as well as the accompanying lnodes and ghost layer. The forest must be at least face balanced (see [`p4est_balance`](@ref)()). See test/test\\_plex2.c for example usage.
+
+All arrays should be initialized to hold sizeof ([`p4est_locidx_t`](@ref)), except for *out_remotes*, which should be initialized to hold (2 * sizeof ([`p4est_locidx_t`](@ref))).
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `ghost`:\\[out\\] the ghost layer
+* `lnodes`:\\[out\\] the lnodes
+* `ctype`:\\[in\\] the type of adjacency for the overlap
+* `overlap`:\\[in\\] the number of layers of overlap (zero is acceptable)
+* `first_local_quad`:\\[out\\] the local quadrants are assigned contiguous plex indices, starting with this index
+* `out_points_per_dim`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cone_sizes`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cones`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cone_orientations`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_vertex_coords`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_children`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_parents`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_childids`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_leaves`:\\[in,out\\] filled with argument for PetscSFSetGraph()
+* `out_remotes`:\\[in,out\\] filled with argument for PetscSFSetGraph()
+* `custom_numbering`:\\[in\\] Whether or use the default numbering (0) of DMPlex child ids or the custom (1).
+### Prototype
+```c
+void p4est_get_plex_data_ext (p4est_t * p4est, p4est_ghost_t ** ghost, p4est_lnodes_t ** lnodes, p4est_connect_type_t ctype, int overlap, p4est_locidx_t * first_local_quad, sc_array_t * out_points_per_dim, sc_array_t * out_cone_sizes, sc_array_t * out_cones, sc_array_t * out_cone_orientations, sc_array_t * out_vertex_coords, sc_array_t * out_children, sc_array_t * out_parents, sc_array_t * out_childids, sc_array_t * out_leaves, sc_array_t * out_remotes, int custom_numbering);
+```
+"""
+function p4est_get_plex_data_ext(p4est_, ghost, lnodes, ctype, overlap, first_local_quad, out_points_per_dim, out_cone_sizes, out_cones, out_cone_orientations, out_vertex_coords, out_children, out_parents, out_childids, out_leaves, out_remotes, custom_numbering)
+    @ccall libt8.p4est_get_plex_data_ext(p4est_::Ptr{p4est_t}, ghost::Ptr{Ptr{p4est_ghost_t}}, lnodes::Ptr{Ptr{p4est_lnodes_t}}, ctype::p4est_connect_type_t, overlap::Cint, first_local_quad::Ptr{p4est_locidx_t}, out_points_per_dim::Ptr{sc_array_t}, out_cone_sizes::Ptr{sc_array_t}, out_cones::Ptr{sc_array_t}, out_cone_orientations::Ptr{sc_array_t}, out_vertex_coords::Ptr{sc_array_t}, out_children::Ptr{sc_array_t}, out_parents::Ptr{sc_array_t}, out_childids::Ptr{sc_array_t}, out_leaves::Ptr{sc_array_t}, out_remotes::Ptr{sc_array_t}, custom_numbering::Cint)::Cvoid
+end
+
+"""
+    p4est_find_lower_bound(array, q, guess)
+
+Find the lowest position tq in a quadrant array such that tq >= q.
+
+### Returns
+Returns the id of the matching quadrant or -1 if array < q or the array is empty.
+### Prototype
+```c
+ssize_t p4est_find_lower_bound (sc_array_t * array, const p4est_quadrant_t * q, size_t guess);
+```
+"""
+function p4est_find_lower_bound(array, q, guess)
+    @ccall libt8.p4est_find_lower_bound(array::Ptr{sc_array_t}, q::Ptr{p4est_quadrant_t}, guess::Csize_t)::Cssize_t
+end
+
+"""
+    p4est_find_higher_bound(array, q, guess)
+
+Find the highest position tq in a quadrant array such that tq <= q.
+
+### Returns
+Returns the id of the matching quadrant or -1 if array > q or the array is empty.
+### Prototype
+```c
+ssize_t p4est_find_higher_bound (sc_array_t * array, const p4est_quadrant_t * q, size_t guess);
+```
+"""
+function p4est_find_higher_bound(array, q, guess)
+    @ccall libt8.p4est_find_higher_bound(array::Ptr{sc_array_t}, q::Ptr{p4est_quadrant_t}, guess::Csize_t)::Cssize_t
+end
+
+"""
+    p4est_split_array(array, level, indices)
+
+Split an array of quadrants by the children of an ancestor.
+
+Given a sorted **array** of quadrants that have a common ancestor at level **level**, compute the **indices** of the first quadrant in each of the common ancestor's children at level **level** + 1.
+
+### Parameters
+* `array`:\\[in\\] The sorted array of quadrants of level > **level**.
+* `level`:\\[in\\] The level at which there is a common ancestor.
+* `indices`:\\[in,out\\] The indices of the first quadrant in each of the ancestors's children, plus an additional index on the end. The quadrants of **array** that are descendants of child i have indices between indices[i] and indices[i + 1] - 1. If indices[i] = indices[i+1], this indicates that no quadrant in the array is contained in child i.
+### Prototype
+```c
+void p4est_split_array (sc_array_t * array, int level, size_t indices[]);
+```
+"""
+function p4est_split_array(array, level, indices)
+    @ccall libt8.p4est_split_array(array::Ptr{sc_array_t}, level::Cint, indices::Ptr{Csize_t})::Cvoid
+end
+
+"""
+    p4est_find_range_boundaries(lq, uq, level, faces, corners)
+
+Find the boundary points touched by a range of quadrants.
+
+Given two smallest quadrants, **lq** and **uq**, that mark the first and the last quadrant in a range of quadrants, determine which portions of the tree boundary the range touches.
+
+### Parameters
+* `lq`:\\[in\\] The smallest quadrant at the start of the range: if NULL, the tree's first quadrant is taken to be the start of the range.
+* `uq`:\\[in\\] The smallest quadrant at the end of the range: if NULL, the tree's last quadrant is taken to be the end of the range.
+* `level`:\\[in\\] The level of the containing quadrant whose boundaries are tested: 0 if we want to test the boundaries of the whole tree.
+* `faces`:\\[in,out\\] An array of size 4 that is filled: faces[i] is true if the range touches that face.
+* `corners`:\\[in,out\\] An array of size 4 that is filled: corners[i] is true if the range touches that corner. **faces** or **corners** may be NULL.
+### Returns
+Returns an int32\\_t encoded with the same information in **faces** and **corners**: the first (least) four bits represent the four faces, the next four bits represent the four corners.
+### Prototype
+```c
+int32_t p4est_find_range_boundaries (p4est_quadrant_t * lq, p4est_quadrant_t * uq, int level, int faces[], int corners[]);
+```
+"""
+function p4est_find_range_boundaries(lq, uq, level, faces, corners)
+    @ccall libt8.p4est_find_range_boundaries(lq::Ptr{p4est_quadrant_t}, uq::Ptr{p4est_quadrant_t}, level::Cint, faces::Ptr{Cint}, corners::Ptr{Cint})::Int32
+end
+
+# typedef int ( * p4est_search_local_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant , p4est_locidx_t local_num , void * point )
+"""
+Callback function to query the match of a "point" with a quadrant.
+
+This function can be called in two roles: Per-quadrant, in which case the parameter **point** is NULL, or per-point, possibly many times per quadrant.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be queried.
+* `which_tree`:\\[in\\] The tree id under consideration.
+* `quadrant`:\\[in\\] The quadrant under consideration. This quadrant may be coarser than the quadrants that are contained in the forest (an ancestor), in which case it is a temporary variable and not part of the forest storage. Otherwise, it is a leaf and points directly into the forest storage.
+* `local_num`:\\[in\\] If the quadrant is not a leaf, this is < 0. Otherwise it is the (non-negative) index of the quadrant relative to the processor-local storage.
+* `point`:\\[in\\] Representation of a "point"; user-defined. If **point** is NULL, the callback may be used to prepare quadrant-related search meta data.
+### Returns
+If **point** is NULL, true if the search confined to **quadrant** should be executed, false to skip it. Else, true if point may be contained in the quadrant and false otherwise; the return value has no effect on a leaf.
+"""
+const p4est_search_local_t = Ptr{Cvoid}
+
+"""This typedef is provided for backwards compatibility."""
+const p4est_search_query_t = p4est_search_local_t
+
+"""
+    p4est_search_local(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Search through the local part of a forest. The search is especially efficient if multiple targets, called "points" below, are searched for simultaneously.
+
+The search runs over all local quadrants and proceeds recursively top-down. For each tree, it may start at the root of that tree, or further down at the root of the subtree that contains all of the tree's local quadrants. Likewise, some intermediate levels in the recursion may be skipped if the processor-local part is contained in a single deeper subtree. The outer loop is thus a depth-first, processor-local forest traversal. Each quadrant in that loop either is a leaf, or a (direct or indirect) strict ancestor of a leaf. On entering a new quadrant, a user-provided quadrant-callback is executed.
+
+As a convenience, the user may provide anonymous "points" that are tracked down the forest. This way one search call may be used for multiple targets. The set of points that potentially matches a given quadrant diminishes from the root down to the leaves: For each quadrant, an inner loop over the potentially matching points executes a point-callback for each candidate that determines whether the point may be a match. If not, it is discarded in the current branch, otherwise it is passed to the next deeper level. The callback is allowed to return true for the same point and more than one quadrant; in this case more than one matching quadrant may be identified. The callback is also allowed to return false for all children of a quadrant that it returned true for earlier. If the point callback returns false for all points relevant to a quadrant, the recursion stops. The points can really be anything, `p4est` does not perform any interpretation, just passes the pointer along to the callback function.
+
+If points are present and the first quadrant callback returned true, we execute it a second time after calling the point callback for all current points. This can be used to gather and postprocess information about the points more easily. If it returns false, the recursion stops.
+
+If the points are a NULL array, they are ignored and the recursion proceeds by querying the per-quadrant callback. If the points are not NULL but an empty array, the recursion will stop immediately!
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be searched.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] Executed once when a quadrant is entered, and once when it is left (the second time only if points are present and the first call returned true). This quadrant is always local, if not completely then at least one descendant of it. If the callback returns false, this quadrant and its descendants are excluded from the search recursion. Its **point** argument is always NULL. Callback may be NULL in which case it is ignored.
+* `point_fn`:\\[in\\] If **points** is not NULL, must be not NULL. Shall return true for any possible matching point. If **points** is NULL, this callback is ignored.
+* `points`:\\[in\\] User-defined array of "points". If NULL, only the **quadrant_fn** callback is executed. If that is NULL, this function noops. If not NULL, the **point_fn** is called on its members during the search.
+### Prototype
+```c
+void p4est_search_local (p4est_t * p4est, int call_post, p4est_search_local_t quadrant_fn, p4est_search_local_t point_fn, sc_array_t * points);
+```
+"""
+function p4est_search_local(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p4est_search_local(p4est_::Ptr{p4est_t}, call_post::Cint, quadrant_fn::p4est_search_local_t, point_fn::p4est_search_local_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+"""
+    p4est_search(p4est_, quadrant_fn, point_fn, points)
+
+This function is provided for backwards compatibility. We call p4est_search_local with call\\_post = 0.
+
+### Prototype
+```c
+void p4est_search (p4est_t * p4est, p4est_search_query_t quadrant_fn, p4est_search_query_t point_fn, sc_array_t * points);
+```
+"""
+function p4est_search(p4est_, quadrant_fn, point_fn, points)
+    @ccall libt8.p4est_search(p4est_::Ptr{p4est_t}, quadrant_fn::p4est_search_query_t, point_fn::p4est_search_query_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+# typedef int ( * p4est_search_partition_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant , int pfirst , int plast , void * point )
+"""
+Callback function for the partition recursion.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to traverse. Its local quadrants are never accessed.
+* `which_tree`:\\[in\\] The tree number under consideration.
+* `quadrant`:\\[in\\] This quadrant is not from local forest storage, and its user data is undefined. It represents the branch of the forest in the top-down recursion.
+* `pfirst`:\\[in\\] The lowest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `plast`:\\[in\\] The highest processor that owns part of **quadrant**. Guaranteed to be non-empty. If this is equal to **pfirst**, then the recursion will stop for **quadrant**'s branch after this function returns.
+* `point`:\\[in,out\\] Pointer to a user-defined point object. If called per-quadrant, this is NULL.
+### Returns
+If false, the recursion at quadrant is terminated. If true, it continues if **pfirst** < **plast**.
+"""
+const p4est_search_partition_t = Ptr{Cvoid}
+
+"""
+    p4est_search_partition(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Traverse the global partition top-down. We proceed top-down through the partition, identically on all processors except for the results of two user-provided callbacks. The recursion will only go down branches that are split between multiple processors. The callback functions can be used to stop a branch recursion even for split branches. This function offers the option to search for arbitrary user-defined points analogously to p4est_search_local.
+
+!!! note
+
+    Traversing the whole processor partition will be at least O(P), so sensible use of the callback function is advised to cut it short.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to traverse. Its local quadrants are never accessed.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] This function controls the recursion, which only continues deeper if this callback returns true for a branch quadrant. It is allowed to set this to NULL.
+* `point_fn`:\\[in\\] This function decides per-point whether it is followed down the recursion. Must be non-NULL if **points** are not NULL.
+* `points`:\\[in\\] User-provided array of **points** that are passed to the callback **point_fn**. See p4est_search_local for details.
+### Prototype
+```c
+void p4est_search_partition (p4est_t * p4est, int call_post, p4est_search_partition_t quadrant_fn, p4est_search_partition_t point_fn, sc_array_t * points);
+```
+"""
+function p4est_search_partition(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p4est_search_partition(p4est_::Ptr{p4est_t}, call_post::Cint, quadrant_fn::p4est_search_partition_t, point_fn::p4est_search_partition_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+# typedef int ( * p4est_search_all_t ) ( p4est_t * p4est , p4est_topidx_t which_tree , p4est_quadrant_t * quadrant , int pfirst , int plast , p4est_locidx_t local_num , void * point )
+"""
+Callback function for the top-down search through the whole forest.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to search. We recurse through the trees one after another.
+* `which_tree`:\\[in\\] The current tree number.
+* `quadrant`:\\[in\\] The current quadrant in the recursion. This quadrant is either a non-leaf tree branch or a leaf. If the quadrant is contained in the local partition, we know which, otherwise we don't. Let us first consider the situation when **quadrant** is local, which is indicated by both **pfirst** and **plast** being equal to `p4est`->mpirank. Then the parameter **local_num** is negative for non-leaves and the number of the quadrant as a leaf in local storage otherwise. Only if the quadrant is a local leaf, it points to the actual local storage and can be used to access user data etc., and the recursion terminates. The other possibility is that **pfirst** < **plast**, in which case we proceed with the recursion, or both are equal to the same remote rank, in which case the recursion terminates. Either way, the quadrant is not from local forest storage.
+* `pfirst`:\\[in\\] The lowest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `plast`:\\[in\\] The highest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `local_num`:\\[in\\] If **quadrant** is a local leaf, this number is the index of the leaf in local quadrant storage. Else, this is a negative value.
+* `point`:\\[in,out\\] User-defined representation of a point. This parameter distinguishes two uses of the callback. For each quadrant, the callback is first called with a NULL point, and if this callback returns true, once for each point tracked in this branch. The return value for a point determines whether it shall be tracked further down the branch or not, and has no effect on a local leaf. The call with a NULL point is intended to prepare quadrant-related search meta data that is common to all points, and/or to efficiently terminate the recursion for all points in the branch in one call.
+### Returns
+If false, the recursion at **quadrant** terminates. If true, it continues if **pfirst** < **plast** or if they are both equal to `p4est`->mpirank and the recursion has not reached a leaf yet.
+"""
+const p4est_search_all_t = Ptr{Cvoid}
+
+"""
+    p4est_search_all(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Perform a top-down search on the whole forest.
+
+This function combines the functionality of p4est_search_local and p4est_search_partition; their documentation applies for the most part.
+
+The recursion proceeds from the root quadrant of each tree until (a) we encounter a remote quadrant that covers only one processor, or (b) we encounter a local leaf quadrant. In other words, we proceed with the recursion into a quadrant's children if (a) the quadrant is split between two or more processors, no matter whether one of them is the calling processor or not, or (b) if the quadrant is on the local processor but we have not reached a leaf yet.
+
+The search can track one or more points, which are abstract placeholders. They are matched against the quadrants traversed using a callback function. The result of the callback function can be used to stop a recursion early. The user determines how a point is interpreted, we only pass it around.
+
+Note that in the remote case (a), we may terminate the recursion even if the quadrant is not a leaf, which we have no means of knowing. Still, this case is sufficient to determine the processor ownership of a point.
+
+!!! note
+
+    This is a very powerful function that can become slow if not used carefully.
+
+!!! note
+
+    As with the two other search functions in this file, calling it once with many points is generally much faster than calling it once for each point. Using multiple points also allows for a per-quadrant termination of the recursion in addition to a more costly per-point termination.
+
+!!! note
+
+    This function works fine when used for the special cases that either the partition or the local quadrants are not of interest. However, in the case of querying only local information we expect that p4est_search_local will be faster since it employs specific local optimizations.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be searched.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] Executed once for each quadrant that is entered. If the callback returns false, this quadrant and its descendants are excluded from the search, and the points in this branch are not queried further. Its **point** argument is always NULL. Callback may be NULL in which case it is ignored.
+* `point_fn`:\\[in\\] Executed once for each point that is relevant for a quadrant of the search. If it returns true, the point is tracked further down that branch, else it is discarded from the queries for the children. If **points** is not NULL, this callback must be not NULL. If **points** is NULL, it is not called.
+* `points`:\\[in\\] User-defined array of points. We do not interpret a point, just pass it into the callbacks. If NULL, only the **quadrant_fn** callback is executed. If that is NULL, the whole function noops. If not NULL, the **point_fn** is called on its members during the search.
+### Prototype
+```c
+void p4est_search_all (p4est_t * p4est, int call_post, p4est_search_all_t quadrant_fn, p4est_search_all_t point_fn, sc_array_t * points);
+```
+"""
+function p4est_search_all(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p4est_search_all(p4est_::Ptr{p4est_t}, call_post::Cint, quadrant_fn::p4est_search_all_t, point_fn::p4est_search_all_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+struct p6est_quadrant_data
+    data::NTuple{8, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p6est_quadrant_data}, f::Symbol)
+    f === :user_data && return Ptr{Ptr{Cvoid}}(x + 0)
+    f === :user_long && return Ptr{Clong}(x + 0)
+    f === :user_int && return Ptr{Cint}(x + 0)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :piggy1 && return Ptr{__JL_Ctag_1177}(x + 0)
+    f === :piggy2 && return Ptr{__JL_Ctag_1178}(x + 0)
+    f === :piggy3 && return Ptr{__JL_Ctag_1179}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p6est_quadrant_data, f::Symbol)
+    r = Ref{p6est_quadrant_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p6est_quadrant_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p6est_quadrant_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p2est_quadrant
+
+A 1D quadrant datatype: this is used to encode a "layer" of a column in the 2D+1D AMR scheme.
+
+| Field | Note                                            |
+| :---- | :---------------------------------------------- |
+| z     | vertical coordinate                             |
+| level | level of refinement                             |
+| pad8  | padding                                         |
+| pad16 |                                                 |
+| p     | a union of additional data attached to a layer  |
+"""
+struct p2est_quadrant
+    data::NTuple{16, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p2est_quadrant}, f::Symbol)
+    f === :z && return Ptr{p4est_qcoord_t}(x + 0)
+    f === :level && return Ptr{Int8}(x + 4)
+    f === :pad8 && return Ptr{Int8}(x + 5)
+    f === :pad16 && return Ptr{Int16}(x + 6)
+    f === :p && return Ptr{p6est_quadrant_data}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p2est_quadrant, f::Symbol)
+    r = Ref{p2est_quadrant}(x)
+    ptr = Base.unsafe_convert(Ptr{p2est_quadrant}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p2est_quadrant}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""A 1D quadrant datatype: this is used to encode a "layer" of a column in the 2D+1D AMR scheme."""
+const p2est_quadrant_t = p2est_quadrant
+
+"""
+    p8est_connect_type_t
+
+Characterize a type of adjacency.
+
+Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner, or 3) entities are adjacent if they share a face, corner or edge. [`p8est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
+"""
+@cenum p8est_connect_type_t::UInt32 begin
+    P8EST_CONNECT_FACE = 31
+    P8EST_CONNECT_EDGE = 32
+    P8EST_CONNECT_CORNER = 33
+    P8EST_CONNECT_FULL = 33
+end
+
+"""
+    p8est_connectivity_encode_t
+
+Typedef for serialization method.
+
+| Enumerator                   | Note                              |
+| :--------------------------- | :-------------------------------- |
+| P8EST\\_CONN\\_ENCODE\\_LAST | Invalid entry to close the list.  |
+"""
+@cenum p8est_connectivity_encode_t::UInt32 begin
+    P8EST_CONN_ENCODE_NONE = 0
+    P8EST_CONN_ENCODE_LAST = 1
+end
+
+"""
+    p8est_connect_type_int(btype)
+
+Convert the [`p8est_connect_type_t`](@ref) into a number.
+
+### Parameters
+* `btype`:\\[in\\] The balance type to convert.
+### Returns
+Returns 1, 2 or 3.
+### Prototype
+```c
+int p8est_connect_type_int (p8est_connect_type_t btype);
+```
+"""
+function p8est_connect_type_int(btype)
+    @ccall libt8.p8est_connect_type_int(btype::p8est_connect_type_t)::Cint
+end
+
+"""
+    p8est_connect_type_string(btype)
+
+Convert the [`p8est_connect_type_t`](@ref) into a const string.
+
+### Parameters
+* `btype`:\\[in\\] The balance type to convert.
+### Returns
+Returns a pointer to a constant string.
+### Prototype
+```c
+const char *p8est_connect_type_string (p8est_connect_type_t btype);
+```
+"""
+function p8est_connect_type_string(btype)
+    @ccall libt8.p8est_connect_type_string(btype::p8est_connect_type_t)::Cstring
+end
+
+"""
+    p8est_connectivity
+
+This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
+
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
+
+The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
+
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+
+The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
+
+The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
+
+The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+
+The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
+
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+
+| Field                | Note                                                                                 |
+| :------------------- | :----------------------------------------------------------------------------------- |
+| num\\_vertices       | the number of vertices that define the *embedding* of the forest (not the topology)  |
+| num\\_trees          | the number of trees                                                                  |
+| num\\_edges          | the number of edges that help define the topology                                    |
+| num\\_corners        | the number of corners that help define the topology                                  |
+| vertices             | an array of size (3 * *num_vertices*)                                                |
+| tree\\_to\\_vertex   | embed each tree into  ```c++ R^3 ```  for e.g. visualization (see p8est\\_vtk.h)     |
+| tree\\_attr\\_bytes  | bytes per tree in tree\\_to\\_attr                                                   |
+| tree\\_to\\_attr     | not touched by `p4est`                                                       |
+| tree\\_to\\_tree     | (6 * *num_trees*) neighbors across faces                                             |
+| tree\\_to\\_face     | (6 * *num_trees*) face to face+orientation (see description)                         |
+| tree\\_to\\_edge     | (12 * *num_trees*) or NULL (see description)                                         |
+| ett\\_offset         | edge to offset in *edge_to_tree* and *edge_to_edge*                                  |
+| edge\\_to\\_tree     | list of trees that meet at an edge                                                   |
+| edge\\_to\\_edge     | list of tree-edges+orientations that meet at an edge (see description)               |
+| tree\\_to\\_corner   | (8 * *num_trees*) or NULL (see description)                                          |
+| ctt\\_offset         | corner to offset in *corner_to_tree* and *corner_to_corner*                          |
+| corner\\_to\\_tree   | list of trees that meet at a corner                                                  |
+| corner\\_to\\_corner | list of tree-corners that meet at a corner                                           |
+"""
+struct p8est_connectivity
+    num_vertices::p4est_topidx_t
+    num_trees::p4est_topidx_t
+    num_edges::p4est_topidx_t
+    num_corners::p4est_topidx_t
+    vertices::Ptr{Cdouble}
+    tree_to_vertex::Ptr{p4est_topidx_t}
+    tree_attr_bytes::Csize_t
+    tree_to_attr::Cstring
+    tree_to_tree::Ptr{p4est_topidx_t}
+    tree_to_face::Ptr{Int8}
+    tree_to_edge::Ptr{p4est_topidx_t}
+    ett_offset::Ptr{p4est_topidx_t}
+    edge_to_tree::Ptr{p4est_topidx_t}
+    edge_to_edge::Ptr{Int8}
+    tree_to_corner::Ptr{p4est_topidx_t}
+    ctt_offset::Ptr{p4est_topidx_t}
+    corner_to_tree::Ptr{p4est_topidx_t}
+    corner_to_corner::Ptr{Int8}
+end
+
+"""
+This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
+
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
+
+The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
+
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+
+The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
+
+The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
+
+The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+
+The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
+
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+"""
+const p8est_connectivity_t = p8est_connectivity
+
+"""
+    p8est_connectivity_memory_used(conn)
+
+Calculate memory usage of a connectivity structure.
+
+### Parameters
+* `conn`:\\[in\\] Connectivity structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p8est_connectivity_memory_used (p8est_connectivity_t * conn);
+```
+"""
+function p8est_connectivity_memory_used(conn)
+    @ccall libt8.p8est_connectivity_memory_used(conn::Ptr{p8est_connectivity_t})::Csize_t
+end
+
+struct p8est_edge_transform_t
+    ntree::p4est_topidx_t
+    nedge::Int8
+    naxis::NTuple{3, Int8}
+    nflip::Int8
+    corners::Int8
+end
+
+struct p8est_edge_info_t
+    iedge::Int8
+    edge_transforms::sc_array_t
+end
+
+struct p8est_corner_transform_t
+    ntree::p4est_topidx_t
+    ncorner::Int8
+end
+
+struct p8est_corner_info_t
+    icorner::p4est_topidx_t
+    corner_transforms::sc_array_t
+end
+
+"""
+    p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
+
+Transform a corner across one of the adjacent faces into a neighbor tree. It expects a face permutation index that has been precomputed.
+
+### Parameters
+* `c`:\\[in\\] A corner number in 0..7.
+* `f`:\\[in\\] A face number that touches the corner *c*.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `set`:\\[in\\] A value from *p8est_face_permutation_sets* that is obtained using *f*, *nf*, and a valid orientation: ref = p8est\\_face\\_permutation\\_refs[f][nf]; set = p8est\\_face\\_permutation\\_sets[ref][orientation];
+### Returns
+The corner number in 0..7 seen from the other face.
+### Prototype
+```c
+int p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set);
+```
+"""
+function p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
+    @ccall libt8.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint, set::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
+
+Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `fc`:\\[in\\] A face corner number in 0..3.
+* `f`:\\[in\\] A face that the face corner *fc* is relative to.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The face corner number relative to the neighbor's face.
+### Prototype
+```c
+int p8est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
+```
+"""
+function p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
+    @ccall libt8.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_face_neighbor_corner(c, f, nf, o)
+
+Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `c`:\\[in\\] A corner number in 0..7.
+* `f`:\\[in\\] A face number that touches the corner *c*.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The number of the corner seen from the neighbor tree.
+### Prototype
+```c
+int p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
+```
+"""
+function p8est_connectivity_face_neighbor_corner(c, f, nf, o)
+    @ccall libt8.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
+
+Transform a face-edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `fe`:\\[in\\] A face edge number in 0..3.
+* `f`:\\[in\\] A face number that touches the edge *e*.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The face edge number seen from the neighbor tree.
+### Prototype
+```c
+int p8est_connectivity_face_neighbor_face_edge (int fe, int f, int nf, int o);
+```
+"""
+function p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
+    @ccall libt8.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_face_neighbor_edge(e, f, nf, o)
+
+Transform an edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
+
+### Parameters
+* `e`:\\[in\\] A edge number in 0..11.
+* `f`:\\[in\\] A face 0..5 that touches the edge *e*.
+* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+### Returns
+The edge's number seen from the neighbor.
+### Prototype
+```c
+int p8est_connectivity_face_neighbor_edge (int e, int f, int nf, int o);
+```
+"""
+function p8est_connectivity_face_neighbor_edge(e, f, nf, o)
+    @ccall libt8.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_edge_neighbor_edge_corner(ec, o)
+
+Transform an edge corner across one of the adjacent edges into a neighbor tree.
+
+### Parameters
+* `ec`:\\[in\\] An edge corner number in 0..1.
+* `o`:\\[in\\] The orientation of a tree boundary edge connection.
+### Returns
+The edge corner number seen from the other tree.
+### Prototype
+```c
+int p8est_connectivity_edge_neighbor_edge_corner (int ec, int o);
+```
+"""
+function p8est_connectivity_edge_neighbor_edge_corner(ec, o)
+    @ccall libt8.p8est_connectivity_edge_neighbor_edge_corner(ec::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
+
+Transform a corner across one of the adjacent edges into a neighbor tree. This version expects the neighbor edge and orientation separately.
+
+### Parameters
+* `c`:\\[in\\] A corner number in 0..7.
+* `e`:\\[in\\] An edge 0..11 that touches the corner *c*.
+* `ne`:\\[in\\] A neighbor edge that is on the other side of *.*
+* `o`:\\[in\\] The orientation between tree boundary edges *e* and *.*
+### Returns
+Corner number seen from the neighbor.
+### Prototype
+```c
+int p8est_connectivity_edge_neighbor_corner (int c, int e, int ne, int o);
+```
+"""
+function p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
+    @ccall libt8.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint, o::Cint)::Cint
+end
+
+"""
+    p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
+
+Allocate a connectivity structure. The attribute fields are initialized to NULL.
+
+### Parameters
+* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
+* `num_trees`:\\[in\\] Number of trees in the forest.
+* `num_edges`:\\[in\\] Number of tree-connecting edges.
+* `num_ett`:\\[in\\] Number of total trees in edge\\_to\\_tree array.
+* `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
+### Returns
+A connectivity structure with allocated arrays.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_ett, p4est_topidx_t num_corners, p4est_topidx_t num_ctt);
+```
+"""
+function p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
+    @ccall libt8.p8est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_ett::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
+
+Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
+
+### Parameters
+* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
+* `num_trees`:\\[in\\] Number of trees in the forest.
+* `num_edges`:\\[in\\] Number of tree-connecting edges.
+* `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `eoff`:\\[in\\] Edge-to-tree offsets (num\\_edges + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
+* `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
+### Returns
+The connectivity is checked for validity.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * tte, const p4est_topidx_t * eoff, const p4est_topidx_t * ett, const int8_t * ete, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
+```
+"""
+function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
+    @ccall libt8.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, tte::Ptr{p4est_topidx_t}, eoff::Ptr{p4est_topidx_t}, ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_bcast(conn_in, root, comm)
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+```
+"""
+function p8est_connectivity_bcast(conn_in, root, comm)
+    @ccall libt8.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_destroy(connectivity)
+
+Destroy a connectivity structure. Also destroy all attributes.
+
+### Prototype
+```c
+void p8est_connectivity_destroy (p8est_connectivity_t * connectivity);
+```
+"""
+function p8est_connectivity_destroy(connectivity)
+    @ccall libt8.p8est_connectivity_destroy(connectivity::Ptr{p8est_connectivity_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_set_attr(conn, bytes_per_tree)
+
+Allocate or free the attribute fields in a connectivity.
+
+### Parameters
+* `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
+* `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
+### Prototype
+```c
+void p8est_connectivity_set_attr (p8est_connectivity_t * conn, size_t bytes_per_tree);
+```
+"""
+function p8est_connectivity_set_attr(conn, bytes_per_tree)
+    @ccall libt8.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+end
+
+"""
+    p8est_connectivity_is_valid(connectivity)
+
+Examine a connectivity structure.
+
+### Returns
+Returns true if structure is valid, false otherwise.
+### Prototype
+```c
+int p8est_connectivity_is_valid (p8est_connectivity_t * connectivity);
+```
+"""
+function p8est_connectivity_is_valid(connectivity)
+    @ccall libt8.p8est_connectivity_is_valid(connectivity::Ptr{p8est_connectivity_t})::Cint
+end
+
+"""
+    p8est_connectivity_is_equal(conn1, conn2)
+
+Check two connectivity structures for equality.
+
+### Returns
+Returns true if structures are equal, false otherwise.
+### Prototype
+```c
+int p8est_connectivity_is_equal (p8est_connectivity_t * conn1, p8est_connectivity_t * conn2);
+```
+"""
+function p8est_connectivity_is_equal(conn1, conn2)
+    @ccall libt8.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+end
+
+"""
+    p8est_connectivity_sink(conn, sink)
+
+Write connectivity to a sink object.
+
+### Parameters
+* `conn`:\\[in\\] The connectivity to be written.
+* `sink`:\\[in,out\\] The connectivity is written into this sink.
+### Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int p8est_connectivity_sink (p8est_connectivity_t * conn, sc_io_sink_t * sink);
+```
+"""
+function p8est_connectivity_sink(conn, sink)
+    @ccall libt8.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+end
+
+"""
+    p8est_connectivity_deflate(conn, code)
+
+Allocate memory and store the connectivity information there.
+
+### Parameters
+* `conn`:\\[in\\] The connectivity structure to be exported to memory.
+* `code`:\\[in\\] Encoding and compression method for serialization.
+### Returns
+Newly created array that contains the information.
+### Prototype
+```c
+sc_array_t *p8est_connectivity_deflate (p8est_connectivity_t * conn, p8est_connectivity_encode_t code);
+```
+"""
+function p8est_connectivity_deflate(conn, code)
+    @ccall libt8.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t}, code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
+end
+
+"""
+    p8est_connectivity_save(filename, connectivity)
+
+Save a connectivity structure to disk.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `connectivity`:\\[in\\] Valid connectivity structure.
+### Returns
+Returns 0 on success, nonzero on file error.
+### Prototype
+```c
+int p8est_connectivity_save (const char *filename, p8est_connectivity_t * connectivity);
+```
+"""
+function p8est_connectivity_save(filename, connectivity)
+    @ccall libt8.p8est_connectivity_save(filename::Cstring, connectivity::Ptr{p8est_connectivity_t})::Cint
+end
+
+"""
+    p8est_connectivity_source(source)
+
+Read connectivity from a source object.
+
+### Parameters
+* `source`:\\[in,out\\] The connectivity is read from this source.
+### Returns
+The newly created connectivity, or NULL on error.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_source (sc_io_source_t * source);
+```
+"""
+function p8est_connectivity_source(source)
+    @ccall libt8.p8est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_inflate(buffer)
+
+Create new connectivity from a memory buffer.
+
+### Parameters
+* `buffer`:\\[in\\] The connectivity is created from this memory buffer.
+### Returns
+The newly created connectivity, or NULL on error.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
+```
+"""
+function p8est_connectivity_inflate(buffer)
+    @ccall libt8.p8est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_load(filename, bytes)
+
+Load a connectivity structure from disk.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to read.
+* `bytes`:\\[out\\] Size in bytes of connectivity on disk or NULL.
+### Returns
+Returns valid connectivity, or NULL on file error.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_load (const char *filename, size_t * bytes);
+```
+"""
+function p8est_connectivity_load(filename, bytes)
+    @ccall libt8.p8est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_unitcube()
+
+Create a connectivity structure for the unit cube.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
+```
+"""
+function p8est_connectivity_new_unitcube()
+    @ccall libt8.p8est_connectivity_new_unitcube()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_periodic()
+
+Create a connectivity structure for an all-periodic unit cube.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_periodic (void);
+```
+"""
+function p8est_connectivity_new_periodic()
+    @ccall libt8.p8est_connectivity_new_periodic()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_rotwrap()
+
+Create a connectivity structure for a mostly periodic unit cube. The left and right faces are identified, and bottom and top rotated. Front and back are not identified.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
+```
+"""
+function p8est_connectivity_new_rotwrap()
+    @ccall libt8.p8est_connectivity_new_rotwrap()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_twocubes()
+
+Create a connectivity structure that contains two cubes.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
+```
+"""
+function p8est_connectivity_new_twocubes()
+    @ccall libt8.p8est_connectivity_new_twocubes()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_twotrees(l_face, r_face, orientation)
+
+Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way.
+
+### Parameters
+* `l_face`:\\[in\\] index of left face
+* `r_face`:\\[in\\] index of right face
+* `orientation`:\\[in\\] orientation of trees w.r.t. each other
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face, int r_face, int orientation);
+```
+"""
+function p8est_connectivity_new_twotrees(l_face, r_face, orientation)
+    @ccall libt8.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_twowrap()
+
+Create a connectivity structure that contains two cubes where the two far ends are identified periodically.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
+```
+"""
+function p8est_connectivity_new_twowrap()
+    @ccall libt8.p8est_connectivity_new_twowrap()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_rotcubes()
+
+Create a connectivity structure that contains a few cubes. These are rotated against each other to stress the topology routines.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
+```
+"""
+function p8est_connectivity_new_rotcubes()
+    @ccall libt8.p8est_connectivity_new_rotcubes()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
+
+An m by n by p array with periodicity in x, y, and z if periodic\\_a, periodic\\_b, and periodic\\_c are true, respectively.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p, int periodic_a, int periodic_b, int periodic_c);
+```
+"""
+function p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
+    @ccall libt8.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint, periodic_a::Cint, periodic_b::Cint, periodic_c::Cint)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_shell()
+
+Create a connectivity structure that builds a spherical shell. It is made up of six connected parts [-1,1]x[-1,1]x[1,2]. This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_shell (void);
+```
+"""
+function p8est_connectivity_new_shell()
+    @ccall libt8.p8est_connectivity_new_shell()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_sphere()
+
+Create a connectivity structure that builds a solid sphere. It is made up of two layers and a cube in the center. This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_sphere (void);
+```
+"""
+function p8est_connectivity_new_sphere()
+    @ccall libt8.p8est_connectivity_new_sphere()::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_new_byname(name)
+
+Create connectivity structure from predefined catalogue.
+
+### Parameters
+* `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick235 brick (2, 3, 5, 0, 0, 0) periodic periodic rotcubes rotcubes rotwrap rotwrap shell shell sphere sphere twocubes twocubes twowrap twowrap unit unitcube
+### Returns
+An initialized connectivity if name is defined, NULL else.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
+```
+"""
+function p8est_connectivity_new_byname(name)
+    @ccall libt8.p8est_connectivity_new_byname(name::Cstring)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_connectivity_refine(conn, num_per_edge)
+
+Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
+
+### Parameters
+* `conn`:\\[in\\] a valid connectivity
+* `num_per_edge`:\\[in\\] the number of new trees in each direction
+### Returns
+a refined connectivity.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, int num_per_edge);
+```
+"""
+function p8est_connectivity_refine(conn, num_per_edge)
+    @ccall libt8.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_edge::Cint)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p8est_expand_face_transform(iface, nface, ftransform)
+
+Fill an array with the axis combination of a face neighbor transform.
+
+### Parameters
+* `iface`:\\[in\\] The number of the originating face.
+* `nface`:\\[in\\] Encoded as nface = r * 6 + nf, where nf = 0..5 is the neigbbor's connecting face number and r = 0..3 is the relative orientation to the neighbor's face. This encoding matches [`p8est_connectivity_t`](@ref).
+* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face, the first two referring to the tangentials and the third to the normal. A permutation of (0, 1, 2). [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reversal flags for tangential axes (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q
+### Prototype
+```c
+void p8est_expand_face_transform (int iface, int nface, int ftransform[]);
+```
+"""
+function p8est_expand_face_transform(iface, nface, ftransform)
+    @ccall libt8.p8est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+end
+
+"""
+    p8est_find_face_transform(connectivity, itree, iface, ftransform)
+
+Fill an array with the axis combination of a face neighbor transform.
+
+### Parameters
+* `itree`:\\[in\\] The number of the originating tree.
+* `iface`:\\[in\\] The number of the originating tree's face.
+* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face. [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reverse flag for axes t1, t2; face code for n.
+### Returns
+The face neighbor tree if it exists, -1 otherwise.
+### Prototype
+```c
+p4est_topidx_t p8est_find_face_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
+```
+"""
+function p8est_find_face_transform(connectivity, itree, iface, ftransform)
+    @ccall libt8.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+end
+
+"""
+    p8est_find_edge_transform(connectivity, itree, iedge, ei)
+
+Fills an array with information about edge neighbors.
+
+### Parameters
+* `itree`:\\[in\\] The number of the originating tree.
+* `iedge`:\\[in\\] The number of the originating edge.
+* `ei`:\\[in,out\\] A `p8est_edge_info_t` structure with initialized array.
+### Prototype
+```c
+void p8est_find_edge_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int iedge, p8est_edge_info_t * ei);
+```
+"""
+function p8est_find_edge_transform(connectivity, itree, iedge, ei)
+    @ccall libt8.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iedge::Cint, ei::Ptr{p8est_edge_info_t})::Cvoid
+end
+
+"""
+    p8est_find_corner_transform(connectivity, itree, icorner, ci)
+
+Fills an array with information about corner neighbors.
+
+### Parameters
+* `itree`:\\[in\\] The number of the originating tree.
+* `icorner`:\\[in\\] The number of the originating corner.
+* `ci`:\\[in,out\\] A `p8est_corner_info_t` structure with initialized array.
+### Prototype
+```c
+void p8est_find_corner_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int icorner, p8est_corner_info_t * ci);
+```
+"""
+function p8est_find_corner_transform(connectivity, itree, icorner, ci)
+    @ccall libt8.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p8est_corner_info_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_complete(conn)
+
+Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p8est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The edge and corner fields will be freed and allocated anew.
+### Prototype
+```c
+void p8est_connectivity_complete (p8est_connectivity_t * conn);
+```
+"""
+function p8est_connectivity_complete(conn)
+    @ccall libt8.p8est_connectivity_complete(conn::Ptr{p8est_connectivity_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_reduce(conn)
+
+Removes corner and edge information of a connectivity such that enough information is left to run [`p8est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p8est_connectivity_is_valid`](@ref).
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity to be reduced.
+### Prototype
+```c
+void p8est_connectivity_reduce (p8est_connectivity_t * conn);
+```
+"""
+function p8est_connectivity_reduce(conn)
+    @ccall libt8.p8est_connectivity_reduce(conn::Ptr{p8est_connectivity_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_permute(conn, perm, is_current_to_new)
+
+[`p8est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
+
+### Parameters
+* `conn`:\\[in,out\\] The connectivity whose trees are permuted.
+* `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
+* `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
+### Prototype
+```c
+void p8est_connectivity_permute (p8est_connectivity_t * conn, sc_array_t * perm, int is_current_to_new);
+```
+"""
+function p8est_connectivity_permute(conn, perm, is_current_to_new)
+    @ccall libt8.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+end
+
+"""
+    p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
+
+[`p8est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
+
+### Parameters
+* `conn`:\\[in,out\\] connectivity that will be altered.
+* `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
+* `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
+* `face_left`:\\[in\\] face of *tree_left* that will be joined.
+* `face_right`:\\[in\\] face of *tree_right* that will be joined.
+* `orientation`:\\[in\\] the orientation of *face_left* and *face_right* once joined (see the description of [`p8est_connectivity_t`](@ref) to understand orientation).
+### Prototype
+```c
+void p8est_connectivity_join_faces (p8est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
+```
+"""
+function p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
+    @ccall libt8.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+end
+
+"""
+    p8est_connectivity_is_equivalent(conn1, conn2)
+
+[`p8est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
+
+### Parameters
+* `conn1`:\\[in\\] a valid connectivity
+* `conn2`:\\[out\\] a valid connectivity
+### Prototype
+```c
+int p8est_connectivity_is_equivalent (p8est_connectivity_t * conn1, p8est_connectivity_t * conn2);
+```
+"""
+function p8est_connectivity_is_equivalent(conn1, conn2)
+    @ccall libt8.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+end
+
+"""
+    p8est_edge_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_edge_transform_t * p8est_edge_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_edge_array_index(array, it)
+    @ccall libt8.p8est_edge_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_edge_transform_t}
+end
+
+"""
+    p8est_corner_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_corner_transform_t * p8est_corner_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_corner_array_index(array, it)
+    @ccall libt8.p8est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_corner_transform_t}
+end
+
+"""
+    p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
+
+Read an ABAQUS input file from a file stream.
+
+This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
+
+A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
+
+4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
+
+and in 3D they are given as:
+
+8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
+
+```c++
+ *Heading
+  box.inp
+ *Node
+     1,    5,   -5,    5
+     2,    5,    5,    5
+     3,    5,    0,    5
+     4,   -5,    5,    5
+     5,    0,    5,    5
+     6,   -5,   -5,    5
+     7,   -5,    0,    5
+     8,    0,   -5,    5
+     9,    0,    0,    5
+    10,    5,    5,   -5
+    11,    5,   -5,   -5
+    12,    5,    0,   -5
+    13,   -5,   -5,   -5
+    14,    0,   -5,   -5
+    15,   -5,    5,   -5
+    16,   -5,    0,   -5
+    17,    0,    5,   -5
+    18,    0,    0,   -5
+    19,   -5,   -5,    0
+    20,    5,   -5,    0
+    21,    0,   -5,    0
+    22,   -5,    5,    0
+    23,   -5,    0,    0
+    24,    5,    5,    0
+    25,    0,    5,    0
+    26,    5,    0,    0
+    27,    0,    0,    0
+ *Element, type=C3D8, ELSET=EB1
+     1,       6,      19,      23,       7,       8,      21,      27,       9
+     2,      19,      13,      16,      23,      21,      14,      18,      27
+     3,       7,      23,      22,       4,       9,      27,      25,       5
+     4,      23,      16,      15,      22,      27,      18,      17,      25
+     5,       8,      21,      27,       9,       1,      20,      26,       3
+     6,      21,      14,      18,      27,      20,      11,      12,      26
+     7,       9,      27,      25,       5,       3,      26,      24,       2
+     8,      27,      18,      17,      25,      26,      12,      10,      24
+```
+
+This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
+
+### Parameters
+* `stream`:\\[in,out\\] file stream to read the connectivity from
+* `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
+* `num_trees`:\\[in,out\\] the number of trees in the connectivity
+* `vertices`:\\[out\\] the list of `vertices` of the connectivity
+* `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
+### Returns
+0 if successful and nonzero if not
+### Prototype
+```c
+int p8est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
+```
+"""
+function p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
+    @ccall libt8.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+end
+
+"""
+    p8est_connectivity_read_inp(filename)
+
+Create a `p4est` connectivity from an ABAQUS input file.
+
+This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
+
+A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
+
+4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
+
+and in 3D they are given as:
+
+8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
+
+```c++
+ *Heading
+  box.inp
+ *Node
+     1,    5,   -5,    5
+     2,    5,    5,    5
+     3,    5,    0,    5
+     4,   -5,    5,    5
+     5,    0,    5,    5
+     6,   -5,   -5,    5
+     7,   -5,    0,    5
+     8,    0,   -5,    5
+     9,    0,    0,    5
+    10,    5,    5,   -5
+    11,    5,   -5,   -5
+    12,    5,    0,   -5
+    13,   -5,   -5,   -5
+    14,    0,   -5,   -5
+    15,   -5,    5,   -5
+    16,   -5,    0,   -5
+    17,    0,    5,   -5
+    18,    0,    0,   -5
+    19,   -5,   -5,    0
+    20,    5,   -5,    0
+    21,    0,   -5,    0
+    22,   -5,    5,    0
+    23,   -5,    0,    0
+    24,    5,    5,    0
+    25,    0,    5,    0
+    26,    5,    0,    0
+    27,    0,    0,    0
+ *Element, type=C3D8, ELSET=EB1
+     1,       6,      19,      23,       7,       8,      21,      27,       9
+     2,      19,      13,      16,      23,      21,      14,      18,      27
+     3,       7,      23,      22,       4,       9,      27,      25,       5
+     4,      23,      16,      15,      22,      27,      18,      17,      25
+     5,       8,      21,      27,       9,       1,      20,      26,       3
+     6,      21,      14,      18,      27,      20,      11,      12,      26
+     7,       9,      27,      25,       5,       3,      26,      24,       2
+     8,      27,      18,      17,      25,      26,      12,      10,      24
+```
+
+This function reads a mesh from *filename* and returns an associated `p4est` connectivity.
+
+### Parameters
+* `filename`:\\[in\\] file to read the connectivity from
+### Returns
+an allocated connectivity associated with the mesh in *filename*
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_read_inp (const char *filename);
+```
+"""
+function p8est_connectivity_read_inp(filename)
+    @ccall libt8.p8est_connectivity_read_inp(filename::Cstring)::Ptr{p8est_connectivity_t}
+end
+
+"""
+    p6est_connectivity
+
+This structure holds the 2D+1D inter-tree connectivity information. It is essentially a wrapper of the 2D p4est\\_connecitivity\\_t datatype, with some additional information about how the third dimension is embedded.
+
+| Field          | Note                                                                                                                                           |
+| :------------- | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| conn4          | the 2D connecitvity; owned; vertices interpreted as the vertices of the bottom of the sheet                                                    |
+| top\\_vertices | if NULL, uniform vertical profile, otherwise the vertices of the top of the sheet: should be the same size as *conn4*->tree_to_vertex; owned.  |
+| height         | if *top_vertices* == NULL, this gives the offset from the bottom of the sheet to the top                                                       |
+"""
+struct p6est_connectivity
+    conn4::Ptr{p4est_connectivity_t}
+    top_vertices::Ptr{Cdouble}
+    height::NTuple{3, Cdouble}
+end
+
+"""This structure holds the 2D+1D inter-tree connectivity information. It is essentially a wrapper of the 2D p4est\\_connecitivity\\_t datatype, with some additional information about how the third dimension is embedded."""
+const p6est_connectivity_t = p6est_connectivity
+
+"""
+    p6est_connectivity_new(conn4, top_vertices, height)
+
+Create a [`p6est_connectivity_t`](@ref) from a [`p4est_connectivity_t`](@ref). All fields are copied, so all inputs can be safey destroyed.
+
+### Parameters
+* `conn4`:\\[in\\] the 2D connectivity
+* `top_vertices`:\\[in\\] if NULL, then the sheet has a uniform vertical profile; otherwise, *top_vertices* gives teh vertices of the top of the sheet; should be the same size as *conn4*->tree_to_vertex
+* `height`:\\[in\\] if *top_vertices* == NULL, then this gives the offset fro the bottom of the sheet to the top.
+### Returns
+the 2D+1D connectivity information.
+### Prototype
+```c
+p6est_connectivity_t *p6est_connectivity_new (p4est_connectivity_t * conn4, double *top_vertices, double height[3]);
+```
+"""
+function p6est_connectivity_new(conn4, top_vertices, height)
+    @ccall libt8.p6est_connectivity_new(conn4::Ptr{p4est_connectivity_t}, top_vertices::Ptr{Cdouble}, height::Ptr{Cdouble})::Ptr{p6est_connectivity_t}
+end
+
+"""
+    p6est_connectivity_destroy(conn)
+
+Destroy a [`p6est_connectivity`](@ref) structure
+
+### Prototype
+```c
+void p6est_connectivity_destroy (p6est_connectivity_t * conn);
+```
+"""
+function p6est_connectivity_destroy(conn)
+    @ccall libt8.p6est_connectivity_destroy(conn::Ptr{p6est_connectivity_t})::Cvoid
+end
+
+"""
+    p6est_tree_get_vertices(conn, which_tree, vertices)
+
+Get the vertices of the corners of a tree.
+
+### Parameters
+* `conn`:\\[in\\] the 2D+1D connectivity structure
+* `which_tree`:\\[in\\] a tree in the forest
+* `vertices`:\\[out\\] the coordinates of the corners of the tree
+### Prototype
+```c
+void p6est_tree_get_vertices (p6est_connectivity_t * conn, p4est_topidx_t which_tree, double vertices[24]);
+```
+"""
+function p6est_tree_get_vertices(conn, which_tree, vertices)
+    @ccall libt8.p6est_tree_get_vertices(conn::Ptr{p6est_connectivity_t}, which_tree::p4est_topidx_t, vertices::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    p6est_qcoord_to_vertex(connectivity, treeid, x, y, z, vxyz)
+
+Transform a quadrant coordinate into the space spanned by tree vertices.
+
+### Parameters
+* `connectivity`:\\[in\\] Connectivity must provide the vertices.
+* `treeid`:\\[in\\] Identify the tree that contains x, y.
+* `x,`:\\[in\\] y Quadrant coordinates relative to treeid.
+* `vxy`:\\[out\\] Transformed coordinates in vertex space.
+### Prototype
+```c
+void p6est_qcoord_to_vertex (p6est_connectivity_t * connectivity, p4est_topidx_t treeid, p4est_qcoord_t x, p4est_qcoord_t y, p4est_qcoord_t z, double vxyz[3]);
+```
+"""
+function p6est_qcoord_to_vertex(connectivity, treeid, x, y, z, vxyz)
+    @ccall libt8.p6est_qcoord_to_vertex(connectivity::Ptr{p6est_connectivity_t}, treeid::p4est_topidx_t, x::p4est_qcoord_t, y::p4est_qcoord_t, z::p4est_qcoord_t, vxyz::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    p6est
+
+| Field                  | Note                                                                                                       |
+| :--------------------- | :--------------------------------------------------------------------------------------------------------- |
+| mpisize                | number of MPI processes                                                                                    |
+| mpirank                | this process's MPI rank                                                                                    |
+| mpicomm\\_owned        | whether this communicator is owned by the forest                                                           |
+| data\\_size            | size of per-quadrant p.user\\_data (see [`p2est_quadrant_t`](@ref)::p2est\\_quadrant\\_data::user\\_data)  |
+| user\\_pointer         | convenience pointer for users, never touched by `p4est`                                            |
+| connectivity           | topology of sheet, not owned.                                                                              |
+| columns                | 2D description of column layout built from *connectivity*                                                  |
+| layers                 | single array that stores [`p2est_quadrant_t`](@ref) layers within columns                                  |
+| user\\_data\\_pool     | memory allocator for user data                                                                             |
+| layer\\_pool           | memory allocator for temporary layers                                                                      |
+| global\\_first\\_layer | first global quadrant index for each process and 1 beyond                                                  |
+| root\\_len             | height of the domain                                                                                       |
+"""
+struct p6est
+    mpicomm::MPI_Comm
+    mpisize::Cint
+    mpirank::Cint
+    mpicomm_owned::Cint
+    data_size::Csize_t
+    user_pointer::Ptr{Cvoid}
+    connectivity::Ptr{p6est_connectivity_t}
+    columns::Ptr{p4est_t}
+    layers::Ptr{sc_array_t}
+    user_data_pool::Ptr{sc_mempool_t}
+    layer_pool::Ptr{sc_mempool_t}
+    global_first_layer::Ptr{p4est_gloidx_t}
+    root_len::p4est_qcoord_t
+end
+
+"""The `p6est` forest datatype"""
+const p6est_t = p6est
+
+# typedef void ( * p6est_init_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * column , p2est_quadrant_t * layer )
+"""
+Callback function prototype to initialize the layers's user data.
+
+### Parameters
+* `p6est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree in the forest
+* `column`:\\[in\\] the column in the tree in the forest
+* `layer`:\\[in\\] the layer in the column in the tree in the forest, whose *user_data* is to be initialized
+"""
+const p6est_init_t = Ptr{Cvoid}
+
+# typedef void ( * p6est_replace_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , int num_outcolumns , int num_outlayers , p4est_quadrant_t * outcolumns [ ] , p2est_quadrant_t * outlayers [ ] , int num_incolumns , int num_inlayers , p4est_quadrant_t * incolumns [ ] , p2est_quadrant_t * inlayers [ ] )
+"""
+Callback function prototype to transfer information from outgoing layers to incoming layers.
+
+This is used by extended routines when the layers of an existing, valid `p6est` are changed. The callback allows the user to make changes to newly initialized layers before the layers that they replace are destroyed.
+
+### Parameters
+* `num_outcolumns`:\\[in\\] The number of columns that contain the outgoing layers: will be either 1 or 4.
+* `num_outlayers`:\\[in\\] The number of outgoing layers: will be either 1 (a single layer is being refined), 2 (two layers are being vertically coarsened), or 4 (four layers are being horizontally coarsened).
+* `outcolumns`:\\[in\\] The columns of the outgoing layers
+* `outlayers`:\\[in\\] The outgoing layers: after the callback, the user\\_data, if `p6est`->data_size is nonzero, will be destroyed.
+* `num_incolumns`:\\[in\\] The number of columns that contain the outgoing layers: will be either 1 or 4.
+* `num_inlayers`:\\[in\\] The number of incoming layers: will be either 1 (coarsening), 2 (vertical refinement), or 4 (horizontal refinement)
+* `incolumns`:\\[in\\] The columns of the incoming layers
+* `inlayers`:\\[in,out\\] The incoming layers: prior to the callback, the user\\_data, if `p6est`->data_size is nonzero, is allocated, and the [`p6est_init_t`](@ref) callback, if it has been provided, will be called.
+"""
+const p6est_replace_t = Ptr{Cvoid}
+
+# typedef int ( * p6est_refine_column_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * column )
+"""
+Callback function prototype to decide whether to horizontally refine a column, i.e., horizontally refine all of the layers in the column.
+
+### Returns
+nonzero if the layer shall be refined.
+"""
+const p6est_refine_column_t = Ptr{Cvoid}
+
+# typedef int ( * p6est_refine_layer_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * column , p2est_quadrant_t * layer )
+"""
+Callback function prototype to decide whether to vertically refine a layer.
+
+### Returns
+nonzero if the layer shall be refined.
+"""
+const p6est_refine_layer_t = Ptr{Cvoid}
+
+# typedef int ( * p6est_coarsen_column_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * columns [ ] )
+"""
+Callback function prototype to decide for horizontal coarsening.
+
+### Parameters
+* `columns`:\\[in\\] Pointers to 4 sibling columns.
+### Returns
+nonzero if the columns shall be replaced with their parent.
+"""
+const p6est_coarsen_column_t = Ptr{Cvoid}
+
+# typedef int ( * p6est_coarsen_layer_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * column , p2est_quadrant_t * layers [ ] )
+"""
+Callback function prototype to decide for vertical coarsening.
+
+### Parameters
+* `layers`:\\[in\\] Pointers to 2 vertical sibling layers.
+### Returns
+nonzero if the layers shall be replaced with their parent.
+"""
+const p6est_coarsen_layer_t = Ptr{Cvoid}
+
+# typedef int ( * p6est_weight_t ) ( p6est_t * p6est , p4est_topidx_t which_tree , p4est_quadrant_t * column , p2est_quadrant_t * layer )
+"""
+Callback function prototype to calculate weights for partitioning.
+
+!!! note
+
+    Global sum of weights must fit into a 64bit integer.
+
+### Returns
+a 32bit integer >= 0 as the quadrant weight.
+"""
+const p6est_weight_t = Ptr{Cvoid}
+
+"""
+    p6est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p6est_t *p6est_new (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity, size_t data_size, p6est_init_t init_fn, void *user_pointer);
+```
+"""
+function p6est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+    @ccall libt8.p6est_new(mpicomm::MPI_Comm, connectivity::Ptr{p6est_connectivity_t}, data_size::Csize_t, init_fn::p6est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p6est_t}
+end
+
+"""
+    p6est_new_from_p4est(p4est_, top_vertices, height, min_zlevel, data_size, init_fn, user_pointer)
+
+Create a new forest from an already created `p4est` that represents columns.
+
+### Parameters
+* `p4est`:\\[in\\] A valid `p4est`. A deep copy will be created, so this can be destroyed without affectin the new `p6est` object.
+* `top_vertices`:\\[in\\] the same as in p6est\\_conectivity\\_new()
+* `height`:\\[in\\] the same as in p6est\\_conectivity\\_new()
+* `min_zlevel`:\\[in\\] the same as in [`p6est_new`](@ref)()
+* `data_size`:\\[in\\] the same as in [`p6est_new`](@ref)()
+* `init_fn`:\\[in\\] the same as in [`p6est_new`](@ref)()
+* `user_pointer`:\\[in\\] the same as in [`p6est_new`](@ref)()
+### Returns
+This returns a valid forest. The user must destroy the connectivity for the new `p6est` independently.
+### Prototype
+```c
+p6est_t *p6est_new_from_p4est (p4est_t * p4est, double *top_vertices, double height[3], int min_zlevel, size_t data_size, p6est_init_t init_fn, void *user_pointer);
+```
+"""
+function p6est_new_from_p4est(p4est_, top_vertices, height, min_zlevel, data_size, init_fn, user_pointer)
+    @ccall libt8.p6est_new_from_p4est(p4est_::Ptr{p4est_t}, top_vertices::Ptr{Cdouble}, height::Ptr{Cdouble}, min_zlevel::Cint, data_size::Csize_t, init_fn::p6est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p6est_t}
+end
+
+"""
+    p6est_destroy(p6est_)
+
+Destroy a `p6est`.
+
+!!! note
+
+    The connectivity structure is not destroyed with the `p6est`.
+
+### Prototype
+```c
+void p6est_destroy (p6est_t * p6est);
+```
+"""
+function p6est_destroy(p6est_)
+    @ccall libt8.p6est_destroy(p6est_::Ptr{p6est_t})::Cvoid
+end
+
+"""
+    p6est_copy(input, copy_data)
+
+Make a deep copy of a `p6est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+### Returns
+Returns a valid `p6est` that does not depend on the input.
+### Prototype
+```c
+p6est_t *p6est_copy (p6est_t * input, int copy_data);
+```
+"""
+function p6est_copy(input, copy_data)
+    @ccall libt8.p6est_copy(input::Ptr{p6est_t}, copy_data::Cint)::Ptr{p6est_t}
+end
+
+"""
+    p6est_reset_data(p6est_, data_size, init_fn, user_pointer)
+
+Reset user pointer and element data. When the data size is changed the quadrant data is freed and allocated. The initialization callback is invoked on each quadrant. Old user\\_data content is disregarded.
+
+### Parameters
+* `data_size`:\\[in\\] This is the size of data for each quadrant which can be zero. Then user\\_data\\_pool is set to NULL.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `user_pointer`:\\[in\\] Assign to the user\\_pointer member of the `p6est` before init\\_fn is called the first time.
+### Prototype
+```c
+void p6est_reset_data (p6est_t * p6est, size_t data_size, p6est_init_t init_fn, void *user_pointer);
+```
+"""
+function p6est_reset_data(p6est_, data_size, init_fn, user_pointer)
+    @ccall libt8.p6est_reset_data(p6est_::Ptr{p6est_t}, data_size::Csize_t, init_fn::p6est_init_t, user_pointer::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p6est_refine_columns(p6est_, refine_recursive, refine_fn, init_fn)
+
+Refine the columns of a sheet.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `refine_fn`:\\[in\\] Callback function that must return true if a column shall be refined into smaller columns. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created column. Otherwise, it is called for every existing column. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn gets called, or use [`p6est_refine_columns_ext`](@ref) in p6est\\_extended.h and examine whether replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data of newly created layers within columns, which are already allocated. This function pointer may be NULL.
+### Prototype
+```c
+void p6est_refine_columns (p6est_t * p6est, int refine_recursive, p6est_refine_column_t refine_fn, p6est_init_t init_fn);
+```
+"""
+function p6est_refine_columns(p6est_, refine_recursive, refine_fn, init_fn)
+    @ccall libt8.p6est_refine_columns(p6est_::Ptr{p6est_t}, refine_recursive::Cint, refine_fn::p6est_refine_column_t, init_fn::p6est_init_t)::Cvoid
+end
+
+"""
+    p6est_refine_layers(p6est_, refine_recursive, refine_fn, init_fn)
+
+Refine the layers within the columns of a sheet.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `refine_fn`:\\[in\\] Callback function that must return true if a layer shall be refined into smaller layers. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created layer. Otherwise, it is called for every existing layer. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn gets called, or use [`p6est_refine_layers_ext`](@ref) in p6est\\_extended.h and examine whether replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data of newly created layers, which are already allocated. This function pointer may be NULL.
+### Prototype
+```c
+void p6est_refine_layers (p6est_t * p6est, int refine_recursive, p6est_refine_layer_t refine_fn, p6est_init_t init_fn);
+```
+"""
+function p6est_refine_layers(p6est_, refine_recursive, refine_fn, init_fn)
+    @ccall libt8.p6est_refine_layers(p6est_::Ptr{p6est_t}, refine_recursive::Cint, refine_fn::p6est_refine_layer_t, init_fn::p6est_init_t)::Cvoid
+end
+
+"""
+    p6est_coarsen_columns(p6est_, coarsen_recursive, coarsen_fn, init_fn)
+
+Coarsen the columns of a sheet.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of columns shall be coarsened
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p6est_coarsen_columns (p6est_t * p6est, int coarsen_recursive, p6est_coarsen_column_t coarsen_fn, p6est_init_t init_fn);
+```
+"""
+function p6est_coarsen_columns(p6est_, coarsen_recursive, coarsen_fn, init_fn)
+    @ccall libt8.p6est_coarsen_columns(p6est_::Ptr{p6est_t}, coarsen_recursive::Cint, coarsen_fn::p6est_coarsen_column_t, init_fn::p6est_init_t)::Cvoid
+end
+
+"""
+    p6est_coarsen_layers(p6est_, coarsen_recursive, coarsen_fn, init_fn)
+
+Coarsen the layers of a sheet.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of layers shall be coarsened
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p6est_coarsen_layers (p6est_t * p6est, int coarsen_recursive, p6est_coarsen_layer_t coarsen_fn, p6est_init_t init_fn);
+```
+"""
+function p6est_coarsen_layers(p6est_, coarsen_recursive, coarsen_fn, init_fn)
+    @ccall libt8.p6est_coarsen_layers(p6est_::Ptr{p6est_t}, coarsen_recursive::Cint, coarsen_fn::p6est_coarsen_layer_t, init_fn::p6est_init_t)::Cvoid
+end
+
+"""
+    p6est_balance(p6est_, btype, init_fn)
+
+Balance a forest.
+
+### Parameters
+* `p6est`:\\[in\\] The `p6est` to be worked on.
+* `btype`:\\[in\\] Balance type (face, corner or default, full).
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p6est_balance (p6est_t * p6est, p8est_connect_type_t btype, p6est_init_t init_fn);
+```
+"""
+function p6est_balance(p6est_, btype, init_fn)
+    @ccall libt8.p6est_balance(p6est_::Ptr{p6est_t}, btype::p8est_connect_type_t, init_fn::p6est_init_t)::Cvoid
+end
+
+@cenum p6est_comm_tag_t::UInt32 begin
+    P6EST_COMM_PARTITION = 1
+    P6EST_COMM_GHOST = 2
+    P6EST_COMM_BALANCE = 3
+end
+
+"""
+    p6est_partition(p6est_, weight_fn)
+
+Equally partition the forest.
+
+The forest will be partitioned between processors where they each have an approximately equal number of quadrants.
+
+Note that `p6est`->layers and `p6est`->global_first_layers may change during this call. Address pointers referencing these objects from before [`p6est_partition`](@ref) is called become invalid.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest that will be partitioned.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning.
+### Prototype
+```c
+p4est_gloidx_t p6est_partition (p6est_t * p6est, p6est_weight_t weight_fn);
+```
+"""
+function p6est_partition(p6est_, weight_fn)
+    @ccall libt8.p6est_partition(p6est_::Ptr{p6est_t}, weight_fn::p6est_weight_t)::p4est_gloidx_t
+end
+
+"""
+    p6est_partition_correct(p6est_, num_layers_in_proc)
+
+### Prototype
+```c
+void p6est_partition_correct (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc);
+```
+"""
+function p6est_partition_correct(p6est_, num_layers_in_proc)
+    @ccall libt8.p6est_partition_correct(p6est_::Ptr{p6est_t}, num_layers_in_proc::Ptr{p4est_locidx_t})::Cvoid
+end
+
+"""
+    p6est_partition_to_p4est_partition(p6est_, num_layers_in_proc, num_columns_in_proc)
+
+### Prototype
+```c
+void p6est_partition_to_p4est_partition (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc, p4est_locidx_t * num_columns_in_proc);
+```
+"""
+function p6est_partition_to_p4est_partition(p6est_, num_layers_in_proc, num_columns_in_proc)
+    @ccall libt8.p6est_partition_to_p4est_partition(p6est_::Ptr{p6est_t}, num_layers_in_proc::Ptr{p4est_locidx_t}, num_columns_in_proc::Ptr{p4est_locidx_t})::Cvoid
+end
+
+"""
+    p4est_partition_to_p6est_partition(p6est_, num_columns_in_proc, num_layers_in_proc)
+
+### Prototype
+```c
+void p4est_partition_to_p6est_partition (p6est_t * p6est, p4est_locidx_t * num_columns_in_proc, p4est_locidx_t * num_layers_in_proc);
+```
+"""
+function p4est_partition_to_p6est_partition(p6est_, num_columns_in_proc, num_layers_in_proc)
+    @ccall libt8.p4est_partition_to_p6est_partition(p6est_::Ptr{p6est_t}, num_columns_in_proc::Ptr{p4est_locidx_t}, num_layers_in_proc::Ptr{p4est_locidx_t})::Cvoid
+end
+
+"""
+    p6est_partition_for_coarsening(p6est_, num_layers_in_proc)
+
+### Prototype
+```c
+p4est_gloidx_t p6est_partition_for_coarsening (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc);
+```
+"""
+function p6est_partition_for_coarsening(p6est_, num_layers_in_proc)
+    @ccall libt8.p6est_partition_for_coarsening(p6est_::Ptr{p6est_t}, num_layers_in_proc::Ptr{p4est_locidx_t})::p4est_gloidx_t
+end
+
+"""
+    p6est_partition_given(p6est_, num_layers_in_proc)
+
+### Prototype
+```c
+p4est_gloidx_t p6est_partition_given (p6est_t * p6est, p4est_locidx_t * num_layers_in_proc);
+```
+"""
+function p6est_partition_given(p6est_, num_layers_in_proc)
+    @ccall libt8.p6est_partition_given(p6est_::Ptr{p6est_t}, num_layers_in_proc::Ptr{p4est_locidx_t})::p4est_gloidx_t
+end
+
+"""
+    p6est_checksum(p6est_)
+
+Compute the checksum for a forest. Based on quadrant arrays only. It is independent of partition and mpisize.
+
+### Returns
+Returns the checksum on processor 0 only. 0 on other processors.
+### Prototype
+```c
+unsigned p6est_checksum (p6est_t * p6est);
+```
+"""
+function p6est_checksum(p6est_)
+    @ccall libt8.p6est_checksum(p6est_::Ptr{p6est_t})::Cuint
+end
+
+"""
+    p6est_save(filename, p6est_, save_data)
+
+Save the complete connectivity/`p6est` data to disk. This is a collective
+
+operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations.
+
+!!! note
+
+    Aborts on file errors.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p6est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+### Prototype
+```c
+void p6est_save (const char *filename, p6est_t * p6est, int save_data);
+```
+"""
+function p6est_save(filename, p6est_, save_data)
+    @ccall libt8.p6est_save(filename::Cstring, p6est_::Ptr{p6est_t}, save_data::Cint)::Cvoid
+end
+
+"""
+    p6est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+
+### Prototype
+```c
+p6est_t *p6est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, void *user_pointer, p6est_connectivity_t ** connectivity);
+```
+"""
+function p6est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+    @ccall libt8.p6est_load(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p6est_connectivity_t}})::Ptr{p6est_t}
+end
+
+"""
+    p2est_quadrant_array_index(array, it)
+
+### Prototype
+```c
+static inline p2est_quadrant_t * p2est_quadrant_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p2est_quadrant_array_index(array, it)
+    @ccall libt8.p2est_quadrant_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p2est_quadrant_t}
+end
+
+"""
+    p2est_quadrant_array_push(array)
+
+### Prototype
+```c
+static inline p2est_quadrant_t * p2est_quadrant_array_push (sc_array_t * array);
+```
+"""
+function p2est_quadrant_array_push(array)
+    @ccall libt8.p2est_quadrant_array_push(array::Ptr{sc_array_t})::Ptr{p2est_quadrant_t}
+end
+
+"""
+    p2est_quadrant_mempool_alloc(mempool)
+
+### Prototype
+```c
+static inline p2est_quadrant_t * p2est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+```
+"""
+function p2est_quadrant_mempool_alloc(mempool)
+    @ccall libt8.p2est_quadrant_mempool_alloc(mempool::Ptr{sc_mempool_t})::Ptr{p2est_quadrant_t}
+end
+
+"""
+    p2est_quadrant_list_pop(list)
+
+### Prototype
+```c
+static inline p2est_quadrant_t * p2est_quadrant_list_pop (sc_list_t * list);
+```
+"""
+function p2est_quadrant_list_pop(list)
+    @ccall libt8.p2est_quadrant_list_pop(list::Ptr{sc_list_t})::Ptr{p2est_quadrant_t}
+end
+
+"""
+    p6est_layer_init_data(p6est_, which_tree, column, layer, init_fn)
+
+### Prototype
+```c
+static inline void p6est_layer_init_data (p6est_t * p6est, p4est_topidx_t which_tree, p4est_quadrant_t * column, p2est_quadrant_t * layer, p6est_init_t init_fn);
+```
+"""
+function p6est_layer_init_data(p6est_, which_tree, column, layer, init_fn)
+    @ccall libt8.p6est_layer_init_data(p6est_::Ptr{p6est_t}, which_tree::p4est_topidx_t, column::Ptr{p4est_quadrant_t}, layer::Ptr{p2est_quadrant_t}, init_fn::p6est_init_t)::Cvoid
+end
+
+"""
+    p6est_layer_free_data(p6est_, layer)
+
+### Prototype
+```c
+static inline void p6est_layer_free_data (p6est_t * p6est, p2est_quadrant_t * layer);
+```
+"""
+function p6est_layer_free_data(p6est_, layer)
+    @ccall libt8.p6est_layer_free_data(p6est_::Ptr{p6est_t}, layer::Ptr{p2est_quadrant_t})::Cvoid
+end
+
+"""
+    p6est_compress_columns(p6est_)
+
+### Prototype
+```c
+void p6est_compress_columns (p6est_t * p6est);
+```
+"""
+function p6est_compress_columns(p6est_)
+    @ccall libt8.p6est_compress_columns(p6est_::Ptr{p6est_t})::Cvoid
+end
+
+"""
+    p6est_update_offsets(p6est_)
+
+### Prototype
+```c
+void p6est_update_offsets (p6est_t * p6est);
+```
+"""
+function p6est_update_offsets(p6est_)
+    @ccall libt8.p6est_update_offsets(p6est_::Ptr{p6est_t})::Cvoid
+end
+
+"""
+    p6est_new_ext(mpicomm, connectivity, min_quadrants, min_level, min_zlevel, num_zroot, fill_uniform, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p6est_t *p6est_new_ext (sc_MPI_Comm mpicomm, p6est_connectivity_t * connectivity, p4est_locidx_t min_quadrants, int min_level, int min_zlevel, int num_zroot, int fill_uniform, size_t data_size, p6est_init_t init_fn, void *user_pointer);
+```
+"""
+function p6est_new_ext(mpicomm, connectivity, min_quadrants, min_level, min_zlevel, num_zroot, fill_uniform, data_size, init_fn, user_pointer)
+    @ccall libt8.p6est_new_ext(mpicomm::MPI_Comm, connectivity::Ptr{p6est_connectivity_t}, min_quadrants::p4est_locidx_t, min_level::Cint, min_zlevel::Cint, num_zroot::Cint, fill_uniform::Cint, data_size::Csize_t, init_fn::p6est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p6est_t}
+end
+
+"""
+    p6est_copy_ext(input, copy_data, duplicate_mpicomm)
+
+Make a deep copy of a `p6est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless. The inspect member of the copy is set to NULL.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+* `duplicate_mpicomm`:\\[in\\] If true, MPI communicator is copied.
+### Returns
+Returns a valid `p6est` that does not depend on the input.
+### Prototype
+```c
+p6est_t *p6est_copy_ext (p6est_t * input, int copy_data, int duplicate_mpicomm);
+```
+"""
+function p6est_copy_ext(input, copy_data, duplicate_mpicomm)
+    @ccall libt8.p6est_copy_ext(input::Ptr{p6est_t}, copy_data::Cint, duplicate_mpicomm::MPI_Comm)::Ptr{p6est_t}
+end
+
+"""
+    p6est_save_ext(filename, p6est_, save_data, save_partition)
+
+Save the complete connectivity/`p6est` data to disk.
+
+This is a collective operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations. See [`p6est_load_ext`](@ref)() for information on the autopartition parameter.
+
+!!! note
+
+    Aborts on file errors.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p6est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+* `save_partition`:\\[in\\] If false, save file as if 1 core was used. If true, save core count and partition. Advantage: Partition can be recovered on loading with same mpisize and autopartition false. Disadvantage: Makes the file depend on mpisize. Either way the file can be loaded with autopartition true.
+### Prototype
+```c
+void p6est_save_ext (const char *filename, p6est_t * p6est, int save_data, int save_partition);
+```
+"""
+function p6est_save_ext(filename, p6est_, save_data, save_partition)
+    @ccall libt8.p6est_save_ext(filename::Cstring, p6est_::Ptr{p6est_t}, save_data::Cint, save_partition::Cint)::Cvoid
+end
+
+"""
+    p6est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+
+### Prototype
+```c
+p6est_t *p6est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, int autopartition, int broadcasthead, void *user_pointer, p6est_connectivity_t ** connectivity);
+```
+"""
+function p6est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+    @ccall libt8.p6est_load_ext(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, autopartition::Cint, broadcasthead::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p6est_connectivity_t}})::Ptr{p6est_t}
+end
+
+"""
+    p6est_refine_columns_ext(p6est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+
+Horizontally refine a forest with a bounded refinement level and a replace option.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `maxlevel`:\\[in\\] Maximum allowed refinement level (inclusive). If this is negative the level is restricted only by the compile-time constant QMAXLEVEL in `p4est.h`.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn or replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data for newly created quadrants, which is guaranteed to be allocated. This function pointer may be NULL.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace; may be NULL.
+### Prototype
+```c
+void p6est_refine_columns_ext (p6est_t * p6est, int refine_recursive, int maxlevel, p6est_refine_column_t refine_fn, p6est_init_t init_fn, p6est_replace_t replace_fn);
+```
+"""
+function p6est_refine_columns_ext(p6est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+    @ccall libt8.p6est_refine_columns_ext(p6est_::Ptr{p6est_t}, refine_recursive::Cint, maxlevel::Cint, refine_fn::p6est_refine_column_t, init_fn::p6est_init_t, replace_fn::p6est_replace_t)::Cvoid
+end
+
+"""
+    p6est_refine_layers_ext(p6est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+
+Vertically refine a forest with a bounded refinement level and a replace option.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `maxlevel`:\\[in\\] Maximum allowed refinement level (inclusive). If this is negative the level is restricted only by the compile-time constant QMAXLEVEL in `p4est.h`.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn or replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data for newly created quadrants, which is guaranteed to be allocated. This function pointer may be NULL.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace; may be NULL.
+### Prototype
+```c
+void p6est_refine_layers_ext (p6est_t * p6est, int refine_recursive, int maxlevel, p6est_refine_layer_t refine_fn, p6est_init_t init_fn, p6est_replace_t replace_fn);
+```
+"""
+function p6est_refine_layers_ext(p6est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+    @ccall libt8.p6est_refine_layers_ext(p6est_::Ptr{p6est_t}, refine_recursive::Cint, maxlevel::Cint, refine_fn::p6est_refine_layer_t, init_fn::p6est_init_t, replace_fn::p6est_replace_t)::Cvoid
+end
+
+"""
+    p6est_coarsen_columns_ext(p6est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+
+Horizontally coarsen a forest.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `callback_orphans`:\\[in\\] Boolean to enable calling coarsen\\_fn even on non-families. In this case, the second quadrant pointer in the argument list of the callback is NULL, subsequent pointers are undefined, and the return value is ignored. If coarsen\\_recursive is true, it is possible that a quadrant is called once or more as an orphan and eventually becomes part of a family.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p6est_coarsen_columns_ext (p6est_t * p6est, int coarsen_recursive, int callback_orphans, p6est_coarsen_column_t coarsen_fn, p6est_init_t init_fn, p6est_replace_t replace_fn);
+```
+"""
+function p6est_coarsen_columns_ext(p6est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+    @ccall libt8.p6est_coarsen_columns_ext(p6est_::Ptr{p6est_t}, coarsen_recursive::Cint, callback_orphans::Cint, coarsen_fn::p6est_coarsen_column_t, init_fn::p6est_init_t, replace_fn::p6est_replace_t)::Cvoid
+end
+
+"""
+    p6est_coarsen_layers_ext(p6est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+
+Vertically coarsen a forest.
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `callback_orphans`:\\[in\\] Boolean to enable calling coarsen\\_fn even on non-families. In this case, the second quadrant pointer in the argument list of the callback is NULL, subsequent pointers are undefined, and the return value is ignored. If coarsen\\_recursive is true, it is possible that a quadrant is called once or more as an orphan and eventually becomes part of a family.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p6est_coarsen_layers_ext (p6est_t * p6est, int coarsen_recursive, int callback_orphans, p6est_coarsen_layer_t coarsen_fn, p6est_init_t init_fn, p6est_replace_t replace_fn);
+```
+"""
+function p6est_coarsen_layers_ext(p6est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+    @ccall libt8.p6est_coarsen_layers_ext(p6est_::Ptr{p6est_t}, coarsen_recursive::Cint, callback_orphans::Cint, coarsen_fn::p6est_coarsen_layer_t, init_fn::p6est_init_t, replace_fn::p6est_replace_t)::Cvoid
+end
+
+"""
+    p6est_partition_ext(p6est_, partition_for_coarsening, weight_fn)
+
+Repartition the forest.
+
+The forest is partitioned between processors such that each processor has an approximately equal number of quadrants (or weight).
+
+### Parameters
+* `p6est`:\\[in,out\\] The forest that will be partitioned.
+* `partition_for_coarsening`:\\[in\\] If true, the partition is modified to allow one level of coarsening.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning.
+### Returns
+The global number of shipped quadrants
+### Prototype
+```c
+p4est_gloidx_t p6est_partition_ext (p6est_t * p6est, int partition_for_coarsening, p6est_weight_t weight_fn);
+```
+"""
+function p6est_partition_ext(p6est_, partition_for_coarsening, weight_fn)
+    @ccall libt8.p6est_partition_ext(p6est_::Ptr{p6est_t}, partition_for_coarsening::Cint, weight_fn::p6est_weight_t)::p4est_gloidx_t
+end
+
+"""
+    p6est_balance_ext(p6est_, btype, max_diff, min_diff, init_fn, replace_fn)
+
+2:1 balance the size differences of neighboring elements in a forest.
+
+### Parameters
+* `p6est`:\\[in,out\\] The `p6est` to be worked on.
+* `btype`:\\[in\\] Balance type (face or corner/full). Corner balance is almost never required when discretizing a PDE; just causes smoother mesh grading.
+* `max_diff`:\\[in\\] The maximum difference between the horizontal refinement level and the vertical refinement level
+* `min_diff`:\\[in\\] The minimum difference between the horizontal refinement level and the vertical refinement level
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p6est_balance_ext (p6est_t * p6est, p8est_connect_type_t btype, int max_diff, int min_diff, p6est_init_t init_fn, p6est_replace_t replace_fn);
+```
+"""
+function p6est_balance_ext(p6est_, btype, max_diff, min_diff, init_fn, replace_fn)
+    @ccall libt8.p6est_balance_ext(p6est_::Ptr{p6est_t}, btype::p8est_connect_type_t, max_diff::Cint, min_diff::Cint, init_fn::p6est_init_t, replace_fn::p6est_replace_t)::Cvoid
+end
+
+struct p8est_quadrant_data
+    data::NTuple{8, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_quadrant_data}, f::Symbol)
+    f === :user_data && return Ptr{Ptr{Cvoid}}(x + 0)
+    f === :user_long && return Ptr{Clong}(x + 0)
+    f === :user_int && return Ptr{Cint}(x + 0)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :piggy1 && return Ptr{__JL_Ctag_1180}(x + 0)
+    f === :piggy2 && return Ptr{__JL_Ctag_1181}(x + 0)
+    f === :piggy3 && return Ptr{__JL_Ctag_1182}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_quadrant_data, f::Symbol)
+    r = Ref{p8est_quadrant_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_quadrant_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_quadrant_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p8est_quadrant
+
+The 3D quadrant (i.e., octant) datatype
+
+| Field | Note                                               |
+| :---- | :------------------------------------------------- |
+| x     | coordinates                                        |
+| y     |                                                    |
+| z     |                                                    |
+| level | level of refinement                                |
+| pad8  | padding                                            |
+| pad16 |                                                    |
+| p     | a union of additional data attached to a quadrant  |
+"""
+struct p8est_quadrant
+    data::NTuple{24, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_quadrant}, f::Symbol)
+    f === :x && return Ptr{p4est_qcoord_t}(x + 0)
+    f === :y && return Ptr{p4est_qcoord_t}(x + 4)
+    f === :z && return Ptr{p4est_qcoord_t}(x + 8)
+    f === :level && return Ptr{Int8}(x + 12)
+    f === :pad8 && return Ptr{Int8}(x + 13)
+    f === :pad16 && return Ptr{Int16}(x + 14)
+    f === :p && return Ptr{p8est_quadrant_data}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_quadrant, f::Symbol)
+    r = Ref{p8est_quadrant}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_quadrant}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_quadrant}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""The 3D quadrant (i.e., octant) datatype"""
+const p8est_quadrant_t = p8est_quadrant
+
+"""
+    p8est_tree
+
+The `p8est` tree datatype
+
+| Field              | Note                                                               |
+| :----------------- | :----------------------------------------------------------------- |
+| quadrants          | locally stored quadrants                                           |
+| first\\_desc       | first local descendant                                             |
+| last\\_desc        | last local descendant                                              |
+| quadrants\\_offset | cumulative sum over earlier trees on this processor (locals only)  |
+| maxlevel           | highest local quadrant level                                       |
+"""
+struct p8est_tree
+    quadrants::sc_array_t
+    first_desc::p8est_quadrant_t
+    last_desc::p8est_quadrant_t
+    quadrants_offset::p4est_locidx_t
+    quadrants_per_level::NTuple{20, p4est_locidx_t}
+    maxlevel::Int8
+end
+
+"""The `p8est` tree datatype"""
+const p8est_tree_t = p8est_tree
+
+"""
+    p8est_inspect
+
+| Field                           | Note                                                                                                                                        |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| use\\_balance\\_ranges          | Use sc\\_ranges to determine the asymmetric communication pattern. If *use_balance_ranges* is false (the default), sc\\_notify is used.     |
+| use\\_balance\\_ranges\\_notify | If true, call both sc\\_ranges and sc\\_notify and verify consistency. Which is actually used is still determined by *use_balance_ranges*.  |
+| use\\_balance\\_verify          | Verify sc\\_ranges and/or sc\\_notify as applicable.                                                                                        |
+| balance\\_max\\_ranges          | If positive and smaller than p8est\\_num ranges, overrides it                                                                               |
+| balance\\_ranges                | time spent in sc\\_ranges                                                                                                                   |
+| balance\\_notify                | time spent in sc\\_notify                                                                                                                   |
+| balance\\_notify\\_allgather    | time spent in sc\\_notify\\_allgather                                                                                                       |
+"""
+struct p8est_inspect
+    use_balance_ranges::Cint
+    use_balance_ranges_notify::Cint
+    use_balance_verify::Cint
+    balance_max_ranges::Cint
+    balance_A_count_in::Csize_t
+    balance_A_count_out::Csize_t
+    balance_comm_sent::Csize_t
+    balance_comm_nzpeers::Csize_t
+    balance_B_count_in::Csize_t
+    balance_B_count_out::Csize_t
+    balance_zero_sends::NTuple{2, Csize_t}
+    balance_zero_receives::NTuple{2, Csize_t}
+    balance_A::Cdouble
+    balance_comm::Cdouble
+    balance_B::Cdouble
+    balance_ranges::Cdouble
+    balance_notify::Cdouble
+    balance_notify_allgather::Cdouble
+    use_B::Cint
+end
+
+"""Data pertaining to selecting, inspecting, and profiling algorithms. A pointer to this structure is hooked into the `p8est` main structure. Declared in p8est\\_extended.h. Used to profile important algorithms."""
+const p8est_inspect_t = p8est_inspect
+
+"""
+    p8est
+
+| Field                     | Note                                                                                                             |
+| :------------------------ | :--------------------------------------------------------------------------------------------------------------- |
+| mpisize                   | number of MPI processes                                                                                          |
+| mpirank                   | this process's MPI rank                                                                                          |
+| mpicomm\\_owned           | flag if communicator is owned                                                                                    |
+| data\\_size               | size of per-quadrant p.user\\_data (see [`p8est_quadrant_t`](@ref)::[`p8est_quadrant_data`](@ref)::user\\_data)  |
+| user\\_pointer            | convenience pointer for users, never touched by `p4est`                                                  |
+| revision                  | Gets bumped on mesh change                                                                                       |
+| first\\_local\\_tree      | 0-based index of first local tree, must be -1 for an empty processor                                             |
+| last\\_local\\_tree       | 0-based index of last local tree, must be -2 for an empty processor                                              |
+| local\\_num\\_quadrants   | number of quadrants on all trees on this processor                                                               |
+| global\\_num\\_quadrants  | number of quadrants on all trees on all processors                                                               |
+| global\\_first\\_quadrant | first global quadrant index for each process and 1 beyond                                                        |
+| global\\_first\\_position | first smallest possible quad for each process and 1 beyond                                                       |
+| connectivity              | connectivity structure, not owned                                                                                |
+| trees                     | array of all trees                                                                                               |
+| user\\_data\\_pool        | memory allocator for user data                                                                                   |
+| quadrant\\_pool           | memory allocator for temporary quadrants                                                                         |
+| inspect                   | algorithmic switches                                                                                             |
+"""
+struct p8est
+    mpicomm::MPI_Comm
+    mpisize::Cint
+    mpirank::Cint
+    mpicomm_owned::Cint
+    data_size::Csize_t
+    user_pointer::Ptr{Cvoid}
+    revision::Clong
+    first_local_tree::p4est_topidx_t
+    last_local_tree::p4est_topidx_t
+    local_num_quadrants::p4est_locidx_t
+    global_num_quadrants::p4est_gloidx_t
+    global_first_quadrant::Ptr{p4est_gloidx_t}
+    global_first_position::Ptr{p8est_quadrant_t}
+    connectivity::Ptr{p8est_connectivity_t}
+    trees::Ptr{sc_array_t}
+    user_data_pool::Ptr{sc_mempool_t}
+    quadrant_pool::Ptr{sc_mempool_t}
+    inspect::Ptr{p8est_inspect_t}
+end
+
+"""The `p8est` forest datatype"""
+const p8est_t = p8est
+
+"""
+    p8est_memory_used(p8est_)
+
+Calculate local memory usage of a forest structure. Not collective. The memory used on the current rank is returned. The connectivity structure is not counted since it is not owned; use p8est\\_connectivity\\_memory\\_usage (`p8est`->connectivity).
+
+### Parameters
+* `p8est`:\\[in\\] Valid forest structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p8est_memory_used (p8est_t * p8est);
+```
+"""
+function p8est_memory_used(p8est_)
+    @ccall libt8.p8est_memory_used(p8est_::Ptr{p8est_t})::Csize_t
+end
+
+"""
+    p8est_revision(p8est_)
+
+Return the revision counter of the forest. Not collective, even though the revision value is the same on all ranks. A newly created forest starts with a revision counter of zero. Every refine, coarsen, partition, and balance that actually changes the mesh increases the counter by one. Operations with no effect keep the old value.
+
+### Parameters
+* `p8est`:\\[in\\] The forest must be valid.
+### Returns
+Non-negative number.
+### Prototype
+```c
+long p8est_revision (p8est_t * p8est);
+```
+"""
+function p8est_revision(p8est_)
+    @ccall libt8.p8est_revision(p8est_::Ptr{p8est_t})::Clong
+end
+
+# typedef void ( * p8est_init_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant )
+"""
+Callback function prototype to initialize the quadrant's user data.
+
+### Parameters
+* `p8est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrant`:\\[in,out\\] the quadrant to be initialized: if data\\_size > 0, the data to be initialized is at *quadrant*->p.user_data; otherwise, the non-pointer user data (such as *quadrant*->p.user_int) can be initialized
+"""
+const p8est_init_t = Ptr{Cvoid}
+
+# typedef int ( * p8est_refine_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant )
+"""
+Callback function prototype to decide for refinement.
+
+### Parameters
+* `p8est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrant`:\\[in\\] the quadrant that may be refined
+### Returns
+nonzero if the quadrant shall be refined.
+"""
+const p8est_refine_t = Ptr{Cvoid}
+
+# typedef int ( * p8est_coarsen_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrants [ ] )
+"""
+Callback function prototype to decide for coarsening.
+
+### Parameters
+* `p8est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+* `quadrants`:\\[in\\] Pointers to 8 siblings in Morton ordering.
+### Returns
+nonzero if the quadrants shall be replaced with their parent.
+"""
+const p8est_coarsen_t = Ptr{Cvoid}
+
+# typedef int ( * p8est_weight_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant )
+"""
+Callback function prototype to calculate weights for partitioning.
+
+!!! note
+
+    Global sum of weights must fit into a 64bit integer.
+
+### Parameters
+* `p8est`:\\[in\\] the forest
+* `which_tree`:\\[in\\] the tree containing *quadrant*
+### Returns
+a 32bit integer >= 0 as the quadrant weight.
+"""
+const p8est_weight_t = Ptr{Cvoid}
+
+"""
+    p8est_qcoord_to_vertex(connectivity, treeid, x, y, z, vxyz)
+
+Transform a quadrant coordinate into the space spanned by tree vertices.
+
+### Parameters
+* `connectivity`:\\[in\\] Connectivity must provide the vertices.
+* `treeid`:\\[in\\] Identify the tree that contains x, y, z.
+* `x,`:\\[in\\] y, z Quadrant coordinates relative to treeid.
+* `vxyz`:\\[out\\] Transformed coordinates in vertex space.
+### Prototype
+```c
+void p8est_qcoord_to_vertex (p8est_connectivity_t * connectivity, p4est_topidx_t treeid, p4est_qcoord_t x, p4est_qcoord_t y, p4est_qcoord_t z, double vxyz[3]);
+```
+"""
+function p8est_qcoord_to_vertex(connectivity, treeid, x, y, z, vxyz)
+    @ccall libt8.p8est_qcoord_to_vertex(connectivity::Ptr{p8est_connectivity_t}, treeid::p4est_topidx_t, x::p4est_qcoord_t, y::p4est_qcoord_t, z::p4est_qcoord_t, vxyz::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    p8est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p8est_t *p8est_new (sc_MPI_Comm mpicomm, p8est_connectivity_t * connectivity, size_t data_size, p8est_init_t init_fn, void *user_pointer);
+```
+"""
+function p8est_new(mpicomm, connectivity, data_size, init_fn, user_pointer)
+    @ccall libt8.p8est_new(mpicomm::MPI_Comm, connectivity::Ptr{p8est_connectivity_t}, data_size::Csize_t, init_fn::p8est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p8est_t}
+end
+
+"""
+    p8est_destroy(p8est_)
+
+Destroy a `p8est`.
+
+!!! note
+
+    The connectivity structure is not destroyed with the `p8est`.
+
+### Prototype
+```c
+void p8est_destroy (p8est_t * p8est);
+```
+"""
+function p8est_destroy(p8est_)
+    @ccall libt8.p8est_destroy(p8est_::Ptr{p8est_t})::Cvoid
+end
+
+"""
+    p8est_copy(input, copy_data)
+
+Make a deep copy of a `p8est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless. The inspect member of the copy is set to NULL. The revision counter of the copy is set to zero.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+### Returns
+Returns a valid `p8est` that does not depend on the input, except for borrowing the same connectivity. Its revision counter is 0.
+### Prototype
+```c
+p8est_t *p8est_copy (p8est_t * input, int copy_data);
+```
+"""
+function p8est_copy(input, copy_data)
+    @ccall libt8.p8est_copy(input::Ptr{p8est_t}, copy_data::Cint)::Ptr{p8est_t}
+end
+
+"""
+    p8est_reset_data(p8est_, data_size, init_fn, user_pointer)
+
+Reset user pointer and element data. When the data size is changed the quadrant data is freed and allocated. The initialization callback is invoked on each quadrant. Old user\\_data content is disregarded.
+
+### Parameters
+* `data_size`:\\[in\\] This is the size of data for each quadrant which can be zero. Then user\\_data\\_pool is set to NULL.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically. May be NULL.
+* `user_pointer`:\\[in\\] Assign to the user\\_pointer member of the `p8est` before init\\_fn is called the first time.
+### Prototype
+```c
+void p8est_reset_data (p8est_t * p8est, size_t data_size, p8est_init_t init_fn, void *user_pointer);
+```
+"""
+function p8est_reset_data(p8est_, data_size, init_fn, user_pointer)
+    @ccall libt8.p8est_reset_data(p8est_::Ptr{p8est_t}, data_size::Csize_t, init_fn::p8est_init_t, user_pointer::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p8est_refine(p8est_, refine_recursive, refine_fn, init_fn)
+
+Refine a forest.
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn gets called, or use [`p8est_refine_ext`](@ref) in p8est\\_extended.h and examine whether replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data of newly created quadrants, which is already allocated. This function pointer may be NULL.
+### Prototype
+```c
+void p8est_refine (p8est_t * p8est, int refine_recursive, p8est_refine_t refine_fn, p8est_init_t init_fn);
+```
+"""
+function p8est_refine(p8est_, refine_recursive, refine_fn, init_fn)
+    @ccall libt8.p8est_refine(p8est_::Ptr{p8est_t}, refine_recursive::Cint, refine_fn::p8est_refine_t, init_fn::p8est_init_t)::Cvoid
+end
+
+"""
+    p8est_coarsen(p8est_, coarsen_recursive, coarsen_fn, init_fn)
+
+Coarsen a forest.
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p8est_coarsen (p8est_t * p8est, int coarsen_recursive, p8est_coarsen_t coarsen_fn, p8est_init_t init_fn);
+```
+"""
+function p8est_coarsen(p8est_, coarsen_recursive, coarsen_fn, init_fn)
+    @ccall libt8.p8est_coarsen(p8est_::Ptr{p8est_t}, coarsen_recursive::Cint, coarsen_fn::p8est_coarsen_t, init_fn::p8est_init_t)::Cvoid
+end
+
+"""
+    p8est_balance(p8est_, btype, init_fn)
+
+2:1 balance the size differences of neighboring elements in a forest.
+
+### Parameters
+* `p8est`:\\[in,out\\] The `p8est` to be worked on.
+* `btype`:\\[in\\] Balance type (face, edge, or corner/full). Examples: Finite volume or discontinuous Galerkin methods only require face balance. Continuous finite element methods usually require edge balance. Corner balance is almost never required mathematically; it just produces a smoother mesh grading.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+### Prototype
+```c
+void p8est_balance (p8est_t * p8est, p8est_connect_type_t btype, p8est_init_t init_fn);
+```
+"""
+function p8est_balance(p8est_, btype, init_fn)
+    @ccall libt8.p8est_balance(p8est_::Ptr{p8est_t}, btype::p8est_connect_type_t, init_fn::p8est_init_t)::Cvoid
+end
+
+"""
+    p8est_partition(p8est_, allow_for_coarsening, weight_fn)
+
+Equally partition the forest. The partition can be by element count or by a user-defined weight.
+
+The forest will be partitioned between processors such that they have an approximately equal number of quadrants (or sum of weights).
+
+On one process, the function noops and does not call the weight callback. Otherwise, the weight callback is called once per quadrant in order.
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest that will be partitioned.
+* `allow_for_coarsening`:\\[in\\] Slightly modify partition such that quadrant families are not split between ranks.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning. When running with mpisize == 1, never called. Otherwise, called in order for all quadrants if not NULL.
+### Prototype
+```c
+void p8est_partition (p8est_t * p8est, int allow_for_coarsening, p8est_weight_t weight_fn);
+```
+"""
+function p8est_partition(p8est_, allow_for_coarsening, weight_fn)
+    @ccall libt8.p8est_partition(p8est_::Ptr{p8est_t}, allow_for_coarsening::Cint, weight_fn::p8est_weight_t)::Cvoid
+end
+
+"""
+    p8est_checksum(p8est_)
+
+Compute the checksum for a forest. Based on quadrant arrays only. It is independent of partition and mpisize.
+
+### Returns
+Returns the checksum on processor 0 only. 0 on other processors.
+### Prototype
+```c
+unsigned p8est_checksum (p8est_t * p8est);
+```
+"""
+function p8est_checksum(p8est_)
+    @ccall libt8.p8est_checksum(p8est_::Ptr{p8est_t})::Cuint
+end
+
+"""
+    p8est_save(filename, p8est_, save_data)
+
+Save the complete connectivity/`p8est` data to disk.
+
+This is a collective operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations.
+
+By default, we write the current processor count and partition into the file header. This makes the file depend on mpisize. For changing this see [`p8est_save_ext`](@ref)() in p8est\\_extended.h.
+
+The revision counter is not saved to the file, since that would make files different that come from different revisions but store the same mesh.
+
+!!! note
+
+    Aborts on file errors.
+
+!!! note
+
+    If `p4est` is not configured to use MPI-IO, some processes return from this function before the file is complete, in which case immediate read-access to the file may require a call to `sc_MPI_Barrier`.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p8est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+### Prototype
+```c
+void p8est_save (const char *filename, p8est_t * p8est, int save_data);
+```
+"""
+function p8est_save(filename, p8est_, save_data)
+    @ccall libt8.p8est_save(filename::Cstring, p8est_::Ptr{p8est_t}, save_data::Cint)::Cvoid
+end
+
+"""
+    p8est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+
+### Prototype
+```c
+p8est_t *p8est_load (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, void *user_pointer, p8est_connectivity_t ** connectivity);
+```
+"""
+function p8est_load(filename, mpicomm, data_size, load_data, user_pointer, connectivity)
+    @ccall libt8.p8est_load(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p8est_connectivity_t}})::Ptr{p8est_t}
+end
+
+"""
+    p8est_tree_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_tree_t * p8est_tree_array_index (sc_array_t * array, p4est_topidx_t it);
+```
+"""
+function p8est_tree_array_index(array, it)
+    @ccall libt8.p8est_tree_array_index(array::Ptr{sc_array_t}, it::p4est_topidx_t)::Ptr{p8est_tree_t}
+end
+
+"""
+    p8est_quadrant_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_quadrant_t * p8est_quadrant_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_quadrant_array_index(array, it)
+    @ccall libt8.p8est_quadrant_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_quadrant_array_push(array)
+
+### Prototype
+```c
+static inline p8est_quadrant_t * p8est_quadrant_array_push (sc_array_t * array);
+```
+"""
+function p8est_quadrant_array_push(array)
+    @ccall libt8.p8est_quadrant_array_push(array::Ptr{sc_array_t})::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_quadrant_mempool_alloc(mempool)
+
+### Prototype
+```c
+static inline p8est_quadrant_t * p8est_quadrant_mempool_alloc (sc_mempool_t * mempool);
+```
+"""
+function p8est_quadrant_mempool_alloc(mempool)
+    @ccall libt8.p8est_quadrant_mempool_alloc(mempool::Ptr{sc_mempool_t})::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_quadrant_list_pop(list)
+
+### Prototype
+```c
+static inline p8est_quadrant_t * p8est_quadrant_list_pop (sc_list_t * list);
+```
+"""
+function p8est_quadrant_list_pop(list)
+    @ccall libt8.p8est_quadrant_list_pop(list::Ptr{sc_list_t})::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_ghost_t
+
+quadrants that neighbor the local domain
+
+| Field                           | Note                                                                                                                           |
+| :------------------------------ | :----------------------------------------------------------------------------------------------------------------------------- |
+| btype                           | which neighbors are in the ghost layer                                                                                         |
+| ghosts                          | array of [`p8est_quadrant_t`](@ref) type                                                                                       |
+| tree\\_offsets                  | num\\_trees + 1 ghost indices                                                                                                  |
+| proc\\_offsets                  | mpisize + 1 ghost indices                                                                                                      |
+| mirrors                         | array of [`p4est_quadrant_t`](@ref) type                                                                                       |
+| mirror\\_tree\\_offsets         | num\\_trees + 1 mirror indices                                                                                                 |
+| mirror\\_proc\\_mirrors         | indices into mirrors grouped by outside processor rank and ascending within each rank                                          |
+| mirror\\_proc\\_offsets         | mpisize + 1 indices into  mirror\\_proc\\_mirrors                                                                              |
+| mirror\\_proc\\_fronts          | like mirror\\_proc\\_mirrors, but limited to the outermost octants. This is NULL until [`p4est_ghost_expand`](@ref) is called  |
+| mirror\\_proc\\_front\\_offsets | NULL until [`p4est_ghost_expand`](@ref) is called                                                                              |
+"""
+struct p8est_ghost_t
+    mpisize::Cint
+    num_trees::p4est_topidx_t
+    btype::p8est_connect_type_t
+    ghosts::sc_array_t
+    tree_offsets::Ptr{p4est_locidx_t}
+    proc_offsets::Ptr{p4est_locidx_t}
+    mirrors::sc_array_t
+    mirror_tree_offsets::Ptr{p4est_locidx_t}
+    mirror_proc_mirrors::Ptr{p4est_locidx_t}
+    mirror_proc_offsets::Ptr{p4est_locidx_t}
+    mirror_proc_fronts::Ptr{p4est_locidx_t}
+    mirror_proc_front_offsets::Ptr{p4est_locidx_t}
+end
+
+"""
+    p8est_ghost_is_valid(p8est_, ghost)
+
+Examine if a ghost structure is valid as desribed above. Test if within a ghost-structure the arrays ghosts and mirrors are in p4est\\_quadrant\\_compare\\_piggy order. Test if local\\_num in piggy3 data member of the quadrants in ghosts and mirrors are in ascending order (ascending within each rank for ghost).
+
+Test if the [`p4est_locidx_t`](@ref) arrays are in ascending order (for mirror\\_proc\\_mirrors ascending within each rank)
+
+### Parameters
+* `p8est`:\\[in\\] the forest.
+* `ghost`:\\[in\\] Ghost layer structure.
+### Returns
+true if *ghost* is valid
+### Prototype
+```c
+int p8est_ghost_is_valid (p8est_t * p8est, p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_is_valid(p8est_, ghost)
+    @ccall libt8.p8est_ghost_is_valid(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t})::Cint
+end
+
+"""
+    p8est_ghost_memory_used(ghost)
+
+Calculate the memory usage of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] Ghost layer structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p8est_ghost_memory_used (p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_memory_used(ghost)
+    @ccall libt8.p8est_ghost_memory_used(ghost::Ptr{p8est_ghost_t})::Csize_t
+end
+
+"""
+    p8est_quadrant_find_owner(p8est_, treeid, face, q)
+
+Gets the processor id of a quadrant's owner. The quadrant can lie outside of a tree across faces (and only faces).
+
+!!! warning
+
+    Does not work for tree edge or corner neighbors.
+
+### Parameters
+* `p8est`:\\[in\\] The forest in which to search for a quadrant.
+* `treeid`:\\[in\\] The tree to which the quadrant belongs.
+* `face`:\\[in\\] Supply a face direction if known, or -1 otherwise.
+* `q`:\\[in\\] The quadrant that is being searched for.
+### Returns
+Processor id of the owner or -1 if the quadrant lies outside of the mesh.
+### Prototype
+```c
+int p8est_quadrant_find_owner (p8est_t * p8est, p4est_topidx_t treeid, int face, const p8est_quadrant_t * q);
+```
+"""
+function p8est_quadrant_find_owner(p8est_, treeid, face, q)
+    @ccall libt8.p8est_quadrant_find_owner(p8est_::Ptr{p8est_t}, treeid::p4est_topidx_t, face::Cint, q::Ptr{p8est_quadrant_t})::Cint
+end
+
+"""
+    p8est_ghost_new(p8est_, btype)
+
+Builds the ghost layer.
+
+This will gather the quadrants from each neighboring proc to build one layer of face, edge and corner based ghost elements around the ones they own.
+
+### Parameters
+* `p8est`:\\[in\\] The forest for which the ghost layer will be generated.
+* `btype`:\\[in\\] Which ghosts to include (across face, edge, or corner/full).
+### Returns
+A fully initialized ghost layer.
+### Prototype
+```c
+p8est_ghost_t *p8est_ghost_new (p8est_t * p8est, p8est_connect_type_t btype);
+```
+"""
+function p8est_ghost_new(p8est_, btype)
+    @ccall libt8.p8est_ghost_new(p8est_::Ptr{p8est_t}, btype::p8est_connect_type_t)::Ptr{p8est_ghost_t}
+end
+
+"""
+    p8est_ghost_destroy(ghost)
+
+Frees all memory used for the ghost layer.
+
+### Prototype
+```c
+void p8est_ghost_destroy (p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_destroy(ghost)
+    @ccall libt8.p8est_ghost_destroy(ghost::Ptr{p8est_ghost_t})::Cvoid
+end
+
+"""
+    p8est_ghost_bsearch(ghost, which_proc, which_tree, q)
+
+Conduct binary search for exact match on a range of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] The ghost layer.
+* `which_proc`:\\[in\\] The owner of the searched quadrant. Can be -1.
+* `which_tree`:\\[in\\] The tree of the searched quadrant. Can be -1.
+* `q`:\\[in\\] Valid quadrant is searched in the ghost layer.
+### Returns
+Offset in the ghost layer, or -1 if not found.
+### Prototype
+```c
+ssize_t p8est_ghost_bsearch (p8est_ghost_t * ghost, int which_proc, p4est_topidx_t which_tree, const p8est_quadrant_t * q);
+```
+"""
+function p8est_ghost_bsearch(ghost, which_proc, which_tree, q)
+    @ccall libt8.p8est_ghost_bsearch(ghost::Ptr{p8est_ghost_t}, which_proc::Cint, which_tree::p4est_topidx_t, q::Ptr{p8est_quadrant_t})::Cssize_t
+end
+
+"""
+    p8est_ghost_tree_contains(ghost, which_proc, which_tree, q)
+
+Conduct binary search for ancestor on range of the ghost layer.
+
+### Parameters
+* `ghost`:\\[in\\] The ghost layer.
+* `which_proc`:\\[in\\] The owner of the searched quadrant. Can be -1.
+* `which_tree`:\\[in\\] The tree of the searched quadrant. Can be -1.
+* `q`:\\[in\\] Valid quadrant's ancestor is searched.
+### Returns
+Offset in the ghost layer, or -1 if not found.
+### Prototype
+```c
+ssize_t p8est_ghost_tree_contains (p8est_ghost_t * ghost, int which_proc, p4est_topidx_t which_tree, const p8est_quadrant_t * q);
+```
+"""
+function p8est_ghost_tree_contains(ghost, which_proc, which_tree, q)
+    @ccall libt8.p8est_ghost_tree_contains(ghost::Ptr{p8est_ghost_t}, which_proc::Cint, which_tree::p4est_topidx_t, q::Ptr{p8est_quadrant_t})::Cssize_t
+end
+
+"""
+    p8est_face_quadrant_exists(p8est_, ghost, treeid, q, face, hang, owner_rank)
+
+Checks if quadrant exists in the local forest or the ghost layer.
+
+For quadrants across tree boundaries it checks if the quadrant exists across any face, but not across edges or corners.
+
+### Parameters
+* `p8est`:\\[in\\] The forest in which to search for *q*.
+* `ghost`:\\[in\\] The ghost layer in which to search for *q*.
+* `treeid`:\\[in\\] The tree to which *q* belongs.
+* `q`:\\[in\\] The quadrant that is being searched for.
+* `face`:\\[in,out\\] On input, face id across which *q* was created. On output, the neighbor's face number augmented by orientation, so face is in 0..23.
+* `hang`:\\[in,out\\] If not NULL, signals that q is bigger than the quadrant it came from. The child id of that originating quadrant is passed into hang. On output, hang holds the hanging face number of *q* that is in contact with its originator.
+* `owner_rank`:\\[out\\] Filled with the rank of the owner if it is found and undefined otherwise.
+### Returns
+Returns the local number of *q* if the quadrant exists in the local forest or in the ghost\\_layer. Otherwise, returns -2 for a domain boundary and -1 if not found.
+### Prototype
+```c
+p4est_locidx_t p8est_face_quadrant_exists (p8est_t * p8est, p8est_ghost_t * ghost, p4est_topidx_t treeid, const p8est_quadrant_t * q, int *face, int *hang, int *owner_rank);
+```
+"""
+function p8est_face_quadrant_exists(p8est_, ghost, treeid, q, face, hang, owner_rank)
+    @ccall libt8.p8est_face_quadrant_exists(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, treeid::p4est_topidx_t, q::Ptr{p8est_quadrant_t}, face::Ptr{Cint}, hang::Ptr{Cint}, owner_rank::Ptr{Cint})::p4est_locidx_t
+end
+
+"""
+    p8est_quadrant_exists(p8est_, ghost, treeid, q, exists_arr, rproc_arr, rquad_arr)
+
+Checks if quadrant exists in the local forest or the ghost layer.
+
+For quadrants across tree corners it checks if the quadrant exists in any of the corner neighbors, thus it can execute multiple queries.
+
+### Parameters
+* `p4est`:\\[in\\] The forest in which to search for *q*
+* `ghost`:\\[in\\] The ghost layer in which to search for *q*
+* `treeid`:\\[in\\] The tree to which *q* belongs (can be extended).
+* `q`:\\[in\\] The quadrant that is being searched for.
+* `exists_arr`:\\[in,out\\] Must exist and be of of elem\\_size = sizeof (int) for inter-tree corner cases. Is resized by this function to one entry for each corner search and set to true/false depending on its existence in the local forest or ghost\\_layer.
+* `rproc_arr`:\\[in,out\\] If not NULL is filled with one rank per query.
+* `rquad_arr`:\\[in,out\\] If not NULL is filled with one quadrant per query. Its piggy3 member is defined as well.
+### Returns
+true if the quadrant exists in the local forest or in the ghost\\_layer, and false if doesn't exist in either.
+### Prototype
+```c
+int p8est_quadrant_exists (p8est_t * p8est, p8est_ghost_t * ghost, p4est_topidx_t treeid, const p8est_quadrant_t * q, sc_array_t * exists_arr, sc_array_t * rproc_arr, sc_array_t * rquad_arr);
+```
+"""
+function p8est_quadrant_exists(p8est_, ghost, treeid, q, exists_arr, rproc_arr, rquad_arr)
+    @ccall libt8.p8est_quadrant_exists(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, treeid::p4est_topidx_t, q::Ptr{p8est_quadrant_t}, exists_arr::Ptr{sc_array_t}, rproc_arr::Ptr{sc_array_t}, rquad_arr::Ptr{sc_array_t})::Cint
+end
+
+"""
+    p8est_is_balanced(p8est_, btype)
+
+Check a forest to see if it is balanced.
+
+This function builds the ghost layer and discards it when done.
+
+### Parameters
+* `p8est`:\\[in\\] The `p8est` to be tested.
+* `btype`:\\[in\\] Balance type (face, edge, corner or default, full).
+### Returns
+Returns true if balanced, false otherwise.
+### Prototype
+```c
+int p8est_is_balanced (p8est_t * p8est, p8est_connect_type_t btype);
+```
+"""
+function p8est_is_balanced(p8est_, btype)
+    @ccall libt8.p8est_is_balanced(p8est_::Ptr{p8est_t}, btype::p8est_connect_type_t)::Cint
+end
+
+"""
+    p8est_ghost_checksum(p8est_, ghost)
+
+Compute the parallel checksum of a ghost layer.
+
+### Parameters
+* `p8est`:\\[in\\] The MPI information of this `p8est` will be used.
+* `ghost`:\\[in\\] A ghost layer obtained from the `p8est`.
+### Returns
+Parallel checksum on rank 0, 0 otherwise.
+### Prototype
+```c
+unsigned p8est_ghost_checksum (p8est_t * p8est, p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_checksum(p8est_, ghost)
+    @ccall libt8.p8est_ghost_checksum(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t})::Cuint
+end
+
+"""
+    p8est_ghost_exchange_data(p4est_, ghost, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. Send the data stored in the quadrant's user\\_data. This is either the pointer variable itself if `p8est`->data_size is 0, or the content of the referenced memory field if `p8est`->data\\_size is positive.
+
+### Parameters
+* `p8est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghost quadrants in sequence. If `p8est`->data\\_size is 0, must at least hold sizeof (void *) bytes for each, otherwise `p8est`->data\\_size each.
+### Prototype
+```c
+void p8est_ghost_exchange_data (p8est_t * p4est, p8est_ghost_t * ghost, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_data(p4est_, ghost, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_data(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p8est_ghost_exchange
+
+Transient storage for asynchronous ghost exchange.
+
+| Field       | Note                                           |
+| :---------- | :--------------------------------------------- |
+| is\\_custom | False for [`p4est_ghost_exchange_data`](@ref)  |
+| is\\_levels | Are we restricted to levels or not             |
+| minlevel    | Meaningful with is\\_levels                    |
+| maxlevel    |                                                |
+"""
+struct p8est_ghost_exchange
+    is_custom::Cint
+    is_levels::Cint
+    p4est::Ptr{p8est_t}
+    ghost::Ptr{p8est_ghost_t}
+    minlevel::Cint
+    maxlevel::Cint
+    data_size::Csize_t
+    ghost_data::Ptr{Cvoid}
+    qactive::Ptr{Cint}
+    qbuffer::Ptr{Cint}
+    requests::sc_array_t
+    sbuffers::sc_array_t
+    rrequests::sc_array_t
+    rbuffers::sc_array_t
+end
+
+"""Transient storage for asynchronous ghost exchange."""
+const p8est_ghost_exchange_t = p8est_ghost_exchange
+
+"""
+    p8est_ghost_exchange_data_begin(p4est_, ghost, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p8est_ghost_exchange_data`](@ref). The return type is always non-NULL and must be passed to [`p8est_ghost_exchange_data_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion.
+
+### Parameters
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p8est_ghost_exchange_t *p8est_ghost_exchange_data_begin (p8est_t * p4est, p8est_ghost_t * ghost, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_data_begin(p4est_, ghost, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_data_begin(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, ghost_data::Ptr{Cvoid})::Ptr{p8est_ghost_exchange_t}
+end
+
+"""
+    p8est_ghost_exchange_data_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p8est_ghost_exchange_data_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p8est_ghost_exchange_data_end (p8est_ghost_exchange_t * exc);
+```
+"""
+function p8est_ghost_exchange_data_end(exc)
+    @ccall libt8.p8est_ghost_exchange_data_end(exc::Ptr{p8est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p8est_ghost_exchange_custom(p4est_, ghost, data_size, mirror_data, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. The data size is the same for all quadrants and can be chosen arbitrarily.
+
+### Parameters
+* `p8est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `data_size`:\\[in\\] The data size to transfer per quadrant.
+* `mirror_data`:\\[in\\] One data pointer per mirror quadrant.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghosts in sequence, which must hold at least `data_size` for each ghost.
+### Prototype
+```c
+void p8est_ghost_exchange_custom (p8est_t * p4est, p8est_ghost_t * ghost, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_custom(p4est_, ghost, data_size, mirror_data, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_custom(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p8est_ghost_exchange_custom_begin(p4est_, ghost, data_size, mirror_data, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p8est_ghost_exchange_custom`](@ref). The return type is always non-NULL and must be passed to [`p8est_ghost_exchange_custom_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion. The mirror data can be safely discarded right after this function returns since it is copied into internal send buffers.
+
+### Parameters
+* `mirror_data`:\\[in\\] Not required to stay alive any longer.
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p8est_ghost_exchange_t *p8est_ghost_exchange_custom_begin (p8est_t * p4est, p8est_ghost_t * ghost, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_custom_begin(p4est_, ghost, data_size, mirror_data, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_custom_begin(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Ptr{p8est_ghost_exchange_t}
+end
+
+"""
+    p8est_ghost_exchange_custom_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p8est_ghost_exchange_custom_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p8est_ghost_exchange_custom_end (p8est_ghost_exchange_t * exc);
+```
+"""
+function p8est_ghost_exchange_custom_end(exc)
+    @ccall libt8.p8est_ghost_exchange_custom_end(exc::Ptr{p8est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p8est_ghost_exchange_custom_levels(p8est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+
+Transfer data for local quadrants that are ghosts to other processors. The data size is the same for all quadrants and can be chosen arbitrarily. This function restricts the transfer to a range of refinement levels. The memory for quadrants outside the level range is not dereferenced.
+
+### Parameters
+* `p4est`:\\[in\\] The forest used for reference.
+* `ghost`:\\[in\\] The ghost layer used for reference.
+* `minlevel`:\\[in\\] Level of the largest quads to be exchanged. Use <= 0 for no restriction.
+* `maxlevel`:\\[in\\] Level of the smallest quads to be exchanged. Use >= `P8EST_QMAXLEVEL` for no restriction.
+* `data_size`:\\[in\\] The data size to transfer per quadrant.
+* `mirror_data`:\\[in\\] One data pointer per mirror quadrant as input.
+* `ghost_data`:\\[in,out\\] Pre-allocated contiguous data for all ghosts in sequence, which must hold at least `data_size` for each ghost.
+### Prototype
+```c
+void p8est_ghost_exchange_custom_levels (p8est_t * p8est, p8est_ghost_t * ghost, int minlevel, int maxlevel, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_custom_levels(p8est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_custom_levels(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, minlevel::Cint, maxlevel::Cint, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Cvoid
+end
+
+"""
+    p8est_ghost_exchange_custom_levels_begin(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+
+Begin an asynchronous ghost data exchange by posting messages. The arguments are identical to [`p8est_ghost_exchange_custom_levels`](@ref). The return type is always non-NULL and must be passed to [`p8est_ghost_exchange_custom_levels_end`](@ref) to complete the exchange. The ghost data must not be accessed before completion. The mirror data can be safely discarded right after this function returns since it is copied into internal send buffers.
+
+### Parameters
+* `mirror_data`:\\[in\\] Not required to stay alive any longer.
+* `ghost_data`:\\[in,out\\] Must stay alive into the completion call.
+### Returns
+Transient storage for messages in progress.
+### Prototype
+```c
+p8est_ghost_exchange_t *p8est_ghost_exchange_custom_levels_begin (p8est_t * p4est, p8est_ghost_t * ghost, int minlevel, int maxlevel, size_t data_size, void **mirror_data, void *ghost_data);
+```
+"""
+function p8est_ghost_exchange_custom_levels_begin(p4est_, ghost, minlevel, maxlevel, data_size, mirror_data, ghost_data)
+    @ccall libt8.p8est_ghost_exchange_custom_levels_begin(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, minlevel::Cint, maxlevel::Cint, data_size::Csize_t, mirror_data::Ptr{Ptr{Cvoid}}, ghost_data::Ptr{Cvoid})::Ptr{p8est_ghost_exchange_t}
+end
+
+"""
+    p8est_ghost_exchange_custom_levels_end(exc)
+
+Complete an asynchronous ghost data exchange. This function waits for all pending MPI communications.
+
+### Parameters
+* `Data`:\\[in,out\\] created ONLY by [`p8est_ghost_exchange_custom_levels_begin`](@ref). It is deallocated before this function returns.
+### Prototype
+```c
+void p8est_ghost_exchange_custom_levels_end (p8est_ghost_exchange_t * exc);
+```
+"""
+function p8est_ghost_exchange_custom_levels_end(exc)
+    @ccall libt8.p8est_ghost_exchange_custom_levels_end(exc::Ptr{p8est_ghost_exchange_t})::Cvoid
+end
+
+"""
+    p8est_ghost_expand(p8est_, ghost)
+
+Expand the size of the ghost layer and mirrors by one additional layer of adjacency.
+
+### Parameters
+* `p8est`:\\[in\\] The forest from which the ghost layer was generated.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p8est_ghost_expand (p8est_t * p8est, p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_expand(p8est_, ghost)
+    @ccall libt8.p8est_ghost_expand(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t})::Cvoid
+end
+
+"""
+    p8est_mesh_t
+
+This structure contains complete mesh information on the forest. It stores the locally relevant neighborhood, that is, all locally owned quadrants and one layer of adjacent ghost quadrants and their owners.
+
+For each local quadrant, its tree number is stored in quad\\_to\\_tree. The quad\\_to\\_tree array is NULL by default and can be enabled using [`p8est_mesh_new_ext`](@ref). For each ghost quadrant, its owner rank is stored in ghost\\_to\\_proc. For each level, an array of local quadrant numbers is stored in quad\\_level. The quad\\_level array is NULL by default and can be enabled using [`p8est_mesh_new_ext`](@ref).
+
+The quad\\_to\\_quad list stores one value for each local quadrant's face. This value is in 0..local\\_num\\_quadrants-1 for local quadrants, or in local\\_num\\_quadrants + (0..ghost\\_num\\_quadrants-1) for ghost quadrants. The quad\\_to\\_face list has equally many entries which are either: 1. A value of v = 0..23 indicates one same-size neighbor. This value is decoded as v = r * 6 + nf, where nf = 0..5 is the neighbor's connecting face number and r = 0..3 is the relative orientation of the neighbor's face, see [`p8est_connectivity`](@ref).h. 2. A value of v = 24..119 indicates a double-size neighbor. This value is decoded as v = 24 + h * 24 + r * 6 + nf, where r and nf are as above and h = 0..3 is the number of the subface. 3. A value of v = -24..-1 indicates four half-size neighbors. In this case the corresponding quad\\_to\\_quad index points into the quad\\_to\\_half array which stores four quadrant numbers per index, and the orientation of the smaller faces follows from 24 + v. The entries of quad\\_to\\_half encode between local and ghost quadrant in the same way as the quad\\_to\\_quad values described above. A quadrant on the boundary of the forest sees itself and its face number.
+
+The quad\\_to\\_corner list stores corner neighbors that are not face or edge neighbors. On the inside of a tree, there is precisely one such neighbor per corner. In this case, its index is encoded as described above for quad\\_to\\_quad. The neighbor's matching corner number is always diagonally opposite.
+
+On the inside of an inter-tree face, we have precisely one corner neighbor. If a corner is across an inter-tree edge or corner, then the number of corner neighbors may be any non-negative number. In all inter-tree cases, the quad\\_to\\_corner value is in local\\_num\\_quadrants + local\\_num\\_ghosts + [0 .. local\\_num\\_corners - 1] where the offset by local quadrants and ghosts is implicitly substracted. It indexes into corner\\_offset, which encodes a group of corner neighbors. Each group contains the quadrant numbers encoded as usual for quad\\_to\\_quad in corner\\_quad, and the corner number from the neighbor as corner\\_corner.
+
+Intra-tree corners and inter-tree face and corner corners are implemented. Edge inter-tree corners are NOT IMPLEMENTED and are assigned the value -2. Corners with no diagonal neighbor at all are assigned the value -1.
+
+| Field             | Note                                              |
+| :---------------- | :------------------------------------------------ |
+| quad\\_to\\_tree  | tree index for each local quad, NULL by default   |
+| ghost\\_to\\_proc | processor for each ghost quad                     |
+| quad\\_to\\_quad  | one index for each of the 6 faces                 |
+| quad\\_to\\_face  | encodes orientation/2:1 status                    |
+| quad\\_to\\_half  | stores half-size neighbors                        |
+| quad\\_level      | stores lists of per-level quads, NULL by default  |
+"""
+struct p8est_mesh_t
+    local_num_quadrants::p4est_locidx_t
+    ghost_num_quadrants::p4est_locidx_t
+    quad_to_tree::Ptr{p4est_topidx_t}
+    ghost_to_proc::Ptr{Cint}
+    quad_to_quad::Ptr{p4est_locidx_t}
+    quad_to_face::Ptr{Int8}
+    quad_to_half::Ptr{sc_array_t}
+    quad_level::Ptr{sc_array_t}
+    local_num_corners::p4est_locidx_t
+    quad_to_corner::Ptr{p4est_locidx_t}
+    corner_offset::Ptr{sc_array_t}
+    corner_quad::Ptr{sc_array_t}
+    corner_corner::Ptr{sc_array_t}
+end
+
+"""
+    p8est_mesh_face_neighbor_t
+
+This structure can be used as the status of a face neighbor iterator. It always contains the face and subface of the neighbor to be processed.
+"""
+struct p8est_mesh_face_neighbor_t
+    p4est::Ptr{p8est_t}
+    ghost::Ptr{p8est_ghost_t}
+    mesh::Ptr{p8est_mesh_t}
+    which_tree::p4est_topidx_t
+    quadrant_id::p4est_locidx_t
+    quadrant_code::p4est_locidx_t
+    face::Cint
+    subface::Cint
+    current_qtq::p4est_locidx_t
+end
+
+"""
+    p8est_mesh_memory_used(mesh)
+
+Calculate the memory usage of the mesh structure.
+
+### Parameters
+* `mesh`:\\[in\\] Mesh structure.
+### Returns
+Memory used in bytes.
+### Prototype
+```c
+size_t p8est_mesh_memory_used (p8est_mesh_t * mesh);
+```
+"""
+function p8est_mesh_memory_used(mesh)
+    @ccall libt8.p8est_mesh_memory_used(mesh::Ptr{p8est_mesh_t})::Csize_t
+end
+
+"""
+    p8est_mesh_new(p8est_, ghost, btype)
+
+Create a p8est\\_mesh structure.
+
+### Parameters
+* `p8est`:\\[in\\] A forest that is fully 2:1 balanced.
+* `ghost`:\\[in\\] The ghost layer created from the provided `p4est`.
+* `btype`:\\[in\\] Determines the highest codimension of neighbors.
+### Returns
+A fully allocated mesh structure.
+### Prototype
+```c
+p8est_mesh_t *p8est_mesh_new (p8est_t * p8est, p8est_ghost_t * ghost, p8est_connect_type_t btype);
+```
+"""
+function p8est_mesh_new(p8est_, ghost, btype)
+    @ccall libt8.p8est_mesh_new(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, btype::p8est_connect_type_t)::Ptr{p8est_mesh_t}
+end
+
+"""
+    p8est_mesh_destroy(mesh)
+
+Destroy a p8est\\_mesh structure.
+
+### Parameters
+* `mesh`:\\[in\\] Mesh structure previously created by [`p8est_mesh_new`](@ref).
+### Prototype
+```c
+void p8est_mesh_destroy (p8est_mesh_t * mesh);
+```
+"""
+function p8est_mesh_destroy(mesh)
+    @ccall libt8.p8est_mesh_destroy(mesh::Ptr{p8est_mesh_t})::Cvoid
+end
+
+"""
+    p8est_mesh_quadrant_cumulative(p8est_, cumulative_id, which_tree, quadrant_id)
+
+Find a quadrant based on its cumulative number in the local forest.
+
+### Parameters
+* `p8est`:\\[in\\] Forest to be worked with.
+* `cumulative_id`:\\[in\\] Cumulative index over all trees of quadrant.
+* `which_tree`:\\[in,out\\] If not NULL, the input value can be -1 or an initial guess for the quadrant's tree and output is the tree of returned quadrant.
+* `quadrant_id`:\\[out\\] If not NULL, the number of quadrant in tree.
+### Returns
+The identified quadrant.
+### Prototype
+```c
+p8est_quadrant_t *p8est_mesh_quadrant_cumulative (p8est_t * p8est, p4est_locidx_t cumulative_id, p4est_topidx_t * which_tree, p4est_locidx_t * quadrant_id);
+```
+"""
+function p8est_mesh_quadrant_cumulative(p8est_, cumulative_id, which_tree, quadrant_id)
+    @ccall libt8.p8est_mesh_quadrant_cumulative(p8est_::Ptr{p8est_t}, cumulative_id::p4est_locidx_t, which_tree::Ptr{p4est_topidx_t}, quadrant_id::Ptr{p4est_locidx_t})::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_mesh_face_neighbor_init2(mfn, p8est_, ghost, mesh, which_tree, quadrant_id)
+
+Initialize a mesh neighbor iterator by quadrant index.
+
+### Parameters
+* `mfn`:\\[out\\] A [`p8est_mesh_face_neighbor_t`](@ref) to be initialized.
+* `which_tree`:\\[in\\] Tree of quadrant whose neighbors are looped over.
+* `quadrant_id`:\\[in\\] Index relative to which\\_tree of quadrant.
+### Prototype
+```c
+void p8est_mesh_face_neighbor_init2 (p8est_mesh_face_neighbor_t * mfn, p8est_t * p8est, p8est_ghost_t * ghost, p8est_mesh_t * mesh, p4est_topidx_t which_tree, p4est_locidx_t quadrant_id);
+```
+"""
+function p8est_mesh_face_neighbor_init2(mfn, p8est_, ghost, mesh, which_tree, quadrant_id)
+    @ccall libt8.p8est_mesh_face_neighbor_init2(mfn::Ptr{p8est_mesh_face_neighbor_t}, p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, mesh::Ptr{p8est_mesh_t}, which_tree::p4est_topidx_t, quadrant_id::p4est_locidx_t)::Cvoid
+end
+
+"""
+    p8est_mesh_face_neighbor_init(mfn, p8est_, ghost, mesh, which_tree, quadrant)
+
+Initialize a mesh neighbor iterator by quadrant pointer.
+
+### Parameters
+* `mfn`:\\[out\\] A [`p8est_mesh_face_neighbor_t`](@ref) to be initialized.
+* `which_tree`:\\[in\\] Tree of quadrant whose neighbors are looped over.
+* `quadrant`:\\[in\\] Pointer to quadrant contained in which\\_tree.
+### Prototype
+```c
+void p8est_mesh_face_neighbor_init (p8est_mesh_face_neighbor_t * mfn, p8est_t * p8est, p8est_ghost_t * ghost, p8est_mesh_t * mesh, p4est_topidx_t which_tree, p8est_quadrant_t * quadrant);
+```
+"""
+function p8est_mesh_face_neighbor_init(mfn, p8est_, ghost, mesh, which_tree, quadrant)
+    @ccall libt8.p8est_mesh_face_neighbor_init(mfn::Ptr{p8est_mesh_face_neighbor_t}, p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, mesh::Ptr{p8est_mesh_t}, which_tree::p4est_topidx_t, quadrant::Ptr{p8est_quadrant_t})::Cvoid
+end
+
+"""
+    p8est_mesh_face_neighbor_next(mfn, ntree, nquad, nface, nrank)
+
+Move the iterator forward to loop around neighbors of the quadrant.
+
+### Parameters
+* `mfn`:\\[in,out\\] Internal status of the iterator.
+* `ntree`:\\[out\\] If not NULL, the tree number of the neighbor.
+* `nquad`:\\[out\\] If not NULL, the quadrant number within tree. For ghosts instead the number in ghost layer.
+* `nface`:\\[out\\] If not NULL, neighbor's face as in [`p8est_mesh_t`](@ref).
+* `nrank`:\\[out\\] If not NULL, the owner process of the neighbor.
+### Returns
+Either a real quadrant or one from the ghost layer. Returns NULL when the iterator is done.
+### Prototype
+```c
+p8est_quadrant_t *p8est_mesh_face_neighbor_next (p8est_mesh_face_neighbor_t * mfn, p4est_topidx_t * ntree, p4est_locidx_t * nquad, int *nface, int *nrank);
+```
+"""
+function p8est_mesh_face_neighbor_next(mfn, ntree, nquad, nface, nrank)
+    @ccall libt8.p8est_mesh_face_neighbor_next(mfn::Ptr{p8est_mesh_face_neighbor_t}, ntree::Ptr{p4est_topidx_t}, nquad::Ptr{p4est_locidx_t}, nface::Ptr{Cint}, nrank::Ptr{Cint})::Ptr{p8est_quadrant_t}
+end
+
+"""
+    p8est_mesh_face_neighbor_data(mfn, ghost_data)
+
+Get the user data for the current face neighbor.
+
+### Parameters
+* `mfn`:\\[in\\] Internal status of the iterator.
+* `ghost_data`:\\[in\\] Data for the ghost quadrants that has been synchronized with [`p4est_ghost_exchange_data`](@ref).
+### Returns
+A pointer to the user data for the current neighbor.
+### Prototype
+```c
+void *p8est_mesh_face_neighbor_data (p8est_mesh_face_neighbor_t * mfn, void *ghost_data);
+```
+"""
+function p8est_mesh_face_neighbor_data(mfn, ghost_data)
+    @ccall libt8.p8est_mesh_face_neighbor_data(mfn::Ptr{p8est_mesh_face_neighbor_t}, ghost_data::Ptr{Cvoid})::Ptr{Cvoid}
+end
+
+"""
+    p8est_iter_volume_info
+
+The information that is available to the user-defined [`p8est_iter_volume_t`](@ref) callback function.
+
+*treeid* gives the index in `p4est`->trees of the tree to which *quad* belongs. *quadid* gives the index of *quad* within *tree*'s quadrants array.
+
+| Field  | Note                                                    |
+| :----- | :------------------------------------------------------ |
+| quad   | the quadrant of the callback                            |
+| quadid | id in *quad*'s tree array (see [`p8est_tree_t`](@ref))  |
+| treeid | the tree containing *quad*                              |
+"""
+struct p8est_iter_volume_info
+    p4est::Ptr{p8est_t}
+    ghost_layer::Ptr{p8est_ghost_t}
+    quad::Ptr{p8est_quadrant_t}
+    quadid::p4est_locidx_t
+    treeid::p4est_topidx_t
+end
+
+"""
+The information that is available to the user-defined [`p8est_iter_volume_t`](@ref) callback function.
+
+*treeid* gives the index in `p4est`->trees of the tree to which *quad* belongs. *quadid* gives the index of *quad* within *tree*'s quadrants array.
+"""
+const p8est_iter_volume_info_t = p8est_iter_volume_info
+
+# typedef void ( * p8est_iter_volume_t ) ( p8est_iter_volume_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p8est_iterate`](@ref)() will execute at every quadrant local to the current process.
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p8est_iterate`](@ref)()
+"""
+const p8est_iter_volume_t = Ptr{Cvoid}
+
+struct p8est_iter_face_side_data
+    data::NTuple{56, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_iter_face_side_data}, f::Symbol)
+    f === :full && return Ptr{__JL_Ctag_1183}(x + 0)
+    f === :hanging && return Ptr{__JL_Ctag_1184}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_iter_face_side_data, f::Symbol)
+    r = Ref{p8est_iter_face_side_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_iter_face_side_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_iter_face_side_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p8est_iter_face_side
+
+Information about one side of a face in the forest. If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If the face is hanging, then the quadrants are listed in z-order. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1.
+
+| Field        | Note                                                  |
+| :----------- | :---------------------------------------------------- |
+| treeid       | the tree on this side                                 |
+| face         | which quadrant side the face touches                  |
+| is\\_hanging | boolean: one full quad (0) or four smaller quads (1)  |
+"""
+struct p8est_iter_face_side
+    data::NTuple{64, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_iter_face_side}, f::Symbol)
+    f === :treeid && return Ptr{p4est_topidx_t}(x + 0)
+    f === :face && return Ptr{Int8}(x + 4)
+    f === :is_hanging && return Ptr{Int8}(x + 5)
+    f === :is && return Ptr{p8est_iter_face_side_data}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_iter_face_side, f::Symbol)
+    r = Ref{p8est_iter_face_side}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_iter_face_side}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_iter_face_side}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""Information about one side of a face in the forest. If a *quad* is local (*is_ghost* is false), then its *quadid* indexes the tree's quadrant array; otherwise, it indexes the ghosts array. If the face is hanging, then the quadrants are listed in z-order. If a quadrant should be present, but it is not included in the ghost layer, then quad = NULL, is\\_ghost is true, and quadid = -1."""
+const p8est_iter_face_side_t = p8est_iter_face_side
+
+"""
+    p8est_iter_face_info
+
+The information that is available to the user-defined [`p8est_iter_face_t`](@ref) callback.
+
+The orientation is 0 if the face is within one tree; otherwise, it is the same as the orientation value between the two trees given in the connectivity. If the face is on the outside of the forest, then there is only one side. If tree\\_boundary is false, the face is on the interior of a tree. When tree\\_boundary false, sides[0] contains the lowest z-order quadrant that touches the face. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE.
+
+| Field           | Note                                                                                                |
+| :-------------- | :-------------------------------------------------------------------------------------------------- |
+| orientation     | the orientation of the sides to each other, as in the definition of [`p8est_connectivity_t`](@ref)  |
+| tree\\_boundary | boolean: interior face (0), tree boundary face (true)                                               |
+"""
+struct p8est_iter_face_info
+    p4est::Ptr{p8est_t}
+    ghost_layer::Ptr{p8est_ghost_t}
+    orientation::Int8
+    tree_boundary::Int8
+    sides::sc_array_t
+end
+
+"""
+The information that is available to the user-defined [`p8est_iter_face_t`](@ref) callback.
+
+The orientation is 0 if the face is within one tree; otherwise, it is the same as the orientation value between the two trees given in the connectivity. If the face is on the outside of the forest, then there is only one side. If tree\\_boundary is false, the face is on the interior of a tree. When tree\\_boundary false, sides[0] contains the lowest z-order quadrant that touches the face. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE.
+"""
+const p8est_iter_face_info_t = p8est_iter_face_info
+
+# typedef void ( * p8est_iter_face_t ) ( p8est_iter_face_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p8est_iterate`](@ref)() will execute wherever two quadrants share a face: the face can be a 2:1 hanging face, it does not have to be conformal.
+
+!!! note
+
+    the forest must be face balanced for [`p8est_iterate`](@ref)() to execute a callback function on faces (see [`p8est_balance`](@ref)()).
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p8est_iterate`](@ref)()
+"""
+const p8est_iter_face_t = Ptr{Cvoid}
+
+struct p8est_iter_edge_side_data
+    data::NTuple{32, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_iter_edge_side_data}, f::Symbol)
+    f === :full && return Ptr{__JL_Ctag_1185}(x + 0)
+    f === :hanging && return Ptr{__JL_Ctag_1186}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_iter_edge_side_data, f::Symbol)
+    r = Ref{p8est_iter_edge_side_data}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_iter_edge_side_data}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_iter_edge_side_data}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+"""
+    p8est_iter_edge_side
+
+| Field        | Note                                                                                                            |
+| :----------- | :-------------------------------------------------------------------------------------------------------------- |
+| treeid       | the tree on this side                                                                                           |
+| edge         | which quadrant side the edge touches                                                                            |
+| orientation  | the orientation of each quadrant relative to this edge, as in the definition of [`p8est_connectivity_t`](@ref)  |
+| is\\_hanging | boolean: one full quad (0) or two smaller quads (1)                                                             |
+"""
+struct p8est_iter_edge_side
+    data::NTuple{48, UInt8}
+end
+
+function Base.getproperty(x::Ptr{p8est_iter_edge_side}, f::Symbol)
+    f === :treeid && return Ptr{p4est_topidx_t}(x + 0)
+    f === :edge && return Ptr{Int8}(x + 4)
+    f === :orientation && return Ptr{Int8}(x + 5)
+    f === :is_hanging && return Ptr{Int8}(x + 6)
+    f === :is && return Ptr{p8est_iter_edge_side_data}(x + 8)
+    f === :faces && return Ptr{NTuple{2, Int8}}(x + 40)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::p8est_iter_edge_side, f::Symbol)
+    r = Ref{p8est_iter_edge_side}(x)
+    ptr = Base.unsafe_convert(Ptr{p8est_iter_edge_side}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{p8est_iter_edge_side}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+const p8est_iter_edge_side_t = p8est_iter_edge_side
+
+"""
+    p8est_iter_edge_info
+
+The information about all sides of an edge in the forest. If tree\\_boundary is false, the edge is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the edge. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE/EDGE depending on the location of the edge relative to the tree.
+
+| Field           | Note                                                   |
+| :-------------- | :----------------------------------------------------- |
+| tree\\_boundary | boolean: interior face (0), tree boundary face (true)  |
+| sides           | array of `p8est_iter_edge_side_t` type         |
+"""
+struct p8est_iter_edge_info
+    p4est::Ptr{p8est_t}
+    ghost_layer::Ptr{p8est_ghost_t}
+    tree_boundary::Int8
+    sides::sc_array_t
+end
+
+"""The information about all sides of an edge in the forest. If tree\\_boundary is false, the edge is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the edge. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE/EDGE depending on the location of the edge relative to the tree."""
+const p8est_iter_edge_info_t = p8est_iter_edge_info
+
+# typedef void ( * p8est_iter_edge_t ) ( p8est_iter_edge_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p8est_iterate`](@ref) will execute wherever the edge is an edge of all quadrants that touch it i.e. the callback will not execute on an edge the sits on a hanging face.
+
+!!! note
+
+    the forest must be edge balanced for [`p8est_iterate`](@ref)() to execute a callback function on edges.
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p8est_iterate`](@ref)()
+"""
+const p8est_iter_edge_t = Ptr{Cvoid}
+
+"""
+    p8est_iter_corner_side
+
+| Field      | Note                                                 |
+| :--------- | :--------------------------------------------------- |
+| treeid     | the tree that contains *quad*                        |
+| corner     | which of the quadrant's corners touches this corner  |
+| is\\_ghost | boolean: local (0) or ghost (1)                      |
+| quadid     | the index in the tree or ghost array                 |
+| faces      | internal work data                                   |
+| edges      |                                                      |
+"""
+struct p8est_iter_corner_side
+    treeid::p4est_topidx_t
+    corner::Int8
+    is_ghost::Int8
+    quad::Ptr{p8est_quadrant_t}
+    quadid::p4est_locidx_t
+    faces::NTuple{3, Int8}
+    edges::NTuple{3, Int8}
+end
+
+const p8est_iter_corner_side_t = p8est_iter_corner_side
+
+"""
+    p8est_iter_corner_info
+
+The information that is availalbe to the user-defined [`p8est_iter_corner_t`](@ref) callback.
+
+If tree\\_boundary is false, the corner is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the corner. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE/EDGE/CORNER depending on the location of the corner relative to the tree.
+
+| Field           | Note                                                   |
+| :-------------- | :----------------------------------------------------- |
+| tree\\_boundary | boolean: interior face (0), tree boundary face (true)  |
+| sides           | array of `p8est_iter_corner_side_t` type       |
+"""
+struct p8est_iter_corner_info
+    p4est::Ptr{p8est_t}
+    ghost_layer::Ptr{p8est_ghost_t}
+    tree_boundary::Int8
+    sides::sc_array_t
+end
+
+"""
+The information that is availalbe to the user-defined [`p8est_iter_corner_t`](@ref) callback.
+
+If tree\\_boundary is false, the corner is on the interior of a tree. When tree\\_boundary is false, sides[0] contains the lowest z-order quadrant that touches the corner. When tree\\_boundary is true, its value is P8EST\\_CONNECT\\_FACE/EDGE/CORNER depending on the location of the corner relative to the tree.
+"""
+const p8est_iter_corner_info_t = p8est_iter_corner_info
+
+# typedef void ( * p8est_iter_corner_t ) ( p8est_iter_corner_info_t * info , void * user_data )
+"""
+The prototype for a function that [`p8est_iterate`](@ref) will execute wherever the corner is a corner for all quadrants that touch it
+
+i.e. the callback will not execute on a corner that sits on a hanging face or edge.
+
+!!! note
+
+    the forest does not need to be corner balanced for [`p8est_iterate`](@ref)() to execute a callback function at corners, only face and edge balanced.
+
+### Parameters
+* `info`:\\[in\\] information about a quadrant provided to the user
+* `user_data`:\\[in,out\\] the user context passed to [`p8est_iterate`](@ref)()
+"""
+const p8est_iter_corner_t = Ptr{Cvoid}
+
+"""
+    p8est_iterate(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_edge, iter_corner)
+
+Execute the user-supplied callback functions at every volume, face, edge and corner in the local forest.
+
+The ghost\\_layer may be NULL. The *user_data* pointer is not touched by [`p8est_iterate`](@ref), but is passed to each of the callbacks. Any of the callback functions may be NULL. The callback functions are interspersed with each other, i.e. some face callbacks will occur between volume callbacks, and some edge callbacks will occur between face callbacks, etc.:
+
+1) volume callbacks occur in the sorted Morton-index order. 2) a face callback is not executed until after the volume callbacks have been executed for the quadrants that share it. 3) an edge callback is not executed until the face callbacks have been executed for all faces that touch the edge. 4) a corner callback is not executed until the edge callbacks have been executed for all edges that touch the corner. 5) it is not always the case that every face callback for a given quadrant is executed before any of the edge or corner callbacks, and it is not always the case that every edge callback for a given quadrant is executed before any of the corner callbacks. 6) callbacks are not executed at faces, edges or corners that only involve ghost quadrants, i.e. that are not adjacent in the local section of the forest.
+
+### Parameters
+* `p4est`:\\[in\\] the forest
+* `ghost_layer`:\\[in\\] optional: when not given, callbacks at the boundaries of the local partition cannot provide quadrant data about ghost quadrants: missing ([`p8est_quadrant_t`](@ref) *) pointers are set to NULL, missing indices are set to -1.
+* `user_data`:\\[in,out\\] optional context to supply to each callback
+* `iter_volume`:\\[in\\] callback function for every quadrant's interior
+* `iter_face`:\\[in\\] callback function for every face between quadrants
+* `iter_edge`:\\[in\\] callback function for every edge between quadrants
+* `iter_corner`:\\[in\\] callback function for every corner between quadrants
+### Prototype
+```c
+void p8est_iterate (p8est_t * p4est, p8est_ghost_t * ghost_layer, void *user_data, p8est_iter_volume_t iter_volume, p8est_iter_face_t iter_face, p8est_iter_edge_t iter_edge, p8est_iter_corner_t iter_corner);
+```
+"""
+function p8est_iterate(p4est_, ghost_layer, user_data, iter_volume, iter_face, iter_edge, iter_corner)
+    @ccall libt8.p8est_iterate(p4est_::Ptr{p8est_t}, ghost_layer::Ptr{p8est_ghost_t}, user_data::Ptr{Cvoid}, iter_volume::p8est_iter_volume_t, iter_face::p8est_iter_face_t, iter_edge::p8est_iter_edge_t, iter_corner::p8est_iter_corner_t)::Cvoid
+end
+
+"""
+    p8est_iter_cside_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_corner_side_t * p8est_iter_cside_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p8est_iter_cside_array_index_int(array, it)
+    @ccall libt8.p8est_iter_cside_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p8est_iter_corner_side_t}
+end
+
+"""
+    p8est_iter_cside_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_corner_side_t * p8est_iter_cside_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_iter_cside_array_index(array, it)
+    @ccall libt8.p8est_iter_cside_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_iter_corner_side_t}
+end
+
+"""
+    p8est_iter_eside_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_edge_side_t * p8est_iter_eside_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p8est_iter_eside_array_index_int(array, it)
+    @ccall libt8.p8est_iter_eside_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p8est_iter_edge_side_t}
+end
+
+"""
+    p8est_iter_eside_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_edge_side_t * p8est_iter_eside_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_iter_eside_array_index(array, it)
+    @ccall libt8.p8est_iter_eside_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_iter_edge_side_t}
+end
+
+"""
+    p8est_iter_fside_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_face_side_t * p8est_iter_fside_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p8est_iter_fside_array_index_int(array, it)
+    @ccall libt8.p8est_iter_fside_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p8est_iter_face_side_t}
+end
+
+"""
+    p8est_iter_fside_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_iter_face_side_t * p8est_iter_fside_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_iter_fside_array_index(array, it)
+    @ccall libt8.p8est_iter_fside_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_iter_face_side_t}
+end
+
+const p8est_lnodes_code_t = Int16
+
+struct p8est_lnodes
+    mpicomm::MPI_Comm
+    num_local_nodes::p4est_locidx_t
+    owned_count::p4est_locidx_t
+    global_offset::p4est_gloidx_t
+    nonlocal_nodes::Ptr{p4est_gloidx_t}
+    sharers::Ptr{sc_array_t}
+    global_owned_count::Ptr{p4est_locidx_t}
+    degree::Cint
+    vnodes::Cint
+    num_local_elements::p4est_locidx_t
+    face_code::Ptr{p8est_lnodes_code_t}
+    element_nodes::Ptr{p4est_locidx_t}
+end
+
+"""
+Store a parallel numbering of Lobatto points of a given degree > 0.
+
+Each element has degree+1 nodes per edge and vnodes = (degree+1)^3 nodes per volume. element\\_nodes is of dimension vnodes * num\\_local\\_elements and lists the nodes of each element in lexicographic yx-order (x varies fastest); element\\_nodes indexes into the set of local nodes, layed out as follows: local nodes = [<-----owned\\_count----->|<-----nonlocal\\_nodes----->] = [<----------------num\\_local\\_nodes----------------->] nonlocal\\_nodes contains the globally unique numbers for independent nodes that are owned by other processes; for local nodes, the globally unique numbers are given by i + global\\_offset, where i is the local number. Hanging nodes are always local and don't have a global number. They index the geometrically corresponding independent nodes of a neighbor.
+
+Whether nodes are hanging or not is decided based on the element faces and edges. This information is encoded in face\\_code with one int16\\_t per element. If no faces or edges are hanging, the value is zero, otherwise the face\\_code is interpreted by [`p8est_lnodes_decode`](@ref).
+
+Independent nodes can be shared by multiple MPI ranks. The owner rank of a node is the one from the lowest numbered element on the lowest numbered octree *touching* the node.
+
+What is meant by *touching*? A quadrant is said to touch all faces/edges/corners that are incident on it, and by extension all nodes that are contained in those faces/edges/corners.
+
+X +-----------+ x |\\ \\ x | \\ \\ . x | \\ \\ x X | +-----------+ +-----+ . . | | | |\\ \\ X o + | | | +-----+ o . \\ | p | + | q | o \\ | | \\| | o \\| | +-----+ O +-----------+
+
+In this example degree = 3. There are 4 nodes that live on the face between q and p, two on each edge and one at each corner of that face. The face is incident on q, so q owns the nodes marked '.' on the face (provided q is from a lower tree or has a lower index than p). The bottom and front edges are incident on q, so q owns its nodes marked 'o' as well. The front lower corner is incident on q, so q owns its node 'O' as well. The other edges and corners are not incident on q, so q cannot own their nodes, marked 'x' and 'X'.
+
+global\\_owned\\_count contains the number of independent nodes owned by each process.
+
+The sharers array contains items of type [`p8est_lnodes_rank_t`](@ref) that hold the ranks that own or share independent local nodes. If there are no shared nodes on this processor, it is empty. Otherwise, it is sorted by rank and the current process is included.
+
+degree < 0 indicates that the lnodes data structure is being used to number the quadrant boundary object (faces, edge and corners) rather than the \$C^0\$ Lobatto nodes:
+
+if degree == -1, then one node is assigned per face, and no nodes are assigned per volume, per edge, or per corner: this numbering can be used for low-order Raviart-Thomas elements. In this case, vnodes == 6, and the nodes are listed in face-order.
+
+if degree == -2, then one node is assigned per face and per edge and no nodes are assigned per volume or per corner. In this case, vnodes == 18, and the nodes are listed in face-order, followed by edge-order.
+
+if degree == -3, then one node is assigned per face, per edge and per corner and no nodes are assigned per volume. In this case, vnodes == 26, and the nodes are listed in face-order, followed by edge-order, followed by corner-order.
+"""
+const p8est_lnodes_t = p8est_lnodes
+
+"""
+    p8est_lnodes_rank
+
+The structure stored in the sharers array.
+
+shared\\_nodes is a sorted array of [`p4est_locidx_t`](@ref) that indexes into local nodes. The shared\\_nodes array has a contiguous (or empty) section of nodes owned by the current rank. shared\\_mine\\_offset and shared\\_mine\\_count identify this section by indexing the shared\\_nodes array, not the local nodes array. owned\\_offset and owned\\_count define the section of local nodes that is owned by the listed rank (the section may be empty). For the current process these coincide with those in [`p8est_lnodes_t`](@ref).
+"""
+struct p8est_lnodes_rank
+    rank::Cint
+    shared_nodes::sc_array_t
+    shared_mine_offset::p4est_locidx_t
+    shared_mine_count::p4est_locidx_t
+    owned_offset::p4est_locidx_t
+    owned_count::p4est_locidx_t
+end
+
+"""
+The structure stored in the sharers array.
+
+shared\\_nodes is a sorted array of [`p4est_locidx_t`](@ref) that indexes into local nodes. The shared\\_nodes array has a contiguous (or empty) section of nodes owned by the current rank. shared\\_mine\\_offset and shared\\_mine\\_count identify this section by indexing the shared\\_nodes array, not the local nodes array. owned\\_offset and owned\\_count define the section of local nodes that is owned by the listed rank (the section may be empty). For the current process these coincide with those in [`p8est_lnodes_t`](@ref).
+"""
+const p8est_lnodes_rank_t = p8est_lnodes_rank
+
+"""
+    p8est_lnodes_decode(face_code, hanging_face, hanging_edge)
+
+### Prototype
+```c
+static inline int p8est_lnodes_decode (p8est_lnodes_code_t face_code, int hanging_face[6], int hanging_edge[12]);
+```
+"""
+function p8est_lnodes_decode(face_code, hanging_face, hanging_edge)
+    @ccall libt8.p8est_lnodes_decode(face_code::p8est_lnodes_code_t, hanging_face::Ptr{Cint}, hanging_edge::Ptr{Cint})::Cint
+end
+
+"""
+    p8est_lnodes_new(p8est_, ghost_layer, degree)
+
+### Prototype
+```c
+p8est_lnodes_t *p8est_lnodes_new (p8est_t * p8est, p8est_ghost_t * ghost_layer, int degree);
+```
+"""
+function p8est_lnodes_new(p8est_, ghost_layer, degree)
+    @ccall libt8.p8est_lnodes_new(p8est_::Ptr{p8est_t}, ghost_layer::Ptr{p8est_ghost_t}, degree::Cint)::Ptr{p8est_lnodes_t}
+end
+
+"""
+    p8est_lnodes_destroy(lnodes)
+
+### Prototype
+```c
+void p8est_lnodes_destroy (p8est_lnodes_t * lnodes);
+```
+"""
+function p8est_lnodes_destroy(lnodes)
+    @ccall libt8.p8est_lnodes_destroy(lnodes::Ptr{p8est_lnodes_t})::Cvoid
+end
+
+"""
+    p8est_partition_lnodes(p8est_, ghost, degree, partition_for_coarsening)
+
+Partition using weights based on the number of nodes assigned to each element in lnodes
+
+### Parameters
+* `p8est`:\\[in,out\\] the forest to be repartitioned
+* `ghost`:\\[in\\] the ghost layer
+* `degree`:\\[in\\] the degree that would be passed to [`p8est_lnodes_new`](@ref)()
+* `partition_for_coarsening`:\\[in\\] whether the partition should allow coarsening (i.e. group siblings who might merge)
+### Prototype
+```c
+void p8est_partition_lnodes (p8est_t * p8est, p8est_ghost_t * ghost, int degree, int partition_for_coarsening);
+```
+"""
+function p8est_partition_lnodes(p8est_, ghost, degree, partition_for_coarsening)
+    @ccall libt8.p8est_partition_lnodes(p8est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, degree::Cint, partition_for_coarsening::Cint)::Cvoid
+end
+
+"""
+    p8est_partition_lnodes_detailed(p4est_, ghost, nodes_per_volume, nodes_per_face, nodes_per_edge, nodes_per_corner, partition_for_coarsening)
+
+Partition using weights that are broken down by where they reside: in volumes, on faces, on edges, or on corners.
+
+### Prototype
+```c
+void p8est_partition_lnodes_detailed (p8est_t * p4est, p8est_ghost_t * ghost, int nodes_per_volume, int nodes_per_face, int nodes_per_edge, int nodes_per_corner, int partition_for_coarsening);
+```
+"""
+function p8est_partition_lnodes_detailed(p4est_, ghost, nodes_per_volume, nodes_per_face, nodes_per_edge, nodes_per_corner, partition_for_coarsening)
+    @ccall libt8.p8est_partition_lnodes_detailed(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, nodes_per_volume::Cint, nodes_per_face::Cint, nodes_per_edge::Cint, nodes_per_corner::Cint, partition_for_coarsening::Cint)::Cvoid
+end
+
+"""
+    p8est_ghost_support_lnodes(p8est_, lnodes, ghost)
+
+Expand the ghost layer to include the support of all nodes supported on the local partition.
+
+### Parameters
+* `p8est`:\\[in\\] The forest from which the ghost layer was generated.
+* `lnodes`:\\[in\\] The nodes to support.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p8est_ghost_support_lnodes (p8est_t * p8est, p8est_lnodes_t * lnodes, p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_support_lnodes(p8est_, lnodes, ghost)
+    @ccall libt8.p8est_ghost_support_lnodes(p8est_::Ptr{p8est_t}, lnodes::Ptr{p8est_lnodes_t}, ghost::Ptr{p8est_ghost_t})::Cvoid
+end
+
+"""
+    p8est_ghost_expand_by_lnodes(p4est_, lnodes, ghost)
+
+Expand the ghost layer as in [`p8est_ghost_expand`](@ref)(), but use node support to define adjacency instead of geometric adjacency.
+
+### Parameters
+* `p8est`:\\[in\\] The forest from which the ghost layer was generated.
+* `lnodes`:\\[in\\] The nodes to support.
+* `ghost`:\\[in,out\\] The ghost layer to be expanded.
+### Prototype
+```c
+void p8est_ghost_expand_by_lnodes (p8est_t * p4est, p8est_lnodes_t * lnodes, p8est_ghost_t * ghost);
+```
+"""
+function p8est_ghost_expand_by_lnodes(p4est_, lnodes, ghost)
+    @ccall libt8.p8est_ghost_expand_by_lnodes(p4est_::Ptr{p8est_t}, lnodes::Ptr{p8est_lnodes_t}, ghost::Ptr{p8est_ghost_t})::Cvoid
+end
+
+"""
+    p8est_lnodes_buffer
+
+[`p8est_lnodes_buffer_t`](@ref) handles the communication of data associated with nodes.
+
+*send_buffers* is an array of arrays: one buffer for each process to which the current process sends node-data. It should not be altered between a shared\\_*\\_begin and a shared\\_*\\_end call.
+
+*recv_buffers* is an array of arrays that is used in lnodes\\_share\\_all\\_*. *recv_buffers*[j] corresponds with lnodes->sharers[j]: it is the same length as *lnodes*->sharers[j]->shared_nodes. At the completion of lnodes\\_share\\_all or lnodes\\_share\\_all\\_end, recv\\_buffers[j] contains the node-data from the process lnodes->sharers[j]->rank (unless j is the current rank, in which case recv\\_buffers[j] is empty).
+"""
+struct p8est_lnodes_buffer
+    requests::Ptr{sc_array_t}
+    send_buffers::Ptr{sc_array_t}
+    recv_buffers::Ptr{sc_array_t}
+end
+
+"""
+[`p8est_lnodes_buffer_t`](@ref) handles the communication of data associated with nodes.
+
+*send_buffers* is an array of arrays: one buffer for each process to which the current process sends node-data. It should not be altered between a shared\\_*\\_begin and a shared\\_*\\_end call.
+
+*recv_buffers* is an array of arrays that is used in lnodes\\_share\\_all\\_*. *recv_buffers*[j] corresponds with lnodes->sharers[j]: it is the same length as *lnodes*->sharers[j]->shared_nodes. At the completion of lnodes\\_share\\_all or lnodes\\_share\\_all\\_end, recv\\_buffers[j] contains the node-data from the process lnodes->sharers[j]->rank (unless j is the current rank, in which case recv\\_buffers[j] is empty).
+"""
+const p8est_lnodes_buffer_t = p8est_lnodes_buffer
+
+"""
+    p8est_lnodes_share_owned_begin(node_data, lnodes)
+
+[`p8est_lnodes_share_owned_begin`](@ref)
+
+*node_data* is a user-defined array of arbitrary type, where each entry is associated with the *lnodes* local nodes entry of matching index. For every local nodes entry that is owned by a process other than the current one, the value in the *node_data* array of the owning process is written directly into the *node_data* array of the current process. Values of *node_data* are not guaranteed to be sent or received until the *buffer* created by [`p8est_lnodes_share_owned_begin`](@ref) is passed to [`p8est_lnodes_share_owned_end`](@ref).
+
+To be memory neutral, the *buffer* created by [`p8est_lnodes_share_owned_begin`](@ref) must be destroying with [`p8est_lnodes_buffer_destroy`](@ref) (it is not destroyed by [`p8est_lnodes_share_owned_end`](@ref)).
+
+### Prototype
+```c
+p8est_lnodes_buffer_t *p8est_lnodes_share_owned_begin (sc_array_t * node_data, p8est_lnodes_t * lnodes);
+```
+"""
+function p8est_lnodes_share_owned_begin(node_data, lnodes)
+    @ccall libt8.p8est_lnodes_share_owned_begin(node_data::Ptr{sc_array_t}, lnodes::Ptr{p8est_lnodes_t})::Ptr{p8est_lnodes_buffer_t}
+end
+
+"""
+    p8est_lnodes_share_owned_end(buffer)
+
+### Prototype
+```c
+void p8est_lnodes_share_owned_end (p8est_lnodes_buffer_t * buffer);
+```
+"""
+function p8est_lnodes_share_owned_end(buffer)
+    @ccall libt8.p8est_lnodes_share_owned_end(buffer::Ptr{p8est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p8est_lnodes_share_owned(node_data, lnodes)
+
+Equivalent to calling [`p8est_lnodes_share_owned_end`](@ref) directly after [`p8est_lnodes_share_owned_begin`](@ref). Use if there is no local work that can be done to mask the communication cost.
+
+### Prototype
+```c
+void p8est_lnodes_share_owned (sc_array_t * node_data, p8est_lnodes_t * lnodes);
+```
+"""
+function p8est_lnodes_share_owned(node_data, lnodes)
+    @ccall libt8.p8est_lnodes_share_owned(node_data::Ptr{sc_array_t}, lnodes::Ptr{p8est_lnodes_t})::Cvoid
+end
+
+"""
+    p8est_lnodes_share_all_begin(node_data, lnodes)
+
+[`p8est_lnodes_share_all_begin`](@ref)
+
+*node_data* is a user\\_defined array of arbitrary type, where each entry is associated with the *lnodes* local nodes entry of matching index. For every process that shares an entry with the current one, the value in the *node_data* array of that process is written into a *buffer*->recv_buffers entry as described above. The user can then perform some arbitrary work that requires the data from all processes that share a node (such as reduce, max, min, etc.). When the work concludes, the *buffer* should be destroyed with [`p8est_lnodes_buffer_destroy`](@ref).
+
+Values of *node_data* are not guaranteed to be send, and *buffer*->recv_buffer entries are not guaranteed to be received until the *buffer* created by [`p8est_lnodes_share_all_begin`](@ref) is passed to [`p8est_lnodes_share_all_end`](@ref).
+
+### Prototype
+```c
+p8est_lnodes_buffer_t *p8est_lnodes_share_all_begin (sc_array_t * node_data, p8est_lnodes_t * lnodes);
+```
+"""
+function p8est_lnodes_share_all_begin(node_data, lnodes)
+    @ccall libt8.p8est_lnodes_share_all_begin(node_data::Ptr{sc_array_t}, lnodes::Ptr{p8est_lnodes_t})::Ptr{p8est_lnodes_buffer_t}
+end
+
+"""
+    p8est_lnodes_share_all_end(buffer)
+
+### Prototype
+```c
+void p8est_lnodes_share_all_end (p8est_lnodes_buffer_t * buffer);
+```
+"""
+function p8est_lnodes_share_all_end(buffer)
+    @ccall libt8.p8est_lnodes_share_all_end(buffer::Ptr{p8est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p8est_lnodes_share_all(node_data, lnodes)
+
+Equivalend to calling [`p8est_lnodes_share_all_end`](@ref) directly after [`p8est_lnodes_share_all_begin`](@ref). Use if there is no local work that can be done to mask the communication cost.
+
+### Returns
+A fully initialized buffer that contains the received data. After processing this data, the buffer must be freed with [`p8est_lnodes_buffer_destroy`](@ref).
+### Prototype
+```c
+p8est_lnodes_buffer_t *p8est_lnodes_share_all (sc_array_t * node_data, p8est_lnodes_t * lnodes);
+```
+"""
+function p8est_lnodes_share_all(node_data, lnodes)
+    @ccall libt8.p8est_lnodes_share_all(node_data::Ptr{sc_array_t}, lnodes::Ptr{p8est_lnodes_t})::Ptr{p8est_lnodes_buffer_t}
+end
+
+"""
+    p8est_lnodes_buffer_destroy(buffer)
+
+### Prototype
+```c
+void p8est_lnodes_buffer_destroy (p8est_lnodes_buffer_t * buffer);
+```
+"""
+function p8est_lnodes_buffer_destroy(buffer)
+    @ccall libt8.p8est_lnodes_buffer_destroy(buffer::Ptr{p8est_lnodes_buffer_t})::Cvoid
+end
+
+"""
+    p8est_lnodes_rank_array_index_int(array, it)
+
+### Prototype
+```c
+static inline p8est_lnodes_rank_t * p8est_lnodes_rank_array_index_int (sc_array_t * array, int it);
+```
+"""
+function p8est_lnodes_rank_array_index_int(array, it)
+    @ccall libt8.p8est_lnodes_rank_array_index_int(array::Ptr{sc_array_t}, it::Cint)::Ptr{p8est_lnodes_rank_t}
+end
+
+"""
+    p8est_lnodes_rank_array_index(array, it)
+
+### Prototype
+```c
+static inline p8est_lnodes_rank_t * p8est_lnodes_rank_array_index (sc_array_t * array, size_t it);
+```
+"""
+function p8est_lnodes_rank_array_index(array, it)
+    @ccall libt8.p8est_lnodes_rank_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_lnodes_rank_t}
+end
+
+"""
+    p8est_lnodes_global_index(lnodes, lidx)
+
+### Prototype
+```c
+static inline p4est_gloidx_t p8est_lnodes_global_index (p8est_lnodes_t * lnodes, p4est_locidx_t lidx);
+```
+"""
+function p8est_lnodes_global_index(lnodes, lidx)
+    @ccall libt8.p8est_lnodes_global_index(lnodes::Ptr{p8est_lnodes_t}, lidx::p4est_locidx_t)::p4est_gloidx_t
+end
+
+# typedef void ( * p8est_replace_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , int num_outgoing , p8est_quadrant_t * outgoing [ ] , int num_incoming , p8est_quadrant_t * incoming [ ] )
+"""
+Callback function prototype to replace one set of quadrants with another.
+
+This is used by extended routines when the quadrants of an existing, valid `p8est` are changed. The callback allows the user to make changes to newly initialized quadrants before the quadrants that they replace are destroyed.
+
+If the mesh is being refined, num\\_outgoing will be 1 and num\\_incoming will be 8, and vice versa if the mesh is being coarsened.
+
+### Parameters
+* `num_outgoing`:\\[in\\] The number of outgoing quadrants.
+* `outgoing`:\\[in\\] The outgoing quadrants: after the callback, the user\\_data, if `p8est`->data_size is nonzero, will be destroyed.
+* `num_incoming`:\\[in\\] The number of incoming quadrants.
+* `incoming`:\\[in,out\\] The incoming quadrants: prior to the callback, the user\\_data, if `p8est`->data_size is nonzero, is allocated, and the [`p8est_init_t`](@ref) callback, if it has been provided, will be called.
+"""
+const p8est_replace_t = Ptr{Cvoid}
+
+"""
+    p8est_new_ext(mpicomm, connectivity, min_quadrants, min_level, fill_uniform, data_size, init_fn, user_pointer)
+
+### Prototype
+```c
+p8est_t *p8est_new_ext (sc_MPI_Comm mpicomm, p8est_connectivity_t * connectivity, p4est_locidx_t min_quadrants, int min_level, int fill_uniform, size_t data_size, p8est_init_t init_fn, void *user_pointer);
+```
+"""
+function p8est_new_ext(mpicomm, connectivity, min_quadrants, min_level, fill_uniform, data_size, init_fn, user_pointer)
+    @ccall libt8.p8est_new_ext(mpicomm::MPI_Comm, connectivity::Ptr{p8est_connectivity_t}, min_quadrants::p4est_locidx_t, min_level::Cint, fill_uniform::Cint, data_size::Csize_t, init_fn::p8est_init_t, user_pointer::Ptr{Cvoid})::Ptr{p8est_t}
+end
+
+"""
+    p8est_mesh_new_ext(p4est_, ghost, compute_tree_index, compute_level_lists, btype)
+
+Create a new mesh.
+
+### Parameters
+* `p8est`:\\[in\\] A forest that is fully 2:1 balanced.
+* `ghost`:\\[in\\] The ghost layer created from the provided `p4est`.
+* `compute_tree_index`:\\[in\\] Boolean to decide whether to allocate and compute the quad\\_to\\_tree list.
+* `compute_level_lists`:\\[in\\] Boolean to decide whether to compute the level lists in quad\\_level.
+* `btype`:\\[in\\] Currently ignored, only face neighbors are stored.
+### Returns
+A fully allocated mesh structure.
+### Prototype
+```c
+p8est_mesh_t *p8est_mesh_new_ext (p8est_t * p4est, p8est_ghost_t * ghost, int compute_tree_index, int compute_level_lists, p8est_connect_type_t btype);
+```
+"""
+function p8est_mesh_new_ext(p4est_, ghost, compute_tree_index, compute_level_lists, btype)
+    @ccall libt8.p8est_mesh_new_ext(p4est_::Ptr{p8est_t}, ghost::Ptr{p8est_ghost_t}, compute_tree_index::Cint, compute_level_lists::Cint, btype::p8est_connect_type_t)::Ptr{p8est_mesh_t}
+end
+
+"""
+    p8est_copy_ext(input, copy_data, duplicate_mpicomm)
+
+Make a deep copy of a `p8est`. The connectivity is not duplicated. Copying of quadrant user data is optional. If old and new data sizes are 0, the user\\_data field is copied regardless. The inspect member of the copy is set to NULL. The revision counter of the copy is set to zero.
+
+### Parameters
+* `copy_data`:\\[in\\] If true, data are copied. If false, data\\_size is set to 0.
+* `duplicate_mpicomm`:\\[in\\] If true, MPI communicator is copied.
+### Returns
+Returns a valid `p8est` that does not depend on the input, except for borrowing the same connectivity. Its revision counter is 0.
+### Prototype
+```c
+p8est_t *p8est_copy_ext (p8est_t * input, int copy_data, int duplicate_mpicomm);
+```
+"""
+function p8est_copy_ext(input, copy_data, duplicate_mpicomm)
+    @ccall libt8.p8est_copy_ext(input::Ptr{p8est_t}, copy_data::Cint, duplicate_mpicomm::MPI_Comm)::Ptr{p8est_t}
+end
+
+"""
+    p8est_refine_ext(p8est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+
+Refine a forest with a bounded refinement level and a replace option.
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest is changed in place.
+* `refine_recursive`:\\[in\\] Boolean to decide on recursive refinement.
+* `maxlevel`:\\[in\\] Maximum allowed refinement level (inclusive). If this is negative the level is restricted only by the compile-time constant QMAXLEVEL in `p8est.h`.
+* `refine_fn`:\\[in\\] Callback function that must return true if a quadrant shall be refined. If refine\\_recursive is true, refine\\_fn is called for every existing and newly created quadrant. Otherwise, it is called for every existing quadrant. It is possible that a refinement request made by the callback is ignored. To catch this case, you can examine whether init\\_fn or replace\\_fn gets called.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data for newly created quadrants, which is guaranteed to be allocated. This function pointer may be NULL.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace; may be NULL.
+### Prototype
+```c
+void p8est_refine_ext (p8est_t * p8est, int refine_recursive, int maxlevel, p8est_refine_t refine_fn, p8est_init_t init_fn, p8est_replace_t replace_fn);
+```
+"""
+function p8est_refine_ext(p8est_, refine_recursive, maxlevel, refine_fn, init_fn, replace_fn)
+    @ccall libt8.p8est_refine_ext(p8est_::Ptr{p8est_t}, refine_recursive::Cint, maxlevel::Cint, refine_fn::p8est_refine_t, init_fn::p8est_init_t, replace_fn::p8est_replace_t)::Cvoid
+end
+
+"""
+    p8est_coarsen_ext(p8est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+
+Coarsen a forest.
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest is changed in place.
+* `coarsen_recursive`:\\[in\\] Boolean to decide on recursive coarsening.
+* `callback_orphans`:\\[in\\] Boolean to enable calling coarsen\\_fn even on non-families. In this case, the second quadrant pointer in the argument list of the callback is NULL, subsequent pointers are undefined, and the return value is ignored. If coarsen\\_recursive is true, it is possible that a quadrant is called once or more as an orphan and eventually becomes part of a family. With coarsen\\_recursive false and callback\\_orphans true, it is guaranteed that every quadrant is passed exactly once into the coarsen\\_fn callback.
+* `coarsen_fn`:\\[in\\] Callback function that returns true if a family of quadrants shall be coarsened.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p8est_coarsen_ext (p8est_t * p8est, int coarsen_recursive, int callback_orphans, p8est_coarsen_t coarsen_fn, p8est_init_t init_fn, p8est_replace_t replace_fn);
+```
+"""
+function p8est_coarsen_ext(p8est_, coarsen_recursive, callback_orphans, coarsen_fn, init_fn, replace_fn)
+    @ccall libt8.p8est_coarsen_ext(p8est_::Ptr{p8est_t}, coarsen_recursive::Cint, callback_orphans::Cint, coarsen_fn::p8est_coarsen_t, init_fn::p8est_init_t, replace_fn::p8est_replace_t)::Cvoid
+end
+
+"""
+    p8est_balance_ext(p8est_, btype, init_fn, replace_fn)
+
+2:1 balance the size differences of neighboring elements in a forest.
+
+### Parameters
+* `p8est`:\\[in,out\\] The `p8est` to be worked on.
+* `btype`:\\[in\\] Balance type (face, edge, or corner/full). Corner balance is almost never required when discretizing a PDE; just causes smoother mesh grading.
+* `init_fn`:\\[in\\] Callback function to initialize the user\\_data which is already allocated automatically.
+* `replace_fn`:\\[in\\] Callback function that allows the user to change incoming quadrants based on the quadrants they replace.
+### Prototype
+```c
+void p8est_balance_ext (p8est_t * p8est, p8est_connect_type_t btype, p8est_init_t init_fn, p8est_replace_t replace_fn);
+```
+"""
+function p8est_balance_ext(p8est_, btype, init_fn, replace_fn)
+    @ccall libt8.p8est_balance_ext(p8est_::Ptr{p8est_t}, btype::p8est_connect_type_t, init_fn::p8est_init_t, replace_fn::p8est_replace_t)::Cvoid
+end
+
+"""
+    p8est_balance_subtree_ext(p8est_, btype, which_tree, init_fn, replace_fn)
+
+### Prototype
+```c
+void p8est_balance_subtree_ext (p8est_t * p8est, p8est_connect_type_t btype, p4est_topidx_t which_tree, p8est_init_t init_fn, p8est_replace_t replace_fn);
+```
+"""
+function p8est_balance_subtree_ext(p8est_, btype, which_tree, init_fn, replace_fn)
+    @ccall libt8.p8est_balance_subtree_ext(p8est_::Ptr{p8est_t}, btype::p8est_connect_type_t, which_tree::p4est_topidx_t, init_fn::p8est_init_t, replace_fn::p8est_replace_t)::Cvoid
+end
+
+"""
+    p8est_partition_ext(p8est_, partition_for_coarsening, weight_fn)
+
+Repartition the forest.
+
+The forest is partitioned between processors such that each processor has an approximately equal number of quadrants (or weight).
+
+### Parameters
+* `p8est`:\\[in,out\\] The forest that will be partitioned.
+* `partition_for_coarsening`:\\[in\\] If true, the partition is modified to allow one level of coarsening.
+* `weight_fn`:\\[in\\] A weighting function or NULL for uniform partitioning.
+### Returns
+The global number of shipped quadrants
+### Prototype
+```c
+p4est_gloidx_t p8est_partition_ext (p8est_t * p8est, int partition_for_coarsening, p8est_weight_t weight_fn);
+```
+"""
+function p8est_partition_ext(p8est_, partition_for_coarsening, weight_fn)
+    @ccall libt8.p8est_partition_ext(p8est_::Ptr{p8est_t}, partition_for_coarsening::Cint, weight_fn::p8est_weight_t)::p4est_gloidx_t
+end
+
+"""
+    p8est_partition_for_coarsening(p8est_, num_quadrants_in_proc)
+
+Correct partition to allow one level of coarsening.
+
+### Parameters
+* `p8est`:\\[in\\] forest whose partition is corrected
+* `num_quadrants_in_proc`:\\[in,out\\] partition that will be corrected
+### Returns
+absolute number of moved quadrants
+### Prototype
+```c
+p4est_gloidx_t p8est_partition_for_coarsening (p8est_t * p8est, p4est_locidx_t * num_quadrants_in_proc);
+```
+"""
+function p8est_partition_for_coarsening(p8est_, num_quadrants_in_proc)
+    @ccall libt8.p8est_partition_for_coarsening(p8est_::Ptr{p8est_t}, num_quadrants_in_proc::Ptr{p4est_locidx_t})::p4est_gloidx_t
+end
+
+"""
+    p8est_iterate_ext(p8est_, ghost_layer, user_data, iter_volume, iter_face, iter_edge, iter_corner, remote)
+
+[`p8est_iterate_ext`](@ref) adds the option *remote*: if this is false, then it is the same as [`p8est_iterate`](@ref); if this is true, then corner/edge callbacks are also called on corners/edges for hanging faces/edges touched by local quadrants.
+
+### Prototype
+```c
+void p8est_iterate_ext (p8est_t * p8est, p8est_ghost_t * ghost_layer, void *user_data, p8est_iter_volume_t iter_volume, p8est_iter_face_t iter_face, p8est_iter_edge_t iter_edge, p8est_iter_corner_t iter_corner, int remote);
+```
+"""
+function p8est_iterate_ext(p8est_, ghost_layer, user_data, iter_volume, iter_face, iter_edge, iter_corner, remote)
+    @ccall libt8.p8est_iterate_ext(p8est_::Ptr{p8est_t}, ghost_layer::Ptr{p8est_ghost_t}, user_data::Ptr{Cvoid}, iter_volume::p8est_iter_volume_t, iter_face::p8est_iter_face_t, iter_edge::p8est_iter_edge_t, iter_corner::p8est_iter_corner_t, remote::Cint)::Cvoid
+end
+
+"""
+    p8est_save_ext(filename, p8est_, save_data, save_partition)
+
+Save the complete connectivity/`p8est` data to disk. This is a collective operation that all MPI processes need to call. All processes write into the same file, so the filename given needs to be identical over all parallel invocations. See [`p8est_load_ext`](@ref) for information on the autopartition parameter.
+
+!!! note
+
+    Aborts on file errors.
+
+### Parameters
+* `filename`:\\[in\\] Name of the file to write.
+* `p8est`:\\[in\\] Valid forest structure.
+* `save_data`:\\[in\\] If true, the element data is saved. Otherwise, a data size of 0 is saved.
+* `save_partition`:\\[in\\] If false, save file as if 1 core was used. If true, save core count and partition. Advantage: Partition can be recovered on loading with same mpisize and autopartition false. Disadvantage: Makes the file depend on mpisize. Either way the file can be loaded with autopartition true.
+### Prototype
+```c
+void p8est_save_ext (const char *filename, p8est_t * p8est, int save_data, int save_partition);
+```
+"""
+function p8est_save_ext(filename, p8est_, save_data, save_partition)
+    @ccall libt8.p8est_save_ext(filename::Cstring, p8est_::Ptr{p8est_t}, save_data::Cint, save_partition::Cint)::Cvoid
+end
+
+"""
+    p8est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+
+### Prototype
+```c
+p8est_t *p8est_load_ext (const char *filename, sc_MPI_Comm mpicomm, size_t data_size, int load_data, int autopartition, int broadcasthead, void *user_pointer, p8est_connectivity_t ** connectivity);
+```
+"""
+function p8est_load_ext(filename, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+    @ccall libt8.p8est_load_ext(filename::Cstring, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, autopartition::Cint, broadcasthead::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p8est_connectivity_t}})::Ptr{p8est_t}
+end
+
+"""
+    p8est_source_ext(src, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+
+### Prototype
+```c
+p8est_t *p8est_source_ext (sc_io_source_t * src, sc_MPI_Comm mpicomm, size_t data_size, int load_data, int autopartition, int broadcasthead, void *user_pointer, p8est_connectivity_t ** connectivity);
+```
+"""
+function p8est_source_ext(src, mpicomm, data_size, load_data, autopartition, broadcasthead, user_pointer, connectivity)
+    @ccall libt8.p8est_source_ext(src::Ptr{sc_io_source_t}, mpicomm::MPI_Comm, data_size::Csize_t, load_data::Cint, autopartition::Cint, broadcasthead::Cint, user_pointer::Ptr{Cvoid}, connectivity::Ptr{Ptr{p8est_connectivity_t}})::Ptr{p8est_t}
+end
+
+"""
+    p8est_get_plex_data_ext(p8est_, ghost, lnodes, ctype, overlap, first_local_quad, out_points_per_dim, out_cone_sizes, out_cones, out_cone_orientations, out_vertex_coords, out_children, out_parents, out_childids, out_leaves, out_remotes, custom_numbering)
+
+Create the data necessary to create a PETsc DMPLEX representation of a forest, as well as the accompanying lnodes and ghost layer. The forest must be at least face balanced (see [`p4est_balance`](@ref)()). See test/test\\_plex2.c for example usage.
+
+All arrays should be initialized to hold sizeof ([`p4est_locidx_t`](@ref)), except for *out_remotes*, which should be initialized to hold (2 * sizeof ([`p4est_locidx_t`](@ref))).
+
+### Parameters
+* `p8est`:\\[in\\] the forest
+* `ghost`:\\[out\\] the ghost layer
+* `lnodes`:\\[out\\] the lnodes
+* `ctype`:\\[in\\] the type of adjacency for the overlap
+* `overlap`:\\[in\\] the number of layers of overlap (zero is acceptable)
+* `first_local_quad`:\\[out\\] the local quadrants are assigned contiguous plex indices, starting with this index
+* `out_points_per_dim`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cone_sizes`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cones`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_cone_orientations`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_vertex_coords`:\\[in,out\\] filled with argument for DMPlexCreateFromDAG()
+* `out_children`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_parents`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_childids`:\\[in,out\\] filled with argument for DMPlexSetTree()
+* `out_leaves`:\\[in,out\\] filled with argument for PetscSFSetGraph()
+* `out_remotes`:\\[in,out\\] filled with argument for PetscSFSetGraph()
+* `custom_numbering`:\\[in\\] Whether or use the default numbering (0) of DMPlex child ids or the custom (1).
+### Prototype
+```c
+void p8est_get_plex_data_ext (p8est_t * p8est, p8est_ghost_t ** ghost, p8est_lnodes_t ** lnodes, p8est_connect_type_t ctype, int overlap, p4est_locidx_t * first_local_quad, sc_array_t * out_points_per_dim, sc_array_t * out_cone_sizes, sc_array_t * out_cones, sc_array_t * out_cone_orientations, sc_array_t * out_vertex_coords, sc_array_t * out_children, sc_array_t * out_parents, sc_array_t * out_childids, sc_array_t * out_leaves, sc_array_t * out_remotes, int custom_numbering);
+```
+"""
+function p8est_get_plex_data_ext(p8est_, ghost, lnodes, ctype, overlap, first_local_quad, out_points_per_dim, out_cone_sizes, out_cones, out_cone_orientations, out_vertex_coords, out_children, out_parents, out_childids, out_leaves, out_remotes, custom_numbering)
+    @ccall libt8.p8est_get_plex_data_ext(p8est_::Ptr{p8est_t}, ghost::Ptr{Ptr{p8est_ghost_t}}, lnodes::Ptr{Ptr{p8est_lnodes_t}}, ctype::p8est_connect_type_t, overlap::Cint, first_local_quad::Ptr{p4est_locidx_t}, out_points_per_dim::Ptr{sc_array_t}, out_cone_sizes::Ptr{sc_array_t}, out_cones::Ptr{sc_array_t}, out_cone_orientations::Ptr{sc_array_t}, out_vertex_coords::Ptr{sc_array_t}, out_children::Ptr{sc_array_t}, out_parents::Ptr{sc_array_t}, out_childids::Ptr{sc_array_t}, out_leaves::Ptr{sc_array_t}, out_remotes::Ptr{sc_array_t}, custom_numbering::Cint)::Cvoid
+end
+
+"""
+    p8est_find_lower_bound(array, q, guess)
+
+Find the lowest position tq in a quadrant array such that tq >= q.
+
+### Returns
+Returns the id of the matching quadrant or -1 if array < q or the array is empty.
+### Prototype
+```c
+ssize_t p8est_find_lower_bound (sc_array_t * array, const p8est_quadrant_t * q, size_t guess);
+```
+"""
+function p8est_find_lower_bound(array, q, guess)
+    @ccall libt8.p8est_find_lower_bound(array::Ptr{sc_array_t}, q::Ptr{p8est_quadrant_t}, guess::Csize_t)::Cssize_t
+end
+
+"""
+    p8est_find_higher_bound(array, q, guess)
+
+Find the highest position tq in a quadrant array such that tq <= q.
+
+### Returns
+Returns the id of the matching quadrant or -1 if array > q or the array is empty.
+### Prototype
+```c
+ssize_t p8est_find_higher_bound (sc_array_t * array, const p8est_quadrant_t * q, size_t guess);
+```
+"""
+function p8est_find_higher_bound(array, q, guess)
+    @ccall libt8.p8est_find_higher_bound(array::Ptr{sc_array_t}, q::Ptr{p8est_quadrant_t}, guess::Csize_t)::Cssize_t
+end
+
+"""
+    p8est_split_array(array, level, indices)
+
+Split an array of quadrants by the children of an ancestor.
+
+Given a sorted **array** of quadrants that have a common ancestor at level **level**, compute the **indices** of the first quadrant in each of the common ancestor's children at level **level** + 1.
+
+### Parameters
+* `array`:\\[in\\] The sorted array of quadrants of level > **level**.
+* `level`:\\[in\\] The level at which there is a common ancestor.
+* `indices`:\\[in,out\\] The indices of the first quadrant in each of the ancestors's children, plus an additional index on the end. The quadrants of **array** that are descendants of child i have indices between indices[i] and indices[i + 1] - 1. If indices[i] = indices[i+1], this indicates that no quadrant in the array is contained in child i.
+### Prototype
+```c
+void p8est_split_array (sc_array_t * array, int level, size_t indices[]);
+```
+"""
+function p8est_split_array(array, level, indices)
+    @ccall libt8.p8est_split_array(array::Ptr{sc_array_t}, level::Cint, indices::Ptr{Csize_t})::Cvoid
+end
+
+"""
+    p8est_find_range_boundaries(lq, uq, level, faces, edges, corners)
+
+Find the boundary points touched by a range of quadrants.
+
+Given two smallest quadrants, **lq** and **uq**, that mark the first and the last quadrant in a range of quadrants, determine which portions of the tree boundary the range touches.
+
+### Parameters
+* `lq`:\\[in\\] The smallest quadrant at the start of the range: if NULL, the tree's first quadrant is taken to be the start of the range.
+* `uq`:\\[in\\] The smallest quadrant at the end of the range: if NULL, the tree's last quadrant is taken to be the end of the range.
+* `level`:\\[in\\] The level of the containing quadrant whose boundaries are tested: 0 if we want to test the boundaries of the whole tree.
+* `faces`:\\[in,out\\] An array of size 6 that is filled: faces[i] is true if the range touches that face.
+* `edges`:\\[in,out\\] An array of size 12 that is filled: edges[i] is true if the range touches that edge.
+* `corners`:\\[in,out\\] An array of size 8 that is filled: corners[i] is true if the range touches that corner. **faces**, **edges** or **corners** may be NULL.
+### Returns
+Returns an int32\\_t encoded with the same information in **faces**, **edges** and **corners**: the first (least) six bits represent the six faces, the next twelve bits represent the twelve edges, the next eight bits represent the eight corners.
+### Prototype
+```c
+int32_t p8est_find_range_boundaries (p8est_quadrant_t * lq, p8est_quadrant_t * uq, int level, int faces[], int edges[], int corners[]);
+```
+"""
+function p8est_find_range_boundaries(lq, uq, level, faces, edges, corners)
+    @ccall libt8.p8est_find_range_boundaries(lq::Ptr{p8est_quadrant_t}, uq::Ptr{p8est_quadrant_t}, level::Cint, faces::Ptr{Cint}, edges::Ptr{Cint}, corners::Ptr{Cint})::Int32
+end
+
+# typedef int ( * p8est_search_local_t ) ( p8est_t * p4est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant , p4est_locidx_t local_num , void * point )
+"""
+Callback function to query the match of a "point" with a quadrant.
+
+This function can be called in two roles: Per-quadrant, in which case the parameter **point** is NULL, or per-point, possibly many times per quadrant.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be queried.
+* `which_tree`:\\[in\\] The tree id under consideration.
+* `quadrant`:\\[in\\] The quadrant under consideration. This quadrant may be coarser than the quadrants that are contained in the forest (an ancestor), in which case it is a temporary variable and not part of the forest storage. Otherwise, it is a leaf and points directly into the forest storage.
+* `local_num`:\\[in\\] If the quadrant is not a leaf, this is < 0. Otherwise it is the (non-negative) index of the quadrant relative to the processor-local storage.
+* `point`:\\[in\\] Representation of a "point"; user-defined. If **point** is NULL, the callback may be used to prepare quadrant-related search meta data.
+### Returns
+If **point** is NULL, true if the search confined to **quadrant** should be executed, false to skip it. Else, true if point may be contained in the quadrant and false otherwise; the return value has no effect on a leaf.
+"""
+const p8est_search_local_t = Ptr{Cvoid}
+
+"""This typedef is provided for backwards compatibility."""
+const p8est_search_query_t = p8est_search_local_t
+
+"""
+    p8est_search_local(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Search through the local part of a forest. The search is especially efficient if multiple targets, called "points" below, are searched for simultaneously.
+
+The search runs over all local quadrants and proceeds recursively top-down. For each tree, it may start at the root of that tree, or further down at the root of the subtree that contains all of the tree's local quadrants. Likewise, some intermediate levels in the recursion may be skipped if the processor-local part is contained in a single deeper subtree. The outer loop is thus a depth-first, processor-local forest traversal. Each quadrant in that loop either is a leaf, or a (direct or indirect) strict ancestor of a leaf. On entering a new quadrant, a user-provided quadrant-callback is executed.
+
+As a convenience, the user may provide anonymous "points" that are tracked down the forest. This way one search call may be used for multiple targets. The set of points that potentially matches a given quadrant diminishes from the root down to the leaves: For each quadrant, an inner loop over the potentially matching points executes a point-callback for each candidate that determines whether the point may be a match. If not, it is discarded in the current branch, otherwise it is passed to the next deeper level. The callback is allowed to return true for the same point and more than one quadrant; in this case more than one matching quadrant may be identified. The callback is also allowed to return false for all children of a quadrant that it returned true for earlier. If the point callback returns false for all points relevant to a quadrant, the recursion stops. The points can really be anything, `p4est` does not perform any interpretation, just passes the pointer along to the callback function.
+
+If points are present and the first quadrant callback returned true, we execute it a second time after calling the point callback for all current points. This can be used to gather and postprocess information about the points more easily. If it returns false, the recursion stops.
+
+If the points are a NULL array, they are ignored and the recursion proceeds by querying the per-quadrant callback. If the points are not NULL but an empty array, the recursion will stop immediately!
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be searched.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] Executed once when a quadrant is entered, and once when it is left (the second time only if points are present and the first call returned true). This quadrant is always local, if not completely than at least one descendant of it. If the callback returns false, this quadrant and its descendants are excluded from the search recursion. Its **point** argument is always NULL. Callback may be NULL in which case it is ignored.
+* `point_fn`:\\[in\\] If **points** is not NULL, must be not NULL. Shall return true for any possible matching point. If **points** is NULL, this callback is ignored.
+* `points`:\\[in\\] User-defined array of "points". If NULL, only the **quadrant_fn** callback is executed. If that is NULL, this function noops. If not NULL, the **point_fn** is called on its members during the search.
+### Prototype
+```c
+void p8est_search_local (p8est_t * p4est, int call_post, p8est_search_local_t quadrant_fn, p8est_search_local_t point_fn, sc_array_t * points);
+```
+"""
+function p8est_search_local(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p8est_search_local(p4est_::Ptr{p8est_t}, call_post::Cint, quadrant_fn::p8est_search_local_t, point_fn::p8est_search_local_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+"""
+    p8est_search(p4est_, quadrant_fn, point_fn, points)
+
+This function is provided for backwards compatibility. We call p8est_search_local with call\\_post = 0.
+
+### Prototype
+```c
+void p8est_search (p8est_t * p4est, p8est_search_query_t quadrant_fn, p8est_search_query_t point_fn, sc_array_t * points);
+```
+"""
+function p8est_search(p4est_, quadrant_fn, point_fn, points)
+    @ccall libt8.p8est_search(p4est_::Ptr{p8est_t}, quadrant_fn::p8est_search_query_t, point_fn::p8est_search_query_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+# typedef int ( * p8est_search_partition_t ) ( p8est_t * p4est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant , int pfirst , int plast , void * point )
+"""
+Callback function for the partition recursion.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to traverse. Its local quadrants are never accessed.
+* `which_tree`:\\[in\\] The tree number under consideration.
+* `quadrant`:\\[in\\] This quadrant is not from local forest storage, and its user data is undefined. It represents the branch of the forest in the top-down recursion.
+* `pfirst`:\\[in\\] The lowest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `plast`:\\[in\\] The highest processor that owns part of **quadrant**. Guaranteed to be non-empty. If this is equal to **pfirst**, then the recursion will stop for **quadrant**'s branch after this function returns.
+* `point`:\\[in,out\\] Pointer to a user-defined point object. If called per-quadrant, this is NULL.
+### Returns
+If false, the recursion at quadrant is terminated. If true, it continues if **pfirst** < **plast**.
+"""
+const p8est_search_partition_t = Ptr{Cvoid}
+
+"""
+    p8est_search_partition(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Traverse the global partition top-down. We proceed top-down through the partition, identically on all processors except for the results of two user-provided callbacks. The recursion will only go down branches that are split between multiple processors. The callback functions can be used to stop a branch recursion even for split branches. This function offers the option to search for arbitrary user-defined points analogously to p4est_search_local.
+
+!!! note
+
+    Traversing the whole processor partition will be at least O(P), so sensible use of the callback function is advised to cut it short.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to traverse. Its local quadrants are never accessed.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] This function controls the recursion, which only continues deeper if this callback returns true for a branch quadrant. It is allowed to set this to NULL.
+* `point_fn`:\\[in\\] This function decides per-point whether it is followed down the recursion. Must be non-NULL if **points** are not NULL.
+* `points`:\\[in\\] User-provided array of **points** that are passed to the callback **point_fn**. See p8est_search_local for details.
+### Prototype
+```c
+void p8est_search_partition (p8est_t * p4est, int call_post, p8est_search_partition_t quadrant_fn, p8est_search_partition_t point_fn, sc_array_t * points);
+```
+"""
+function p8est_search_partition(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p8est_search_partition(p4est_::Ptr{p8est_t}, call_post::Cint, quadrant_fn::p8est_search_partition_t, point_fn::p8est_search_partition_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+# typedef int ( * p8est_search_all_t ) ( p8est_t * p8est , p4est_topidx_t which_tree , p8est_quadrant_t * quadrant , int pfirst , int plast , p4est_locidx_t local_num , void * point )
+"""
+Callback function for the top-down search through the whole forest.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to search. We recurse through the trees one after another.
+* `which_tree`:\\[in\\] The current tree number.
+* `quadrant`:\\[in\\] The current quadrant in the recursion. This quadrant is either a non-leaf tree branch or a leaf. If the quadrant is contained in the local partition, we know which, otherwise we don't. Let us first consider the situation when **quadrant** is local, which is indicated by both **pfirst** and **plast** being equal to `p4est`->mpirank. Then the parameter **local_num** is negative for non-leaves and the number of the quadrant as a leaf in local storage otherwise. Only if the quadrant is a local leaf, it points to the actual local storage and can be used to access user data etc., and the recursion terminates. The other possibility is that **pfirst** < **plast**, in which case we proceed with the recursion, or both are equal to the same remote rank, in which case the recursion terminates. Either way, the quadrant is not from local forest storage.
+* `pfirst`:\\[in\\] The lowest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `plast`:\\[in\\] The highest processor that owns part of **quadrant**. Guaranteed to be non-empty.
+* `local_num`:\\[in\\] If **quadrant** is a local leaf, this number is the index of the leaf in local quadrant storage. Else, this is a negative value.
+* `point`:\\[in,out\\] User-defined representation of a point. This parameter distinguishes two uses of the callback. For each quadrant, the callback is first called with a NULL point, and if this callback returns true, once for each point tracked in this branch. The return value for a point determines whether it shall be tracked further down the branch or not, and has no effect on a local leaf. The call with a NULL point is intended to prepare quadrant-related search meta data that is common to all points, and/or to efficiently terminate the recursion for all points in the branch in one call.
+### Returns
+If false, the recursion at **quadrant** terminates. If true, it continues if **pfirst** < **plast** or if they are both equal to `p4est`->mpirank and the recursion has not reached a leaf yet.
+"""
+const p8est_search_all_t = Ptr{Cvoid}
+
+"""
+    p8est_search_all(p4est_, call_post, quadrant_fn, point_fn, points)
+
+Perform a top-down search on the whole forest.
+
+This function combines the functionality of p4est_search_local and p4est_search_partition; their documentation applies for the most part.
+
+The recursion proceeds from the root quadrant of each tree until (a) we encounter a remote quadrant that covers only one processor, or (b) we encounter a local leaf quadrant. In other words, we proceed with the recursion into a quadrant's children if (a) the quadrant is split between two or more processors, no matter whether one of them is the calling processor or not, or (b) if the quadrant is on the local processor but we have not reached a leaf yet.
+
+The search can track one or more points, which are abstract placeholders. They are matched against the quadrants traversed using a callback function. The result of the callback function can be used to stop a recursion early. The user determines how a point is interpreted, we only pass it around.
+
+Note that in the remote case (a), we may terminate the recursion even if the quadrant is not a leaf, which we have no means of knowing. Still, this case is sufficient to determine the processor ownership of a point.
+
+!!! note
+
+    This is a very powerful function that can become slow if not used carefully.
+
+!!! note
+
+    As with the two other search functions in this file, calling it once with many points is generally much faster than calling it once for each point. Using multiple points also allows for a per-quadrant termination of the recursion in addition to a more costly per-point termination.
+
+!!! note
+
+    This function works fine when used for the special cases that either the partition or the local quadrants are not of interest. However, in the case of querying only local information we expect that p4est_search_local will be faster since it employs specific local optimizations.
+
+### Parameters
+* `p4est`:\\[in\\] The forest to be searched.
+* `call_post`:\\[in\\] If true, call quadrant callback both pre and post.
+* `quadrant_fn`:\\[in\\] Executed once for each quadrant that is entered. If the callback returns false, this quadrant and its descendants are excluded from the search, and the points in this branch are not queried further. Its **point** argument is always NULL. Callback may be NULL in which case it is ignored.
+* `point_fn`:\\[in\\] Executed once for each point that is relevant for a quadrant of the search. If it returns true, the point is tracked further down that branch, else it is discarded from the queries for the children. If **points** is not NULL, this callback must be not NULL. If **points** is NULL, it is not called.
+* `points`:\\[in\\] User-defined array of points. We do not interpret a point, just pass it into the callbacks. If NULL, only the **quadrant_fn** callback is executed. If that is NULL, the whole function noops. If not NULL, the **point_fn** is called on its members during the search.
+### Prototype
+```c
+void p8est_search_all (p8est_t * p4est, int call_post, p8est_search_all_t quadrant_fn, p8est_search_all_t point_fn, sc_array_t * points);
+```
+"""
+function p8est_search_all(p4est_, call_post, quadrant_fn, point_fn, points)
+    @ccall libt8.p8est_search_all(p4est_::Ptr{p8est_t}, call_post::Cint, quadrant_fn::p8est_search_all_t, point_fn::p8est_search_all_t, points::Ptr{sc_array_t})::Cvoid
+end
+
+"""
+    t8_get_package_id()
+
+Query the package identity as registered in libsc.
+
+### Returns
+This is -1 before t8_init has been called and a proper package identifier afterwards.
+### Prototype
+```c
+int t8_get_package_id (void);
+```
+"""
+function t8_get_package_id()
+    @ccall libt8.t8_get_package_id()::Cint
+end
+
+"""A type for processor-local indexing."""
+const t8_locidx_t = Int32
+
+"""A type for global indexing that holds really big numbers."""
+const t8_gloidx_t = Int64
 
 """A type for storing SFC indices"""
 const t8_linearidx_t = UInt64
@@ -2761,7 +10997,7 @@ end
 """
     sc_refcount_unref(rc)
 
-Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used further with sc_refcount_ref or
+Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used furter with sc_refcount_ref or
 
 ### Parameters
 * `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is decreased by one.
@@ -5500,7 +13736,7 @@ Add an option that takes a size\\_t argument. The value of the size\\_t variable
 * `help_string`:\\[in\\] Help string for usage message, may be NULL.
 ### Prototype
 ```c
-void sc_options_add_size_t (sc_options_t * opt, int opt_char, const char *opt_name, size_t *variable, size_t init_value, const char *help_string);
+void sc_options_add_size_t (sc_options_t * opt, int opt_char, const char *opt_name, size_t * variable, size_t init_value, const char *help_string);
 ```
 """
 function sc_options_add_size_t(opt, opt_char, opt_name, variable, init_value, help_string)
@@ -5732,7 +13968,7 @@ end
 """
     sc_options_load_args(package_id, err_priority, opt, inifile)
 
-Load a file in .ini format and updates entries found under [Arguments]. There needs to be a key Arguments.count specifying the number. Then as many integer keys starting with 0 need to be present.
+Load a file in .ini format and updates entries found under [Arguments]. There needs to be a key Arguments.count specifing the number. Then as many integer keys starting with 0 need to be present.
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
@@ -5932,7 +14168,7 @@ Return the size of any element of a given class.
 The size of an element of class **ts**. We provide a default implementation of this routine that should suffice for most use cases.
 ### Prototype
 ```c
-size_t t8_element_size (const t8_eclass_scheme_c *ts);
+size_t t8_element_size (t8_eclass_scheme_c *ts);
 ```
 """
 function t8_element_size(ts)
@@ -5946,7 +14182,7 @@ Returns true, if there is one element in the tree, that does not refine into 2^d
 
 ### Prototype
 ```c
-int t8_element_refines_irregular (const t8_eclass_scheme_c *ts);
+int t8_element_refines_irregular (t8_eclass_scheme_c *ts);
 ```
 """
 function t8_element_refines_irregular(ts)
@@ -5964,7 +14200,7 @@ Return the maximum allowed level for any element of a given class.
 The maximum allowed level for elements of class **ts**.
 ### Prototype
 ```c
-int t8_element_maxlevel (const t8_eclass_scheme_c *ts);
+int t8_element_maxlevel (t8_eclass_scheme_c *ts);
 ```
 """
 function t8_element_maxlevel(ts)
@@ -5983,7 +14219,7 @@ Return the type of each child in the ordering of the implementation.
 The type for the given child.
 ### Prototype
 ```c
-t8_eclass_t t8_element_child_eclass (const t8_eclass_scheme_c *ts, int childid);
+t8_eclass_t t8_element_child_eclass (t8_eclass_scheme_c *ts, int childid);
 ```
 """
 function t8_element_child_eclass(ts, childid)
@@ -6002,7 +14238,7 @@ Return the level of a particular element.
 The level of **elem**.
 ### Prototype
 ```c
-int t8_element_level (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_level (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_level(ts, elem)
@@ -6024,7 +14260,7 @@ Copy all entries of **source** to **dest**. **dest** must be an existing element
 * `dest`:\\[in,out\\] This element's entries will be overwritted with the entries of **source**.
 ### Prototype
 ```c
-void t8_element_copy (const t8_eclass_scheme_c *ts, const t8_element_t *source, t8_element_t *dest);
+void t8_element_copy (t8_eclass_scheme_c *ts, const t8_element_t *source, t8_element_t *dest);
 ```
 """
 function t8_element_copy(ts, source, dest)
@@ -6044,7 +14280,7 @@ Compare two elements.
 negativ if elem1 < elem2, zero if elem1 equals elem2 and positiv if elem1 > elem2. If elem2 is a copy of elem1 then the elements are equal.
 ### Prototype
 ```c
-int t8_element_compare (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, const t8_element_t *elem2);
+int t8_element_compare (t8_eclass_scheme_c *ts, const t8_element_t *elem1, const t8_element_t *elem2);
 ```
 """
 function t8_element_compare(ts, elem1, elem2)
@@ -6062,7 +14298,7 @@ Compute the parent of a given element **elem** and store it in **parent**. **par
 * `parent`:\\[in,out\\] This element's entries will be overwritten by those of **elem**'s parent. The storage for this element must exist and match the element class of the parent.
 ### Prototype
 ```c
-void t8_element_parent (const t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *parent);
+void t8_element_parent (t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *parent);
 ```
 """
 function t8_element_parent(ts, elem, parent)
@@ -6081,7 +14317,7 @@ Compute the number of siblings of an element. That is the number of  Children of
 The number of siblings of *element*. Note that this number is >= 1, since we count the element itself as a sibling.
 ### Prototype
 ```c
-int t8_element_num_siblings (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_num_siblings (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_num_siblings(ts, elem)
@@ -6100,7 +14336,7 @@ Compute a specific sibling of a given element **elem** and store it in **sibling
 * `sibling`:\\[in,out\\] This element's entries will be overwritten by those of **elem**'s sibid-th sibling. The storage for this element must exist and match the element class of the sibling.
 ### Prototype
 ```c
-void t8_element_sibling (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int sibid, t8_element_t *sibling);
+void t8_element_sibling (t8_eclass_scheme_c *ts, const t8_element_t *elem, int sibid, t8_element_t *sibling);
 ```
 """
 function t8_element_sibling(ts, elem, sibid, sibling)
@@ -6138,7 +14374,7 @@ Compute the number of faces of an element.
 The number of faces of *element*.
 ### Prototype
 ```c
-int t8_element_num_faces (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_num_faces (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_num_faces(ts, elem)
@@ -6157,7 +14393,7 @@ Compute the maximum number of faces of a given element and all of its descendant
 The number of faces of *element*.
 ### Prototype
 ```c
-int t8_element_max_num_faces (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_max_num_faces (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_max_num_faces(ts, elem)
@@ -6176,7 +14412,7 @@ Compute the number of children of an element when it is refined.
 The number of children of *element*.
 ### Prototype
 ```c
-int t8_element_num_children (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_num_children (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_num_children(ts, elem)
@@ -6196,7 +14432,7 @@ Compute the number of children of an element's face when the element is refined.
 The number of children of *face* if *elem* is to be refined.
 ### Prototype
 ```c
-int t8_element_num_face_children (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
+int t8_element_num_face_children (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
 ```
 """
 function t8_element_num_face_children(ts, elem, face)
@@ -6219,7 +14455,7 @@ The order in which the corners must be given is determined by the eclass of *ele
 The corner number of the *corner*-th vertex of *face*.
 ### Prototype
 ```c
-int t8_element_get_face_corner (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, int corner);
+int t8_element_get_face_corner (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, int corner);
 ```
 """
 function t8_element_get_face_corner(ts, elem, face, corner)
@@ -6240,7 +14476,7 @@ Compute the face numbers of the faces sharing an element's corner. Example quad:
 The face number of the *face*-th face at *corner*.
 ### Prototype
 ```c
-int t8_element_get_corner_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int corner, int face);
+int t8_element_get_corner_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int corner, int face);
 ```
 """
 function t8_element_get_corner_face(ts, elem, corner, face)
@@ -6262,7 +14498,7 @@ Construct the child element of a given number.
 
 ### Prototype
 ```c
-void t8_element_child (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int childid, t8_element_t *child);
+void t8_element_child (t8_eclass_scheme_c *ts, const t8_element_t *elem, int childid, t8_element_t *child);
 ```
 """
 function t8_element_child(ts, elem, childid, child)
@@ -6284,7 +14520,7 @@ Construct all children of a given element.
 
 ### Prototype
 ```c
-void t8_element_children (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int length, t8_element_t *c[]);
+void t8_element_children (t8_eclass_scheme_c *ts, const t8_element_t *elem, int length, t8_element_t *c[]);
 ```
 """
 function t8_element_children(ts, elem, length, c)
@@ -6303,7 +14539,7 @@ Compute the child id of an element.
 The child id of elem.
 ### Prototype
 ```c
-int t8_element_child_id (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_child_id (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_child_id(ts, elem)
@@ -6323,7 +14559,7 @@ Compute the ancestor id of an element, that is the child id at a given level.
 The child\\_id of *elem* in regard to its *level* ancestor.
 ### Prototype
 ```c
-int t8_element_ancestor_id (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int level);
+int t8_element_ancestor_id (t8_eclass_scheme_c *ts, const t8_element_t *elem, int level);
 ```
 """
 function t8_element_ancestor_id(ts, elem, level)
@@ -6342,7 +14578,7 @@ Query whether a given set of elements is a family or not.
 Zero if **fam** is not a family, nonzero if it is.
 ### Prototype
 ```c
-int t8_element_is_family (const t8_eclass_scheme_c *ts, t8_element_t **fam);
+int t8_element_is_family (t8_eclass_scheme_c *ts, t8_element_t **fam);
 ```
 """
 function t8_element_is_family(ts, fam)
@@ -6361,7 +14597,7 @@ Compute the nearest common ancestor of two elements. That is, the element with h
 * `nca`:\\[in,out\\] The storage for this element must exist and match the element class of the child. On output the unique nearest common ancestor of **elem1** and **elem2**.
 ### Prototype
 ```c
-void t8_element_nca (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, const t8_element_t *elem2, t8_element_t *nca);
+void t8_element_nca (t8_eclass_scheme_c *ts, const t8_element_t *elem1, const t8_element_t *elem2, t8_element_t *nca);
 ```
 """
 function t8_element_nca(ts, elem1, elem2, nca)
@@ -6384,7 +14620,7 @@ Compute the shape of the face of an element.
 The element shape of the face. I.e. T8\\_ECLASS\\_LINE for quads, T8\\_ECLASS\\_TRIANGLE for tets and depending on the face number either T8\\_ECLASS\\_QUAD or T8\\_ECLASS\\_TRIANGLE for prisms.
 ### Prototype
 ```c
-t8_element_shape_t t8_element_face_shape (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
+t8_element_shape_t t8_element_face_shape (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
 ```
 """
 function t8_element_face_shape(ts, elem, face)
@@ -6405,7 +14641,7 @@ Given an element and a face of the element, compute all children of the element 
 * `child_indices`:\\[in,out\\] If not NULL, an array of num\\_children integers must be given, on output its i-th entry is the child\\_id of the i-th face\\_child. It is valid to call this function with elem = children[0].
 ### Prototype
 ```c
-void t8_element_children_at_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *children[], int num_children, int *child_indices);
+void t8_element_children_at_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *children[], int num_children, int *child_indices);
 ```
 """
 function t8_element_children_at_face(ts, elem, face, children, num_children, child_indices)
@@ -6435,7 +14671,7 @@ Given a face of an element and a child number of a child of that face, return th
 The face number of the face of a child of *elem* that conincides with *face_child*.
 ### Prototype
 ```c
-int t8_element_face_child_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, int face_child);
+int t8_element_face_child_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, int face_child);
 ```
 """
 function t8_element_face_child_face(ts, elem, face, face_child)
@@ -6459,7 +14695,7 @@ Given a face of an element return the face number of the parent of the element t
 If *face* of *elem* is also a face of *elem*'s parent, the face number of this face. Otherwise -1.
 ### Prototype
 ```c
-int t8_element_face_parent_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
+int t8_element_face_parent_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
 ```
 """
 function t8_element_face_parent_face(ts, elem, face)
@@ -6479,7 +14715,7 @@ Given an element and a face of this element. If the face lies on the tree bounda
 The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary integer if *is* not at a tree boundary.
 ### Prototype
 ```c
-int t8_element_tree_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
+int t8_element_tree_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
 ```
 """
 function t8_element_tree_face(ts, elem, face)
@@ -6507,7 +14743,7 @@ Suppose we have two trees that share a common face f. Given an element e that is
 
 ### Prototype
 ```c
-void t8_element_transform_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2, int orientation, int sign, int is_smaller_face);
+void t8_element_transform_face (t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2, int orientation, int sign, int is_smaller_face);
 ```
 """
 function t8_element_transform_face(ts, elem1, elem2, orientation, sign, is_smaller_face)
@@ -6529,7 +14765,7 @@ Given a boundary face inside a root tree's face construct the element inside the
 The face number of the face of *elem* that coincides with *face*.
 ### Prototype
 ```c
-int t8_element_extrude_face (const t8_eclass_scheme_c *ts, const t8_element_t *face, const t8_eclass_scheme_c *face_scheme, t8_element_t *elem, int root_face);
+int t8_element_extrude_face (t8_eclass_scheme_c *ts, const t8_element_t *face, const t8_eclass_scheme_c *face_scheme, t8_element_t *elem, int root_face);
 ```
 """
 function t8_element_extrude_face(ts, face, face_scheme, elem, root_face)
@@ -6549,7 +14785,7 @@ Construct the boundary element at a specific face.
 * `boundary_scheme`:\\[in\\] The scheme for the eclass of the boundary face. If *elem* is of class T8\\_ECLASS\\_VERTEX, then *boundary* must be NULL and will not be modified.
 ### Prototype
 ```c
-void t8_element_boundary_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *boundary, const t8_eclass_scheme_c *boundary_scheme);
+void t8_element_boundary_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *boundary, const t8_eclass_scheme_c *boundary_scheme);
 ```
 """
 function t8_element_boundary_face(ts, elem, face, boundary, boundary_scheme)
@@ -6569,7 +14805,7 @@ Construct the first descendant of an element at a given level that touches a giv
 * `level`:\\[in\\] The level, at which the first descendant is constructed
 ### Prototype
 ```c
-void t8_element_first_descendant_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *first_desc, int level);
+void t8_element_first_descendant_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *first_desc, int level);
 ```
 """
 function t8_element_first_descendant_face(ts, elem, face, first_desc, level)
@@ -6589,7 +14825,7 @@ Construct the last descendant of an element at a given level that touches a give
 * `level`:\\[in\\] The level, at which the last descendant is constructed
 ### Prototype
 ```c
-void t8_element_last_descendant_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *last_desc, int level);
+void t8_element_last_descendant_face (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, t8_element_t *last_desc, int level);
 ```
 """
 function t8_element_last_descendant_face(ts, elem, face, last_desc, level)
@@ -6609,7 +14845,7 @@ Compute whether a given element shares a given face with its root tree.
 True if *face* is a subface of the element's root element.
 ### Prototype
 ```c
-int t8_element_is_root_boundary (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
+int t8_element_is_root_boundary (t8_eclass_scheme_c *ts, const t8_element_t *elem, int face);
 ```
 """
 function t8_element_is_root_boundary(ts, elem, face)
@@ -6631,7 +14867,7 @@ Construct the face neighbor of a given element if this face neighbor is inside t
 True if *neigh* is inside the root tree. False if not. In this case *neigh*'s data can be arbitrary on output.
 ### Prototype
 ```c
-int t8_element_face_neighbor_inside (const t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *neigh, int face, int *neigh_face);
+int t8_element_face_neighbor_inside (t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *neigh, int face, int *neigh_face);
 ```
 """
 function t8_element_face_neighbor_inside(ts, elem, neigh, face, neigh_face)
@@ -6650,7 +14886,7 @@ Return the shape of an allocated element according its type. For example, a chil
 The shape of the element as an eclass
 ### Prototype
 ```c
-t8_element_shape_t t8_element_shape (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+t8_element_shape_t t8_element_shape (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_shape(ts, elem)
@@ -6669,7 +14905,7 @@ Initialize the entries of an allocated element according to a given linear id in
 * `id`:\\[in\\] The linear id. id must fulfil 0 <= id < 'number of leafs in the uniform refinement'
 ### Prototype
 ```c
-void t8_element_set_linear_id (const t8_eclass_scheme_c *ts, t8_element_t *elem, int level, t8_linearidx_t id);
+void t8_element_set_linear_id (t8_eclass_scheme_c *ts, t8_element_t *elem, int level, t8_linearidx_t id);
 ```
 """
 function t8_element_set_linear_id(ts, elem, level, id)
@@ -6689,7 +14925,7 @@ Compute the linear id of a given element in a hypothetical uniform refinement of
 The linear id of the element.
 ### Prototype
 ```c
-t8_linearidx_t t8_element_get_linear_id (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int level);
+t8_linearidx_t t8_element_get_linear_id (t8_eclass_scheme_c *ts, const t8_element_t *elem, int level);
 ```
 """
 function t8_element_get_linear_id(ts, elem, level)
@@ -6707,7 +14943,7 @@ Compute the first descendant of a given element.
 * `desc`:\\[out\\] The first element in a uniform refinement of *elem* of the maximum possible level.
 ### Prototype
 ```c
-void t8_element_first_descendant (const t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *desc, int level);
+void t8_element_first_descendant (t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *desc, int level);
 ```
 """
 function t8_element_first_descendant(ts, elem, desc, level)
@@ -6725,7 +14961,7 @@ Compute the last descendant of a given element.
 * `desc`:\\[out\\] The last element in a uniform refinement of *elem* of the maximum possible level.
 ### Prototype
 ```c
-void t8_element_last_descendant (const t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *desc, int level);
+void t8_element_last_descendant (t8_eclass_scheme_c *ts, const t8_element_t *elem, t8_element_t *desc, int level);
 ```
 """
 function t8_element_last_descendant(ts, elem, desc, level)
@@ -6744,7 +14980,7 @@ Construct the successor in a uniform refinement of a given element.
 * `level`:\\[in\\] The level of the uniform refinement to consider.
 ### Prototype
 ```c
-void t8_element_successor (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2, int level);
+void t8_element_successor (t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2, int level);
 ```
 """
 function t8_element_successor(ts, elem1, elem2, level)
@@ -6763,7 +14999,7 @@ Compute the root lenght of a given element, that is the length of its level 0 an
 The root length of *elem*
 ### Prototype
 ```c
-int t8_element_root_len (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
+int t8_element_root_len (t8_eclass_scheme_c *ts, const t8_element_t *elem);
 ```
 """
 function t8_element_root_len(ts, elem)
@@ -6782,7 +15018,7 @@ Compute the coordinates of a given element vertex inside a reference tree that i
 * `coords`:\\[out\\] An array of at least as many doubles as the element's dimension whose entries will be filled with the coordinates of *vertex*.
 ### Prototype
 ```c
-void t8_element_vertex_reference_coords (const t8_eclass_scheme_c *ts, const t8_element_t *t, const int vertex, double coords[]);
+void t8_element_vertex_reference_coords (t8_eclass_scheme_c *ts, const t8_element_t *t, const int vertex, double coords[]);
 ```
 """
 function t8_element_vertex_reference_coords(ts, t, vertex, coords)
@@ -6804,7 +15040,7 @@ Example: If *t* is a line element that refines into 2 line elements on each leve
 Suppose *t* is uniformly refined up to level *level*. The return value is the resulting number of elements (of the given level). If *level* < [`t8_element_level`](@ref)(t), the return value should be 0.
 ### Prototype
 ```c
-t8_gloidx_t t8_element_count_leafs (const t8_eclass_scheme_c *ts, const t8_element_t *t, int level);
+t8_gloidx_t t8_element_count_leafs (t8_eclass_scheme_c *ts, const t8_element_t *t, int level);
 ```
 """
 function t8_element_count_leafs(ts, t, level)
@@ -6825,7 +15061,7 @@ This is a convenience function, and can be implemented via t8_element_count_leaf
 The value of t8_element_count_leafs if the input element is the root (level 0) element.
 ### Prototype
 ```c
-t8_gloidx_t t8_element_count_leafs_from_root (const t8_eclass_scheme_c *ts, int level);
+t8_gloidx_t t8_element_count_leafs_from_root (t8_eclass_scheme_c *ts, int level);
 ```
 """
 function t8_element_count_leafs_from_root(ts, level)
@@ -6844,7 +15080,7 @@ This function has no defined effect but each implementation is free to provide i
 * `outdata`:\\[out\\] Pointer to output data. For the correct usage of *indata* and *outdata* see the specific implementations of the scheme. For example the default scheme triangle and tetrahedron implementations use  this function to return the type of a tri/tet to the caller.
 ### Prototype
 ```c
-void t8_element_general_function (const t8_eclass_scheme_c *ts, const t8_element_t *elem, const void *indata, void *outdata);
+void t8_element_general_function (t8_eclass_scheme_c *ts, const t8_element_t *elem, const void *indata, void *outdata);
 ```
 """
 function t8_element_general_function(ts, elem, indata, outdata)
@@ -6877,7 +15113,7 @@ t8\\_element\\_init, t8\\_element\\_is\\_valid
 
 ### Prototype
 ```c
-void t8_element_new (const t8_eclass_scheme_c *ts, int length, t8_element_t **elems);
+void t8_element_new (t8_eclass_scheme_c *ts, int length, t8_element_t **elems);
 ```
 """
 function t8_element_new(ts, length, elems)
@@ -6895,7 +15131,7 @@ Deallocate an array of elements.
 * `elems`:\\[in,out\\] On input an array of **length** many allocated element pointers. On output all these pointers will be freed. **elem** itself will not be freed by this function.
 ### Prototype
 ```c
-void t8_element_destroy (const t8_eclass_scheme_c *ts, int length, t8_element_t **elems);
+void t8_element_destroy (t8_eclass_scheme_c *ts, int length, t8_element_t **elems);
 ```
 """
 function t8_element_destroy(ts, length, elems)
@@ -7869,3955 +16105,6 @@ function t8_flow_around_circle_with_angular_velocity(x, t, x_out)
     @ccall libt8.t8_flow_around_circle_with_angular_velocity(x::Ptr{Cdouble}, t::Cdouble, x_out::Ptr{Cdouble})::Cvoid
 end
 
-mutable struct t8_mesh end
-
-const t8_mesh_t = t8_mesh
-
-"""
-    t8_mesh_new(dimension, Kglobal, Klocal)
-
-*********************** preallocate *************************
-
-### Prototype
-```c
-t8_mesh_t *t8_mesh_new (int dimension, t8_gloidx_t Kglobal, t8_locidx_t Klocal);
-```
-"""
-function t8_mesh_new(dimension, Kglobal, Klocal)
-    @ccall libt8.t8_mesh_new(dimension::Cint, Kglobal::t8_gloidx_t, Klocal::t8_locidx_t)::Ptr{t8_mesh_t}
-end
-
-"""
-    t8_mesh_new_unitcube(theclass)
-
-*********** all-in-one convenience constructors *************
-
-### Prototype
-```c
-t8_mesh_t *t8_mesh_new_unitcube (t8_eclass_t theclass);
-```
-"""
-function t8_mesh_new_unitcube(theclass)
-    @ccall libt8.t8_mesh_new_unitcube(theclass::t8_eclass_t)::Ptr{t8_mesh_t}
-end
-
-"""
-    t8_mesh_set_comm(mesh, comm)
-
-### Prototype
-```c
-void t8_mesh_set_comm (t8_mesh_t *mesh, sc_MPI_Comm comm);
-```
-"""
-function t8_mesh_set_comm(mesh, comm)
-    @ccall libt8.t8_mesh_set_comm(mesh::Ptr{t8_mesh_t}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_mesh_set_partition(mesh, enable)
-
-Determine whether we partition in t8_mesh_build. Default true.
-
-### Prototype
-```c
-void t8_mesh_set_partition (t8_mesh_t *mesh, int enable);
-```
-"""
-function t8_mesh_set_partition(mesh, enable)
-    @ccall libt8.t8_mesh_set_partition(mesh::Ptr{t8_mesh_t}, enable::Cint)::Cvoid
-end
-
-"""
-    t8_mesh_set_element(mesh, theclass, gloid, locid)
-
-### Prototype
-```c
-void t8_mesh_set_element (t8_mesh_t *mesh, t8_eclass_t theclass, t8_gloidx_t gloid, t8_locidx_t locid);
-```
-"""
-function t8_mesh_set_element(mesh, theclass, gloid, locid)
-    @ccall libt8.t8_mesh_set_element(mesh::Ptr{t8_mesh_t}, theclass::t8_eclass_t, gloid::t8_gloidx_t, locid::t8_locidx_t)::Cvoid
-end
-
-"""
-    t8_mesh_set_local_to_global(mesh, ltog_length, ltog)
-
-### Prototype
-```c
-void t8_mesh_set_local_to_global (t8_mesh_t *mesh, t8_locidx_t ltog_length, const t8_gloidx_t *ltog);
-```
-"""
-function t8_mesh_set_local_to_global(mesh, ltog_length, ltog)
-    @ccall libt8.t8_mesh_set_local_to_global(mesh::Ptr{t8_mesh_t}, ltog_length::t8_locidx_t, ltog::Ptr{t8_gloidx_t})::Cvoid
-end
-
-"""
-    t8_mesh_set_face(mesh, locid1, face1, locid2, face2, orientation)
-
-### Prototype
-```c
-void t8_mesh_set_face (t8_mesh_t *mesh, t8_locidx_t locid1, int face1, t8_locidx_t locid2, int face2, int orientation);
-```
-"""
-function t8_mesh_set_face(mesh, locid1, face1, locid2, face2, orientation)
-    @ccall libt8.t8_mesh_set_face(mesh::Ptr{t8_mesh_t}, locid1::t8_locidx_t, face1::Cint, locid2::t8_locidx_t, face2::Cint, orientation::Cint)::Cvoid
-end
-
-"""
-    t8_mesh_set_element_vertices(mesh, locid, vids_length, vids)
-
-### Prototype
-```c
-void t8_mesh_set_element_vertices (t8_mesh_t *mesh, t8_locidx_t locid, t8_locidx_t vids_length, const t8_locidx_t *vids);
-```
-"""
-function t8_mesh_set_element_vertices(mesh, locid, vids_length, vids)
-    @ccall libt8.t8_mesh_set_element_vertices(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, vids_length::t8_locidx_t, vids::Ptr{t8_locidx_t})::Cvoid
-end
-
-"""
-    t8_mesh_build(mesh)
-
-Setup a mesh and turn it into a usable object.
-
-### Prototype
-```c
-void t8_mesh_build (t8_mesh_t *mesh);
-```
-"""
-function t8_mesh_build(mesh)
-    @ccall libt8.t8_mesh_build(mesh::Ptr{t8_mesh_t})::Cvoid
-end
-
-"""
-    t8_mesh_get_comm(mesh)
-
-### Prototype
-```c
-sc_MPI_Comm t8_mesh_get_comm (t8_mesh_t *mesh);
-```
-"""
-function t8_mesh_get_comm(mesh)
-    @ccall libt8.t8_mesh_get_comm(mesh::Ptr{t8_mesh_t})::Cint
-end
-
-"""
-    t8_mesh_get_element_count(mesh, theclass)
-
-### Prototype
-```c
-t8_locidx_t t8_mesh_get_element_count (t8_mesh_t *mesh, t8_eclass_t theclass);
-```
-"""
-function t8_mesh_get_element_count(mesh, theclass)
-    @ccall libt8.t8_mesh_get_element_count(mesh::Ptr{t8_mesh_t}, theclass::t8_eclass_t)::t8_locidx_t
-end
-
-"""
-    t8_mesh_get_element_class(mesh, locid)
-
-### Parameters
-* `locid`:\\[in\\] The local number can specify a point of any dimension that is locally relevant. The points are ordered in reverse to the element classes in t8_eclass_t. The local index is cumulative in this order.
-### Prototype
-```c
-t8_locidx_t t8_mesh_get_element_class (t8_mesh_t *mesh, t8_locidx_t locid);
-```
-"""
-function t8_mesh_get_element_class(mesh, locid)
-    @ccall libt8.t8_mesh_get_element_class(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_locidx_t
-end
-
-"""
-    t8_mesh_get_element_locid(mesh, gloid)
-
-### Prototype
-```c
-t8_locidx_t t8_mesh_get_element_locid (t8_mesh_t *mesh, t8_gloidx_t gloid);
-```
-"""
-function t8_mesh_get_element_locid(mesh, gloid)
-    @ccall libt8.t8_mesh_get_element_locid(mesh::Ptr{t8_mesh_t}, gloid::t8_gloidx_t)::t8_locidx_t
-end
-
-"""
-    t8_mesh_get_element_gloid(mesh, locid)
-
-### Prototype
-```c
-t8_gloidx_t t8_mesh_get_element_gloid (t8_mesh_t *mesh, t8_locidx_t locid);
-```
-"""
-function t8_mesh_get_element_gloid(mesh, locid)
-    @ccall libt8.t8_mesh_get_element_gloid(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_gloidx_t
-end
-
-"""
-    t8_mesh_get_element(mesh, locid)
-
-### Prototype
-```c
-t8_element_t t8_mesh_get_element (t8_mesh_t *mesh, t8_locidx_t locid);
-```
-"""
-function t8_mesh_get_element(mesh, locid)
-    @ccall libt8.t8_mesh_get_element(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_element_t
-end
-
-"""
-    t8_mesh_get_element_boundary(mesh, locid, length_boundary, elemid, orientation)
-
-### Prototype
-```c
-void t8_mesh_get_element_boundary (t8_mesh_t *mesh, t8_locidx_t locid, int length_boundary, t8_locidx_t *elemid, int *orientation);
-```
-"""
-function t8_mesh_get_element_boundary(mesh, locid, length_boundary, elemid, orientation)
-    @ccall libt8.t8_mesh_get_element_boundary(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, length_boundary::Cint, elemid::Ptr{t8_locidx_t}, orientation::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_mesh_get_maximum_support(mesh)
-
-Return the maximum of the length of the support of any local element.
-
-### Prototype
-```c
-int t8_mesh_get_maximum_support (t8_mesh_t *mesh);
-```
-"""
-function t8_mesh_get_maximum_support(mesh)
-    @ccall libt8.t8_mesh_get_maximum_support(mesh::Ptr{t8_mesh_t})::Cint
-end
-
-"""
-    t8_mesh_get_element_support(mesh, locid, length_support, elemid, orientation)
-
-### Parameters
-* `length_support`:\\[in,out\\]
-### Prototype
-```c
-void t8_mesh_get_element_support (t8_mesh_t *mesh, t8_locidx_t locid, int *length_support, t8_locidx_t *elemid, int *orientation);
-```
-"""
-function t8_mesh_get_element_support(mesh, locid, length_support, elemid, orientation)
-    @ccall libt8.t8_mesh_get_element_support(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, length_support::Ptr{Cint}, elemid::Ptr{t8_locidx_t}, orientation::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_mesh_destroy(mesh)
-
-*************************** destruct ************************
-
-### Prototype
-```c
-void t8_mesh_destroy (t8_mesh_t *mesh);
-```
-"""
-function t8_mesh_destroy(mesh)
-    @ccall libt8.t8_mesh_destroy(mesh::Ptr{t8_mesh_t})::Cvoid
-end
-
-const t8_nc_int64_t = Int64
-
-const t8_nc_int32_t = Int32
-
-"""
-    t8_netcdf_create_var(var_type, var_name, var_long_name, var_unit, var_data)
-
-Create an extern double variable which additionally should be put out to the NetCDF File
-
-### Parameters
-* `var_type`:\\[in\\] Defines the datatype of the variable, either T8\\_NETCDF\\_INT, T8\\_NETCDF\\_INT64 or T8\\_NETCDF\\_DOUBLE.
-* `var_name`:\\[in\\] A String which will be the name of the created variable.
-* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
-* `var_unit`:\\[in\\] The units in which the data is provided.
-* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
-* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
-### Prototype
-```c
-t8_netcdf_variable_t *t8_netcdf_create_var (t8_netcdf_variable_type_t var_type, const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
-```
-"""
-function t8_netcdf_create_var(var_type, var_name, var_long_name, var_unit, var_data)
-    @ccall libt8.t8_netcdf_create_var(var_type::t8_netcdf_variable_type_t, var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
-end
-
-"""
-    t8_netcdf_create_integer_var(var_name, var_long_name, var_unit, var_data)
-
-Create an extern integer variable which additionally should be put out to the NetCDF File (The disctinction if it wille be a NC\\_INT or NC\\_INT64 variable is based on the elementsize of the given [`sc_array_t`](@ref))
-
-### Parameters
-* `var_name`:\\[in\\] A String which will be the name of the created variable.
-* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
-* `var_unit`:\\[in\\] The units in which the data is provided.
-* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
-* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
-### Prototype
-```c
-t8_netcdf_variable_t *t8_netcdf_create_integer_var (const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
-```
-"""
-function t8_netcdf_create_integer_var(var_name, var_long_name, var_unit, var_data)
-    @ccall libt8.t8_netcdf_create_integer_var(var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
-end
-
-"""
-    t8_netcdf_create_double_var(var_name, var_long_name, var_unit, var_data)
-
-Create an extern double variable which additionally should be put out to the NetCDF File
-
-### Parameters
-* `var_name`:\\[in\\] A String which will be the name of the created variable.
-* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
-* `var_unit`:\\[in\\] The units in which the data is provided.
-* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
-* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
-### Prototype
-```c
-t8_netcdf_variable_t *t8_netcdf_create_double_var (const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
-```
-"""
-function t8_netcdf_create_double_var(var_name, var_long_name, var_unit, var_data)
-    @ccall libt8.t8_netcdf_create_double_var(var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
-end
-
-"""
-    t8_netcdf_variable_destroy(var_destroy)
-
-Free the allocated memory of the a [`t8_netcdf_variable_t`](@ref)
-
-### Parameters
-* `var_destroy`:\\[in\\] A t8\\_netcdf\\_t variable whose allocated memory should be freed.
-### Prototype
-```c
-void t8_netcdf_variable_destroy (t8_netcdf_variable_t * var_destroy);
-```
-"""
-function t8_netcdf_variable_destroy(var_destroy)
-    @ccall libt8.t8_netcdf_variable_destroy(var_destroy::Ptr{t8_netcdf_variable_t})::Cvoid
-end
-
-"""
-    t8_vec_norm(vec)
-
-Vector norm.
-
-### Parameters
-* `vec`:\\[in\\] A 3D vector.
-### Returns
-The norm of *vec*.
-### Prototype
-```c
-double t8_vec_norm (const double vec[3]);
-```
-"""
-function t8_vec_norm(vec)
-    @ccall libt8.t8_vec_norm(vec::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_vec_dist(vec_x, vec_y)
-
-Euclidean distance of X and Y.
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-### Returns
-The euclidean distance. Equivalent to norm (X-Y).
-### Prototype
-```c
-double t8_vec_dist (const double vec_x[3], const double vec_y[3]);
-```
-"""
-function t8_vec_dist(vec_x, vec_y)
-    @ccall libt8.t8_vec_dist(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_vec_ax(vec_x, alpha)
-
-Compute X = alpha * X
-
-### Parameters
-* `vec_x`:\\[in,out\\] A 3D vector. On output set to *alpha* * *vec_x*.
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_vec_ax (double vec_x[3], const double alpha);
-```
-"""
-function t8_vec_ax(vec_x, alpha)
-    @ccall libt8.t8_vec_ax(vec_x::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_vec_axy(vec_x, vec_y, alpha)
-
-Compute Y = alpha * X
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_z`:\\[out\\] On output set to *alpha* * *vec_x*.
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_vec_axy (const double vec_x[3], double vec_y[3], const double alpha);
-```
-"""
-function t8_vec_axy(vec_x, vec_y, alpha)
-    @ccall libt8.t8_vec_axy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_vec_axb(vec_x, vec_y, alpha, b)
-
-Y = alpha * X + b
-
-!!! note
-
-    It is possible that vec\\_x = vec\\_y on input to overwrite x
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[out\\] On input, a 3D vector. On output set to *alpha* * *vec_x* + *b*.
-* `alpha`:\\[in\\] A factor.
-* `b`:\\[in\\] An offset.
-### Prototype
-```c
-void t8_vec_axb (const double vec_x[3], double vec_y[3], const double alpha, const double b);
-```
-"""
-function t8_vec_axb(vec_x, vec_y, alpha, b)
-    @ccall libt8.t8_vec_axb(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble, b::Cdouble)::Cvoid
-end
-
-"""
-    t8_vec_axpy(vec_x, vec_y, alpha)
-
-Y = Y + alpha * X
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in,out\\] On input, a 3D vector. On output set *to* vec\\_y + *alpha* * *vec_x*
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_vec_axpy (const double vec_x[3], double vec_y[3], const double alpha);
-```
-"""
-function t8_vec_axpy(vec_x, vec_y, alpha)
-    @ccall libt8.t8_vec_axpy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_vec_axpyz(vec_x, vec_y, vec_z, alpha)
-
-Z = Y + alpha * X
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-* `vec_z`:\\[out\\] On output set *to* vec\\_y + *alpha* * *vec_x*
-### Prototype
-```c
-void t8_vec_axpyz (const double vec_x[3], const double vec_y[3], double vec_z[3], const double alpha);
-```
-"""
-function t8_vec_axpyz(vec_x, vec_y, vec_z, alpha)
-    @ccall libt8.t8_vec_axpyz(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, vec_z::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_vec_dot(vec_x, vec_y)
-
-Dot product of X and Y.
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-### Returns
-The dot product *vec_x* * *vec_y*
-### Prototype
-```c
-double t8_vec_dot (const double vec_x[3], const double vec_y[3]);
-```
-"""
-function t8_vec_dot(vec_x, vec_y)
-    @ccall libt8.t8_vec_dot(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_vec_cross(vec_x, vec_y, cross)
-
-Cross product of X and Y
-
-### Parameters
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-* `cross`:\\[out\\] On output, the cross product of *vec_x* and *vec_y*.
-### Prototype
-```c
-void t8_vec_cross (const double vec_x[3], const double vec_y[3], double cross[3]);
-```
-"""
-function t8_vec_cross(vec_x, vec_y, cross)
-    @ccall libt8.t8_vec_cross(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, cross::Ptr{Cdouble})::Cvoid
-end
-
-@cenum t8_vtk_data_type_t::UInt32 begin
-    T8_VTK_SCALAR = 0
-    T8_VTK_VECTOR = 1
-end
-
-"""
-    t8_vtk_data_field_t
-
-| Field       | Note                                       |
-| :---------- | :----------------------------------------- |
-| type        | Describes of which type the data array is  |
-| description | String that describes the data.            |
-"""
-struct t8_vtk_data_field_t
-    type::t8_vtk_data_type_t
-    description::NTuple{8192, Cchar}
-    data::Ptr{Cdouble}
-end
-
-"""
-    t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
-
-### Prototype
-```c
-int t8_write_pvtu (const char *filename, int num_procs, int write_tree, int write_rank, int write_level, int write_id, int num_data, t8_vtk_data_field_t *data);
-```
-"""
-function t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
-    @ccall libt8.t8_write_pvtu(filename::Cstring, num_procs::Cint, write_tree::Cint, write_rank::Cint, write_level::Cint, write_id::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
-end
-
-"""
-    t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
-
-### Prototype
-```c
-void t8_forest_write_netcdf (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm);
-```
-"""
-function t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
-    @ccall libt8.t8_forest_write_netcdf(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
-
-### Prototype
-```c
-void t8_forest_write_netcdf_ext (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm, int netcdf_var_storage_mode, int netcdf_var_mpi_access);
-```
-"""
-function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
-    @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
-end
-
-"""Typedef for quadrant coordinates."""
-const p4est_qcoord_t = Int32
-
-"""Typedef for counting topological entities (trees, tree vertices)."""
-const p4est_topidx_t = Int32
-
-"""Typedef for processor-local indexing of quadrants and nodes."""
-const p4est_locidx_t = Int32
-
-"""Typedef for globally unique indexing of quadrants."""
-const p4est_gloidx_t = Int64
-
-"""
-    sc_io_error_t
-
-Error values for io.
-
-| Enumerator              | Note                                                                         |
-| :---------------------- | :--------------------------------------------------------------------------- |
-| SC\\_IO\\_ERROR\\_NONE  | The value of zero means no error.                                            |
-| SC\\_IO\\_ERROR\\_FATAL | The io object is now disfunctional.                                          |
-| SC\\_IO\\_ERROR\\_AGAIN | Another io operation may resolve it. The function just returned was a noop.  |
-"""
-@cenum sc_io_error_t::Int32 begin
-    SC_IO_ERROR_NONE = 0
-    SC_IO_ERROR_FATAL = -1
-    SC_IO_ERROR_AGAIN = -2
-end
-
-"""
-    sc_io_mode_t
-
-| Enumerator              | Note                         |
-| :---------------------- | :--------------------------- |
-| SC\\_IO\\_MODE\\_WRITE  | Semantics as "w" in fopen.   |
-| SC\\_IO\\_MODE\\_APPEND | Semantics as "a" in fopen.   |
-| SC\\_IO\\_MODE\\_LAST   | Invalid entry to close list  |
-"""
-@cenum sc_io_mode_t::UInt32 begin
-    SC_IO_MODE_WRITE = 0
-    SC_IO_MODE_APPEND = 1
-    SC_IO_MODE_LAST = 2
-end
-
-"""
-    sc_io_encode_t
-
-| Enumerator              | Note                         |
-| :---------------------- | :--------------------------- |
-| SC\\_IO\\_ENCODE\\_LAST | Invalid entry to close list  |
-"""
-@cenum sc_io_encode_t::UInt32 begin
-    SC_IO_ENCODE_NONE = 0
-    SC_IO_ENCODE_LAST = 1
-end
-
-"""
-    sc_io_type_t
-
-| Enumerator            | Note                         |
-| :-------------------- | :--------------------------- |
-| SC\\_IO\\_TYPE\\_LAST | Invalid entry to close list  |
-"""
-@cenum sc_io_type_t::UInt32 begin
-    SC_IO_TYPE_BUFFER = 0
-    SC_IO_TYPE_FILENAME = 1
-    SC_IO_TYPE_FILEFILE = 2
-    SC_IO_TYPE_LAST = 3
-end
-
-"""
-    sc_io_sink
-
-| Field          | Note                          |
-| :------------- | :---------------------------- |
-| buffer\\_bytes | distinguish from array elems  |
-"""
-struct sc_io_sink
-    iotype::sc_io_type_t
-    mode::sc_io_mode_t
-    encode::sc_io_encode_t
-    buffer::Ptr{sc_array_t}
-    buffer_bytes::Csize_t
-    file::Ptr{Libc.FILE}
-    bytes_in::Csize_t
-    bytes_out::Csize_t
-end
-
-const sc_io_sink_t = sc_io_sink
-
-"""
-    sc_io_source
-
-| Field          | Note                          |
-| :------------- | :---------------------------- |
-| buffer\\_bytes | distinguish from array elems  |
-"""
-struct sc_io_source
-    iotype::sc_io_type_t
-    encode::sc_io_encode_t
-    buffer::Ptr{sc_array_t}
-    buffer_bytes::Csize_t
-    file::Ptr{Libc.FILE}
-    bytes_in::Csize_t
-    bytes_out::Csize_t
-    mirror::Ptr{sc_io_sink_t}
-    mirror_buffer::Ptr{sc_array_t}
-end
-
-const sc_io_source_t = sc_io_source
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_sink_new(iotype, mode, encode, va_list...)
-        :(@ccall(libt8.sc_io_sink_new(iotype::sc_io_type_t, mode::sc_io_mode_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
-    end
-
-"""
-    sc_io_sink_destroy(sink)
-
-Free data sink. Calls [`sc_io_sink_complete`](@ref) and discards the final counts. Errors from complete lead to SC\\_IO\\_ERROR\\_FATAL returned from this function. Call [`sc_io_sink_complete`](@ref) yourself if bytes\\_out is of interest.
-
-### Parameters
-* `sink`:\\[in,out\\] The sink object to complete and free.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_sink_destroy (sc_io_sink_t * sink);
-```
-"""
-function sc_io_sink_destroy(sink)
-    @ccall libt8.sc_io_sink_destroy(sink::Ptr{sc_io_sink_t})::Cint
-end
-
-"""
-    sc_io_sink_write(sink, data, bytes_avail)
-
-Write data to a sink. Data may be buffered and sunk in a later call. The internal counters sink->bytes\\_in and sink->bytes\\_out are updated.
-
-### Parameters
-* `sink`:\\[in,out\\] The sink object to write to.
-* `data`:\\[in\\] Data passed into sink.
-* `bytes_avail`:\\[in\\] Number of data bytes passed in.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_sink_write (sc_io_sink_t * sink, const void *data, size_t bytes_avail);
-```
-"""
-function sc_io_sink_write(sink, data, bytes_avail)
-    @ccall libt8.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t)::Cint
-end
-
-"""
-    sc_io_sink_complete(sink, bytes_in, bytes_out)
-
-Flush all buffered output data to sink. This function may return SC\\_IO\\_ERROR\\_AGAIN if another write is required. Currently this may happen if BUFFER requires an integer multiple of bytes. If successful, the updated value of bytes read and written is returned in bytes\\_in/out, and the sink status is reset as if the sink had just been created. In particular, the bytes counters are reset to zero. The internal state of the sink is not changed otherwise. It is legal to continue writing to the sink hereafter. The sink actions taken depend on its type. BUFFER, FILEFILE: none. FILENAME: call fclose on sink->file.
-
-### Parameters
-* `sink`:\\[in,out\\] The sink object to write to.
-* `bytes_in`:\\[in,out\\] Bytes received since the last new or complete call. May be NULL.
-* `bytes_out`:\\[in,out\\] Bytes written since the last new or complete call. May be NULL.
-### Returns
-0 if completed, nonzero on error.
-### Prototype
-```c
-int sc_io_sink_complete (sc_io_sink_t * sink, size_t * bytes_in, size_t * bytes_out);
-```
-"""
-function sc_io_sink_complete(sink, bytes_in, bytes_out)
-    @ccall libt8.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
-end
-
-"""
-    sc_io_sink_align(sink, bytes_align)
-
-Align sink to a byte boundary by writing zeros.
-
-### Parameters
-* `sink`:\\[in,out\\] The sink object to align.
-* `bytes_align`:\\[in\\] Byte boundary.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_sink_align (sc_io_sink_t * sink, size_t bytes_align);
-```
-"""
-function sc_io_sink_align(sink, bytes_align)
-    @ccall libt8.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
-end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_source_new(iotype, encode, va_list...)
-        :(@ccall(libt8.sc_io_source_new(iotype::sc_io_type_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
-    end
-
-"""
-    sc_io_source_destroy(source)
-
-Free data source. Calls [`sc_io_source_complete`](@ref) and requires it to return no error. This is to avoid discarding buffered data that has not been passed to read.
-
-### Parameters
-* `source`:\\[in,out\\] The source object to free.
-### Returns
-0 on success. Nonzero if an error is encountered or is\\_complete returns one.
-### Prototype
-```c
-int sc_io_source_destroy (sc_io_source_t * source);
-```
-"""
-function sc_io_source_destroy(source)
-    @ccall libt8.sc_io_source_destroy(source::Ptr{sc_io_source_t})::Cint
-end
-
-"""
-    sc_io_source_read(source, data, bytes_avail, bytes_out)
-
-Read data from a source. The internal counters source->bytes\\_in and source->bytes\\_out are updated. Data is read until the data buffer has not enough room anymore, or source becomes empty. It is possible that data already read internally remains in the source object for the next call. Call [`sc_io_source_complete`](@ref) and check its return value to find out. Returns an error if bytes\\_out is NULL and less than bytes\\_avail are read.
-
-### Parameters
-* `source`:\\[in,out\\] The source object to read from.
-* `data`:\\[in\\] Data buffer for reading from sink. If NULL the output data will be thrown away.
-* `bytes_avail`:\\[in\\] Number of bytes available in data buffer.
-* `bytes_out`:\\[in,out\\] If not NULL, byte count read into data buffer. Otherwise, requires to read exactly bytes\\_avail.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
-```
-"""
-function sc_io_source_read(source, data, bytes_avail, bytes_out)
-    @ccall libt8.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
-end
-
-"""
-    sc_io_source_complete(source, bytes_in, bytes_out)
-
-Determine whether all data buffered from source has been returned by read. If it returns SC\\_IO\\_ERROR\\_AGAIN, another [`sc_io_source_read`](@ref) is required. If the call returns no error, the internal counters source->bytes\\_in and source->bytes\\_out are returned to the caller if requested, and reset to 0. The internal state of the source is not changed otherwise. It is legal to continue reading from the source hereafter.
-
-### Parameters
-* `source`:\\[in,out\\] The source object to read from.
-* `bytes_in`:\\[in,out\\] If not NULL and true is returned, the total size of the data sourced.
-* `bytes_out`:\\[in,out\\] If not NULL and true is returned, total bytes passed out by source\\_read.
-### Returns
-SC\\_IO\\_ERROR\\_AGAIN if buffered data remaining. Otherwise return ERROR\\_NONE and reset counters.
-### Prototype
-```c
-int sc_io_source_complete (sc_io_source_t * source, size_t * bytes_in, size_t * bytes_out);
-```
-"""
-function sc_io_source_complete(source, bytes_in, bytes_out)
-    @ccall libt8.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
-end
-
-"""
-    sc_io_source_align(source, bytes_align)
-
-Align source to a byte boundary by skipping.
-
-### Parameters
-* `source`:\\[in,out\\] The source object to align.
-* `bytes_align`:\\[in\\] Byte boundary.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_source_align (sc_io_source_t * source, size_t bytes_align);
-```
-"""
-function sc_io_source_align(source, bytes_align)
-    @ccall libt8.sc_io_source_align(source::Ptr{sc_io_source_t}, bytes_align::Csize_t)::Cint
-end
-
-"""
-    sc_io_source_activate_mirror(source)
-
-Activate a buffer that mirrors (i.e., stores) the data that was read.
-
-### Parameters
-* `source`:\\[in,out\\] The source object to activate mirror in.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_source_activate_mirror (sc_io_source_t * source);
-```
-"""
-function sc_io_source_activate_mirror(source)
-    @ccall libt8.sc_io_source_activate_mirror(source::Ptr{sc_io_source_t})::Cint
-end
-
-"""
-    sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
-
-Read data from the source's mirror. Same behaviour as [`sc_io_source_read`](@ref).
-
-### Parameters
-* `source`:\\[in,out\\] The source object to read mirror data from.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
-```
-"""
-function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
-    @ccall libt8.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
-end
-
-"""
-    sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
-
-This function writes numeric binary data in VTK base64 encoding.
-
-### Parameters
-* `vtkfile`: Stream opened for writing.
-* `numeric_data`: A pointer to a numeric data array.
-* `byte_length`: The length of the data array in bytes.
-### Returns
-Returns 0 on success, -1 on file error.
-### Prototype
-```c
-int sc_vtk_write_binary (FILE * vtkfile, char *numeric_data, size_t byte_length);
-```
-"""
-function sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
-    @ccall libt8.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
-end
-
-"""
-    sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
-
-This function writes numeric binary data in VTK compressed format.
-
-### Parameters
-* `vtkfile`: Stream opened for writing.
-* `numeric_data`: A pointer to a numeric data array.
-* `byte_length`: The length of the data array in bytes.
-### Returns
-Returns 0 on success, -1 on file error.
-### Prototype
-```c
-int sc_vtk_write_compressed (FILE * vtkfile, char *numeric_data, size_t byte_length);
-```
-"""
-function sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
-    @ccall libt8.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
-end
-
-"""
-    sc_fwrite(ptr, size, nmemb, file, errmsg)
-
-Write memory content to a file.
-
-!!! note
-
-    This function aborts on file errors.
-
-### Parameters
-* `ptr`:\\[in\\] Data array to write to disk.
-* `size`:\\[in\\] Size of one array member.
-* `nmemb`:\\[in\\] Number of array members.
-* `file`:\\[in,out\\] File pointer, must be opened for writing.
-* `errmsg`:\\[in\\] Error message passed to `SC_CHECK_ABORT`.
-### Prototype
-```c
-void sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file, const char *errmsg);
-```
-"""
-function sc_fwrite(ptr, size, nmemb, file, errmsg)
-    @ccall libt8.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
-end
-
-"""
-    sc_fread(ptr, size, nmemb, file, errmsg)
-
-Read file content into memory.
-
-!!! note
-
-    This function aborts on file errors.
-
-### Parameters
-* `ptr`:\\[out\\] Data array to read from disk.
-* `size`:\\[in\\] Size of one array member.
-* `nmemb`:\\[in\\] Number of array members.
-* `file`:\\[in,out\\] File pointer, must be opened for reading.
-* `errmsg`:\\[in\\] Error message passed to `SC_CHECK_ABORT`.
-### Prototype
-```c
-void sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file, const char *errmsg);
-```
-"""
-function sc_fread(ptr, size, nmemb, file, errmsg)
-    @ccall libt8.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
-end
-
-"""
-    sc_fflush_fsync_fclose(file)
-
-Best effort to flush a file's data to disc and close it.
-
-### Parameters
-* `file`:\\[in,out\\] File open for writing.
-### Prototype
-```c
-void sc_fflush_fsync_fclose (FILE * file);
-```
-"""
-function sc_fflush_fsync_fclose(file)
-    @ccall libt8.sc_fflush_fsync_fclose(file::Ptr{Libc.FILE})::Cvoid
-end
-
-"""
-    sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
-
-### Prototype
-```c
-void sc_mpi_read (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
-```
-"""
-function sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_mpi_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
-end
-
-"""
-    sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
-
-### Prototype
-```c
-void sc_mpi_write (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
-```
-"""
-function sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_mpi_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
-end
-
-"""
-    p4est_comm_tag
-
-Tags for MPI messages
-"""
-@cenum p4est_comm_tag::UInt32 begin
-    P4EST_COMM_TAG_FIRST = 214
-    P4EST_COMM_COUNT_PERTREE = 295
-    P4EST_COMM_BALANCE_FIRST_COUNT = 296
-    P4EST_COMM_BALANCE_FIRST_LOAD = 297
-    P4EST_COMM_BALANCE_SECOND_COUNT = 298
-    P4EST_COMM_BALANCE_SECOND_LOAD = 299
-    P4EST_COMM_PARTITION_GIVEN = 300
-    P4EST_COMM_PARTITION_WEIGHTED_LOW = 301
-    P4EST_COMM_PARTITION_WEIGHTED_HIGH = 302
-    P4EST_COMM_PARTITION_CORRECTION = 303
-    P4EST_COMM_GHOST_COUNT = 304
-    P4EST_COMM_GHOST_LOAD = 305
-    P4EST_COMM_GHOST_EXCHANGE = 306
-    P4EST_COMM_GHOST_EXPAND_COUNT = 307
-    P4EST_COMM_GHOST_EXPAND_LOAD = 308
-    P4EST_COMM_GHOST_SUPPORT_COUNT = 309
-    P4EST_COMM_GHOST_SUPPORT_LOAD = 310
-    P4EST_COMM_GHOST_CHECKSUM = 311
-    P4EST_COMM_NODES_QUERY = 312
-    P4EST_COMM_NODES_REPLY = 313
-    P4EST_COMM_SAVE = 314
-    P4EST_COMM_LNODES_TEST = 315
-    P4EST_COMM_LNODES_PASS = 316
-    P4EST_COMM_LNODES_OWNED = 317
-    P4EST_COMM_LNODES_ALL = 318
-    P4EST_COMM_TAG_LAST = 319
-end
-
-"""Tags for MPI messages"""
-const p4est_comm_tag_t = p4est_comm_tag
-
-# no prototype is found for this function at p4est_base.h:325:1, please use with caution
-"""
-    p4est_log_indent_push()
-
-### Prototype
-```c
-static inline void p4est_log_indent_push ();
-```
-"""
-function p4est_log_indent_push()
-    @ccall libt8.p4est_log_indent_push()::Cvoid
-end
-
-# no prototype is found for this function at p4est_base.h:331:1, please use with caution
-"""
-    p4est_log_indent_pop()
-
-### Prototype
-```c
-static inline void p4est_log_indent_pop ();
-```
-"""
-function p4est_log_indent_pop()
-    @ccall libt8.p4est_log_indent_pop()::Cvoid
-end
-
-"""
-    p4est_init(log_handler, log_threshold)
-
-Registers p4est with the SC Library and sets the logging behavior. This function is optional. This function must only be called before additional threads are created. If this function is not called or called with log\\_handler == NULL, the default SC log handler will be used. If this function is not called or called with log\\_threshold == `SC_LP_DEFAULT`, the default SC log threshold will be used. The default SC log settings can be changed with [`sc_set_log_defaults`](@ref) ().
-
-### Prototype
-```c
-void p4est_init (sc_log_handler_t log_handler, int log_threshold);
-```
-"""
-function p4est_init(log_handler, log_threshold)
-    @ccall libt8.p4est_init(log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
-end
-
-"""
-    p4est_topidx_hash2(tt)
-
-### Prototype
-```c
-static inline unsigned p4est_topidx_hash2 (const p4est_topidx_t * tt);
-```
-"""
-function p4est_topidx_hash2(tt)
-    @ccall libt8.p4est_topidx_hash2(tt::Ptr{p4est_topidx_t})::Cuint
-end
-
-"""
-    p4est_topidx_hash3(tt)
-
-### Prototype
-```c
-static inline unsigned p4est_topidx_hash3 (const p4est_topidx_t * tt);
-```
-"""
-function p4est_topidx_hash3(tt)
-    @ccall libt8.p4est_topidx_hash3(tt::Ptr{p4est_topidx_t})::Cuint
-end
-
-"""
-    p4est_topidx_hash4(tt)
-
-### Prototype
-```c
-static inline unsigned p4est_topidx_hash4 (const p4est_topidx_t * tt);
-```
-"""
-function p4est_topidx_hash4(tt)
-    @ccall libt8.p4est_topidx_hash4(tt::Ptr{p4est_topidx_t})::Cuint
-end
-
-"""
-    p4est_topidx_is_sorted(t, length)
-
-### Prototype
-```c
-static inline int p4est_topidx_is_sorted (p4est_topidx_t * t, int length);
-```
-"""
-function p4est_topidx_is_sorted(t, length)
-    @ccall libt8.p4est_topidx_is_sorted(t::Ptr{p4est_topidx_t}, length::Cint)::Cint
-end
-
-"""
-    p4est_topidx_bsort(t, length)
-
-### Prototype
-```c
-static inline void p4est_topidx_bsort (p4est_topidx_t * t, int length);
-```
-"""
-function p4est_topidx_bsort(t, length)
-    @ccall libt8.p4est_topidx_bsort(t::Ptr{p4est_topidx_t}, length::Cint)::Cvoid
-end
-
-"""
-    p4est_partition_cut_uint64(global_num, p, num_procs)
-
-### Prototype
-```c
-static inline uint64_t p4est_partition_cut_uint64 (uint64_t global_num, int p, int num_procs);
-```
-"""
-function p4est_partition_cut_uint64(global_num, p, num_procs)
-    @ccall libt8.p4est_partition_cut_uint64(global_num::UInt64, p::Cint, num_procs::Cint)::UInt64
-end
-
-"""
-    p4est_partition_cut_gloidx(global_num, p, num_procs)
-
-### Prototype
-```c
-static inline p4est_gloidx_t p4est_partition_cut_gloidx (p4est_gloidx_t global_num, int p, int num_procs);
-```
-"""
-function p4est_partition_cut_gloidx(global_num, p, num_procs)
-    @ccall libt8.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint, num_procs::Cint)::p4est_gloidx_t
-end
-
-"""
-    p4est_version()
-
-Return the full version of p4est.
-
-### Returns
-Return the version of p4est using the format `VERSION\\_MAJOR.VERSION\\_MINOR.VERSION\\_POINT`, where `VERSION_POINT` can contain dots and characters, e.g. to indicate the additional number of commits and a git commit hash.
-### Prototype
-```c
-const char *p4est_version (void);
-```
-"""
-function p4est_version()
-    @ccall libt8.p4est_version()::Cstring
-end
-
-"""
-    p4est_version_major()
-
-Return the major version of p4est.
-
-### Returns
-Return the major version of p4est.
-### Prototype
-```c
-int p4est_version_major (void);
-```
-"""
-function p4est_version_major()
-    @ccall libt8.p4est_version_major()::Cint
-end
-
-"""
-    p4est_version_minor()
-
-Return the minor version of p4est.
-
-### Returns
-Return the minor version of p4est.
-### Prototype
-```c
-int p4est_version_minor (void);
-```
-"""
-function p4est_version_minor()
-    @ccall libt8.p4est_version_minor()::Cint
-end
-
-"""
-    p4est_connect_type_t
-
-Characterize a type of adjacency.
-
-Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner. [`p4est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
-"""
-@cenum p4est_connect_type_t::UInt32 begin
-    P4EST_CONNECT_FACE = 21
-    P4EST_CONNECT_CORNER = 22
-    P4EST_CONNECT_FULL = 22
-end
-
-"""
-    p4est_connectivity_encode_t
-
-Typedef for serialization method.
-
-| Enumerator                   | Note                              |
-| :--------------------------- | :-------------------------------- |
-| P4EST\\_CONN\\_ENCODE\\_LAST | Invalid entry to close the list.  |
-"""
-@cenum p4est_connectivity_encode_t::UInt32 begin
-    P4EST_CONN_ENCODE_NONE = 0
-    P4EST_CONN_ENCODE_LAST = 1
-end
-
-"""
-    p4est_connect_type_int(btype)
-
-Convert the [`p4est_connect_type_t`](@ref) into a number.
-
-### Parameters
-* `btype`:\\[in\\] The balance type to convert.
-### Returns
-Returns 1 or 2.
-### Prototype
-```c
-int p4est_connect_type_int (p4est_connect_type_t btype);
-```
-"""
-function p4est_connect_type_int(btype)
-    @ccall libt8.p4est_connect_type_int(btype::p4est_connect_type_t)::Cint
-end
-
-"""
-    p4est_connect_type_string(btype)
-
-Convert the [`p4est_connect_type_t`](@ref) into a const string.
-
-### Parameters
-* `btype`:\\[in\\] The balance type to convert.
-### Returns
-Returns a pointer to a constant string.
-### Prototype
-```c
-const char *p4est_connect_type_string (p4est_connect_type_t btype);
-```
-"""
-function p4est_connect_type_string(btype)
-    @ccall libt8.p4est_connect_type_string(btype::p4est_connect_type_t)::Cstring
-end
-
-"""
-    p4est_connectivity
-
-This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
-
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
-
-The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
-
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
-
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
-
-The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
-
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
-
-| Field                | Note                                                                                 |
-| :------------------- | :----------------------------------------------------------------------------------- |
-| num\\_vertices       | the number of vertices that define the *embedding* of the forest (not the topology)  |
-| num\\_trees          | the number of trees                                                                  |
-| num\\_corners        | the number of corners that help define topology                                      |
-| vertices             | an array of size (3 * *num_vertices*)                                                |
-| tree\\_to\\_vertex   | embed each tree into  ```c++ R^3 ```  for e.g. visualization (see p4est\\_vtk.h)     |
-| tree\\_attr\\_bytes  | bytes per tree in tree\\_to\\_attr                                                   |
-| tree\\_to\\_attr     | not touched by p4est                                                                 |
-| tree\\_to\\_tree     | (4 * *num_trees*) neighbors across faces                                             |
-| tree\\_to\\_face     | (4 * *num_trees*) face to face+orientation (see description)                         |
-| tree\\_to\\_corner   | (4 * *num_trees*) or NULL (see description)                                          |
-| ctt\\_offset         | corner to offset in *corner_to_tree* and *corner_to_corner*                          |
-| corner\\_to\\_tree   | list of trees that meet at a corner                                                  |
-| corner\\_to\\_corner | list of tree-corners that meet at a corner                                           |
-"""
-struct p4est_connectivity
-    num_vertices::p4est_topidx_t
-    num_trees::p4est_topidx_t
-    num_corners::p4est_topidx_t
-    vertices::Ptr{Cdouble}
-    tree_to_vertex::Ptr{p4est_topidx_t}
-    tree_attr_bytes::Csize_t
-    tree_to_attr::Cstring
-    tree_to_tree::Ptr{p4est_topidx_t}
-    tree_to_face::Ptr{Int8}
-    tree_to_corner::Ptr{p4est_topidx_t}
-    ctt_offset::Ptr{p4est_topidx_t}
-    corner_to_tree::Ptr{p4est_topidx_t}
-    corner_to_corner::Ptr{Int8}
-end
-
-"""
-This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
-
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
-
-The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
-
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
-
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
-
-The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
-
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
-"""
-const p4est_connectivity_t = p4est_connectivity
-
-"""
-    p4est_connectivity_memory_used(conn)
-
-Calculate memory usage of a connectivity structure.
-
-### Parameters
-* `conn`:\\[in\\] Connectivity structure.
-### Returns
-Memory used in bytes.
-### Prototype
-```c
-size_t p4est_connectivity_memory_used (p4est_connectivity_t * conn);
-```
-"""
-function p4est_connectivity_memory_used(conn)
-    @ccall libt8.p4est_connectivity_memory_used(conn::Ptr{p4est_connectivity_t})::Csize_t
-end
-
-struct p4est_corner_transform_t
-    ntree::p4est_topidx_t
-    ncorner::Int8
-end
-
-struct p4est_corner_info_t
-    icorner::p4est_topidx_t
-    corner_transforms::sc_array_t
-end
-
-"""
-    p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-
-Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `fc`:\\[in\\] A face corner number in 0..1.
-* `f`:\\[in\\] A face that the face corner number *fc* is relative to.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The face corner number relative to the neighbor's face.
-### Prototype
-```c
-int p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
-```
-"""
-function p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libt8.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p4est_connectivity_face_neighbor_corner(c, f, nf, o)
-
-Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `c`:\\[in\\] A corner number in 0..3.
-* `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The number of the corner seen from the neighbor tree.
-### Prototype
-```c
-int p4est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
-```
-"""
-function p4est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libt8.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
-
-Allocate a connectivity structure. The attribute fields are initialized to NULL.
-
-### Parameters
-* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
-* `num_trees`:\\[in\\] Number of trees in the forest.
-* `num_corners`:\\[in\\] Number of tree-connecting corners.
-* `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
-### Returns
-A connectivity structure with allocated arrays.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_corners, p4est_topidx_t num_ctt);
-```
-"""
-function p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
-    @ccall libt8.p4est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
-
-Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
-
-### Parameters
-* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
-* `num_trees`:\\[in\\] Number of trees in the forest.
-* `num_corners`:\\[in\\] Number of tree-connecting corners.
-* `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
-### Returns
-The connectivity is checked for validity.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
-```
-"""
-function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
-    @ccall libt8.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_bcast(conn_in, root, comm)
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
-```
-"""
-function p4est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_destroy(connectivity)
-
-Destroy a connectivity structure. Also destroy all attributes.
-
-### Prototype
-```c
-void p4est_connectivity_destroy (p4est_connectivity_t * connectivity);
-```
-"""
-function p4est_connectivity_destroy(connectivity)
-    @ccall libt8.p4est_connectivity_destroy(connectivity::Ptr{p4est_connectivity_t})::Cvoid
-end
-
-"""
-    p4est_connectivity_set_attr(conn, bytes_per_tree)
-
-Allocate or free the attribute fields in a connectivity.
-
-### Parameters
-* `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
-* `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
-### Prototype
-```c
-void p4est_connectivity_set_attr (p4est_connectivity_t * conn, size_t bytes_per_tree);
-```
-"""
-function p4est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libt8.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
-end
-
-"""
-    p4est_connectivity_is_valid(connectivity)
-
-Examine a connectivity structure.
-
-### Returns
-Returns true if structure is valid, false otherwise.
-### Prototype
-```c
-int p4est_connectivity_is_valid (p4est_connectivity_t * connectivity);
-```
-"""
-function p4est_connectivity_is_valid(connectivity)
-    @ccall libt8.p4est_connectivity_is_valid(connectivity::Ptr{p4est_connectivity_t})::Cint
-end
-
-"""
-    p4est_connectivity_is_equal(conn1, conn2)
-
-Check two connectivity structures for equality.
-
-### Returns
-Returns true if structures are equal, false otherwise.
-### Prototype
-```c
-int p4est_connectivity_is_equal (p4est_connectivity_t * conn1, p4est_connectivity_t * conn2);
-```
-"""
-function p4est_connectivity_is_equal(conn1, conn2)
-    @ccall libt8.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
-end
-
-"""
-    p4est_connectivity_sink(conn, sink)
-
-Write connectivity to a sink object.
-
-### Parameters
-* `conn`:\\[in\\] The connectivity to be written.
-* `sink`:\\[in,out\\] The connectivity is written into this sink.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink);
-```
-"""
-function p4est_connectivity_sink(conn, sink)
-    @ccall libt8.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
-end
-
-"""
-    p4est_connectivity_deflate(conn, code)
-
-Allocate memory and store the connectivity information there.
-
-### Parameters
-* `conn`:\\[in\\] The connectivity structure to be exported to memory.
-* `code`:\\[in\\] Encoding and compression method for serialization.
-### Returns
-Newly created array that contains the information.
-### Prototype
-```c
-sc_array_t *p4est_connectivity_deflate (p4est_connectivity_t * conn, p4est_connectivity_encode_t code);
-```
-"""
-function p4est_connectivity_deflate(conn, code)
-    @ccall libt8.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t}, code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
-end
-
-"""
-    p4est_connectivity_save(filename, connectivity)
-
-Save a connectivity structure to disk.
-
-### Parameters
-* `filename`:\\[in\\] Name of the file to write.
-* `connectivity`:\\[in\\] Valid connectivity structure.
-### Returns
-Returns 0 on success, nonzero on file error.
-### Prototype
-```c
-int p4est_connectivity_save (const char *filename, p4est_connectivity_t * connectivity);
-```
-"""
-function p4est_connectivity_save(filename, connectivity)
-    @ccall libt8.p4est_connectivity_save(filename::Cstring, connectivity::Ptr{p4est_connectivity_t})::Cint
-end
-
-"""
-    p4est_connectivity_source(source)
-
-Read connectivity from a source object.
-
-### Parameters
-* `source`:\\[in,out\\] The connectivity is read from this source.
-### Returns
-The newly created connectivity, or NULL on error.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_source (sc_io_source_t * source);
-```
-"""
-function p4est_connectivity_source(source)
-    @ccall libt8.p4est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_inflate(buffer)
-
-Create new connectivity from a memory buffer.
-
-### Parameters
-* `buffer`:\\[in\\] The connectivity is created from this memory buffer.
-### Returns
-The newly created connectivity, or NULL on error.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
-```
-"""
-function p4est_connectivity_inflate(buffer)
-    @ccall libt8.p4est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_load(filename, bytes)
-
-Load a connectivity structure from disk.
-
-### Parameters
-* `filename`:\\[in\\] Name of the file to read.
-* `bytes`:\\[in,out\\] Size in bytes of connectivity on disk or NULL.
-### Returns
-Returns valid connectivity, or NULL on file error.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_load (const char *filename, size_t *bytes);
-```
-"""
-function p4est_connectivity_load(filename, bytes)
-    @ccall libt8.p4est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_unitsquare()
-
-Create a connectivity structure for the unit square.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
-```
-"""
-function p4est_connectivity_new_unitsquare()
-    @ccall libt8.p4est_connectivity_new_unitsquare()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_periodic()
-
-Create a connectivity structure for an all-periodic unit square.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_periodic (void);
-```
-"""
-function p4est_connectivity_new_periodic()
-    @ccall libt8.p4est_connectivity_new_periodic()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_rotwrap()
-
-Create a connectivity structure for a periodic unit square. The left and right faces are identified, and bottom and top opposite.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
-```
-"""
-function p4est_connectivity_new_rotwrap()
-    @ccall libt8.p4est_connectivity_new_rotwrap()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_twotrees(l_face, r_face, orientation)
-
-Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way
-
-### Parameters
-* `l_face`:\\[in\\] index of left face
-* `r_face`:\\[in\\] index of right face
-* `orientation`:\\[in\\] orientation of trees w.r.t. each other
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face, int r_face, int orientation);
-```
-"""
-function p4est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libt8.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_corner()
-
-Create a connectivity structure for a three-tree mesh around a corner.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_corner (void);
-```
-"""
-function p4est_connectivity_new_corner()
-    @ccall libt8.p4est_connectivity_new_corner()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_pillow()
-
-Create a connectivity structure for two trees on top of each other.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_pillow (void);
-```
-"""
-function p4est_connectivity_new_pillow()
-    @ccall libt8.p4est_connectivity_new_pillow()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_moebius()
-
-Create a connectivity structure for a five-tree moebius band.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_moebius (void);
-```
-"""
-function p4est_connectivity_new_moebius()
-    @ccall libt8.p4est_connectivity_new_moebius()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_star()
-
-Create a connectivity structure for a six-tree star.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_star (void);
-```
-"""
-function p4est_connectivity_new_star()
-    @ccall libt8.p4est_connectivity_new_star()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_cubed()
-
-Create a connectivity structure for the six sides of a unit cube. The ordering of the trees is as follows: 0 1 2 3 <-- 3: axis-aligned top side 4 5. This choice has been made for maximum symmetry (see tree\\_to\\_* in .c file).
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_cubed (void);
-```
-"""
-function p4est_connectivity_new_cubed()
-    @ccall libt8.p4est_connectivity_new_cubed()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_disk_nonperiodic()
-
-Create a connectivity structure for a five-tree flat spherical disk. This disk can just as well be used as a square to test non-Cartesian maps. Without any mapping this connectivity covers the square [-3, 3]**2.
-
-### Returns
-Initialized and usable connectivity.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
-```
-"""
-function p4est_connectivity_new_disk_nonperiodic()
-    @ccall libt8.p4est_connectivity_new_disk_nonperiodic()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_disk(periodic_a, periodic_b)
-
-Create a connectivity structure for a five-tree flat spherical disk. This disk can just as well be used as a square to test non-Cartesian maps. Without any mapping this connectivity covers the square [-3, 3]**2.
-
-!!! note
-
-    The API of this function has changed to accept two arguments. You can query the #define `P4EST_CONN_DISK_PERIODIC` to check whether the new version with the argument is in effect.
-
-The ordering of the trees is as follows: 4 1 2 3 0.
-
-The outside x faces may be identified topologically. The outside y faces may be identified topologically. Both identifications may be specified simultaneously. The general shape and periodicity are the same as those obtained with p4est_connectivity_new_brick (1, 1, periodic\\_a, periodic\\_b).
-
-When setting *periodic_a* and *periodic_b* to false, the result is the same as that of p4est_connectivity_new_disk_nonperiodic.
-
-### Parameters
-* `periodic_a`:\\[in\\] Bool to make disk periodic in x direction.
-* `periodic_b`:\\[in\\] Bool to make disk periodic in y direction.
-### Returns
-Initialized and usable connectivity.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a, int periodic_b);
-```
-"""
-function p4est_connectivity_new_disk(periodic_a, periodic_b)
-    @ccall libt8.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
-end
-
-# no prototype is found for this function at p4est_connectivity.h:475:23, please use with caution
-"""
-    p4est_connectivity_new_icosahedron()
-
-Create a connectivity for mapping the sphere using an icosahedron.
-
-The regular icosadron is a polyhedron with 20 faces, each of which is an equilateral triangle. To build the p4est connectivity, we group faces 2 by 2 to from 10 quadrangles, and thus 10 trees.
-
-This connectivity is meant to be used together with p4est_geometry_new_icosahedron to map the sphere.
-
-The flat connectivity looks like that: Vextex numbering:
-
-A00 A01 A02 A03 A04 / \\ / \\ / \\ / \\ / \\ A05---A06---A07---A08---A09---A10 \\ / \\ / \\ / \\ / \\ / \\ A11---A12---A13---A14---A15---A16 \\ / \\ / \\ / \\ / \\ / A17 A18 A19 A20 A21
-
-Origin in A05.
-
-Tree numbering:
-
-0 2 4 6 8 1 3 5 7 9
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
-```
-"""
-function p4est_connectivity_new_icosahedron()
-    @ccall libt8.p4est_connectivity_new_icosahedron()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_shell2d()
-
-Create a connectivity structure that builds a 2d spherical shell. p8est_connectivity_new_shell
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
-```
-"""
-function p4est_connectivity_new_shell2d()
-    @ccall libt8.p4est_connectivity_new_shell2d()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_disk2d()
-
-Create a connectivity structure that maps a 2d disk.
-
-This is a 5 trees connectivity meant to be used together with p4est_geometry_new_disk2d to map the disk.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
-```
-"""
-function p4est_connectivity_new_disk2d()
-    @ccall libt8.p4est_connectivity_new_disk2d()::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
-
-A rectangular m by n array of trees with configurable periodicity. The brick is periodic in x and y if periodic\\_a and periodic\\_b are true, respectively.
-
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni, int periodic_a, int periodic_b);
-```
-"""
-function p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
-    @ccall libt8.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_new_byname(name)
-
-Create connectivity structure from predefined catalogue.
-
-### Parameters
-* `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick23 brick (2, 3, 0, 0) corner corner cubed cubed disk disk moebius moebius periodic periodic pillow pillow rotwrap rotwrap star star unit unitsquare
-### Returns
-An initialized connectivity if name is defined, NULL else.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
-```
-"""
-function p4est_connectivity_new_byname(name)
-    @ccall libt8.p4est_connectivity_new_byname(name::Cstring)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_connectivity_refine(conn, num_per_edge)
-
-Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
-
-### Parameters
-* `conn`:\\[in\\] A valid connectivity
-* `num_per_edge`:\\[in\\] The number of new trees in each direction. Must use no more than P4EST_OLD_QMAXLEVEL bits.
-### Returns
-a refined connectivity.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, int num_per_edge);
-```
-"""
-function p4est_connectivity_refine(conn, num_per_edge)
-    @ccall libt8.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_edge::Cint)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p4est_expand_face_transform(iface, nface, ftransform)
-
-Fill an array with the axis combination of a face neighbor transform.
-
-### Parameters
-* `iface`:\\[in\\] The number of the originating face.
-* `nface`:\\[in\\] Encoded as nface = r * 4 + nf, where nf = 0..3 is the neigbbor's connecting face number and r = 0..1 is the relative orientation to the neighbor's face. This encoding matches [`p4est_connectivity_t`](@ref).
-* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face, the first referring to the tangential and the second to the normal. A permutation of (0, 1). [3,5] The coordinate axis sequence of the target face. [6,8] Edge reversal flag for tangential axis (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q [1,4,7] 0 (unused for compatibility with 3D).
-### Prototype
-```c
-void p4est_expand_face_transform (int iface, int nface, int ftransform[]);
-```
-"""
-function p4est_expand_face_transform(iface, nface, ftransform)
-    @ccall libt8.p4est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
-end
-
-"""
-    p4est_find_face_transform(connectivity, itree, iface, ftransform)
-
-Fill an array with the axis combinations of a tree neighbor transform.
-
-### Parameters
-* `itree`:\\[in\\] The number of the originating tree.
-* `iface`:\\[in\\] The number of the originating tree's face.
-* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face. [3,5] The coordinate axis sequence of the target face. [6,8] Edge reverse flag for axis t; face code for axis n. [1,4,7] 0 (unused for compatibility with 3D).
-### Returns
-The face neighbor tree if it exists, -1 otherwise.
-### Prototype
-```c
-p4est_topidx_t p4est_find_face_transform (p4est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
-```
-"""
-function p4est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libt8.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
-end
-
-"""
-    p4est_find_corner_transform(connectivity, itree, icorner, ci)
-
-Fills an array with information about corner neighbors.
-
-### Parameters
-* `itree`:\\[in\\] The number of the originating tree.
-* `icorner`:\\[in\\] The number of the originating corner.
-* `ci`:\\[in,out\\] A `p4est_corner_info_t` structure with initialized array.
-### Prototype
-```c
-void p4est_find_corner_transform (p4est_connectivity_t * connectivity, p4est_topidx_t itree, int icorner, p4est_corner_info_t * ci);
-```
-"""
-function p4est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libt8.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p4est_corner_info_t})::Cvoid
-end
-
-"""
-    p4est_connectivity_complete(conn)
-
-Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p4est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The corner fields will be freed and allocated anew.
-### Prototype
-```c
-void p4est_connectivity_complete (p4est_connectivity_t * conn);
-```
-"""
-function p4est_connectivity_complete(conn)
-    @ccall libt8.p4est_connectivity_complete(conn::Ptr{p4est_connectivity_t})::Cvoid
-end
-
-"""
-    p4est_connectivity_reduce(conn)
-
-Removes corner information of a connectivity such that enough information is left to run [`p4est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p4est_connectivity_is_valid`](@ref).
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity to be reduced.
-### Prototype
-```c
-void p4est_connectivity_reduce (p4est_connectivity_t * conn);
-```
-"""
-function p4est_connectivity_reduce(conn)
-    @ccall libt8.p4est_connectivity_reduce(conn::Ptr{p4est_connectivity_t})::Cvoid
-end
-
-"""
-    p4est_connectivity_permute(conn, perm, is_current_to_new)
-
-[`p4est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity whose trees are permuted.
-* `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
-* `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
-### Prototype
-```c
-void p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * perm, int is_current_to_new);
-```
-"""
-function p4est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libt8.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
-end
-
-"""
-    p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-
-[`p4est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
-
-### Parameters
-* `conn`:\\[in,out\\] connectivity that will be altered.
-* `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
-* `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
-* `face_left`:\\[in\\] face of *tree_left* that will be joined.
-* `face_right`:\\[in\\] face of *tree_right* that will be joined.
-* `orientation`:\\[in\\] the orientation of *face_left* and *face_right* once joined (see the description of [`p4est_connectivity_t`](@ref) to understand orientation).
-### Prototype
-```c
-void p4est_connectivity_join_faces (p4est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
-```
-"""
-function p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libt8.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
-end
-
-"""
-    p4est_connectivity_is_equivalent(conn1, conn2)
-
-[`p4est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
-
-### Parameters
-* `conn1`:\\[in\\] a valid connectivity
-* `conn2`:\\[out\\] a valid connectivity
-### Prototype
-```c
-int p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1, p4est_connectivity_t * conn2);
-```
-"""
-function p4est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libt8.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
-end
-
-"""
-    p4est_corner_array_index(array, it)
-
-### Prototype
-```c
-static inline p4est_corner_transform_t * p4est_corner_array_index (sc_array_t * array, size_t it);
-```
-"""
-function p4est_corner_array_index(array, it)
-    @ccall libt8.p4est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_corner_transform_t}
-end
-
-"""
-    p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-
-Read an ABAQUS input file from a file stream.
-
-This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
-
-A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
-
-4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
-
-and in 3D they are given as:
-
-8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
-
-```c++
- *Heading
-  box.inp
- *Node
- 1,  -5, -5, 0
- 2,   5, -5, 0
- 3,   5,  5, 0
- 4,  -5,  5, 0
- 5,   0, -5, 0
- 6,   5,  0, 0
- 7,   0,  5, 0
- 8,  -5,  0, 0
- 9,   1, -1, 0
- 10,  0,  0, 0
- 11, -2,  1, 0
- *Element, type=CPS4, ELSET=Surface1
- 1,  1, 10, 11, 8
- 2,  3, 10, 9,  6
- 3,  9, 10, 1,  5
- 4,  7,  4, 8, 11
- 5, 11, 10, 3,  7
- 6,  2,  6, 9,  5
-```
-
-This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
-
-### Parameters
-* `stream`:\\[in,out\\] file stream to read the connectivity from
-* `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
-* `num_trees`:\\[in,out\\] the number of trees in the connectivity
-* `vertices`:\\[out\\] the list of `vertices` of the connectivity
-* `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
-### Returns
-0 if successful and nonzero if not
-### Prototype
-```c
-int p4est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
-```
-"""
-function p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libt8.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
-end
-
-"""
-    p4est_connectivity_read_inp(filename)
-
-Create a p4est connectivity from an ABAQUS input file.
-
-This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
-
-A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
-
-4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
-
-and in 3D they are given as:
-
-8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
-
-```c++
- *Heading
-  box.inp
- *Node
- 1,  -5, -5, 0
- 2,   5, -5, 0
- 3,   5,  5, 0
- 4,  -5,  5, 0
- 5,   0, -5, 0
- 6,   5,  0, 0
- 7,   0,  5, 0
- 8,  -5,  0, 0
- 9,   1, -1, 0
- 10,  0,  0, 0
- 11, -2,  1, 0
- *Element, type=CPS4, ELSET=Surface1
- 1,  1, 10, 11, 8
- 2,  3, 10, 9,  6
- 3,  9, 10, 1,  5
- 4,  7,  4, 8, 11
- 5, 11, 10, 3,  7
- 6,  2,  6, 9,  5
-```
-
-This function reads a mesh from *filename* and returns an associated p4est connectivity.
-
-### Parameters
-* `filename`:\\[in\\] file to read the connectivity from
-### Returns
-an allocated connectivity associated with the mesh in *filename* or NULL if an error occurred.
-### Prototype
-```c
-p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
-```
-"""
-function p4est_connectivity_read_inp(filename)
-    @ccall libt8.p4est_connectivity_read_inp(filename::Cstring)::Ptr{p4est_connectivity_t}
-end
-
-"""
-    p8est_connect_type_t
-
-Characterize a type of adjacency.
-
-Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner, or 3) entities are adjacent if they share a face, corner or edge. [`p8est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
-"""
-@cenum p8est_connect_type_t::UInt32 begin
-    P8EST_CONNECT_FACE = 31
-    P8EST_CONNECT_EDGE = 32
-    P8EST_CONNECT_CORNER = 33
-    P8EST_CONNECT_FULL = 33
-end
-
-"""
-    p8est_connectivity_encode_t
-
-Typedef for serialization method.
-
-| Enumerator                   | Note                              |
-| :--------------------------- | :-------------------------------- |
-| P8EST\\_CONN\\_ENCODE\\_LAST | Invalid entry to close the list.  |
-"""
-@cenum p8est_connectivity_encode_t::UInt32 begin
-    P8EST_CONN_ENCODE_NONE = 0
-    P8EST_CONN_ENCODE_LAST = 1
-end
-
-"""
-    p8est_connect_type_int(btype)
-
-Convert the [`p8est_connect_type_t`](@ref) into a number.
-
-### Parameters
-* `btype`:\\[in\\] The balance type to convert.
-### Returns
-Returns 1, 2 or 3.
-### Prototype
-```c
-int p8est_connect_type_int (p8est_connect_type_t btype);
-```
-"""
-function p8est_connect_type_int(btype)
-    @ccall libt8.p8est_connect_type_int(btype::p8est_connect_type_t)::Cint
-end
-
-"""
-    p8est_connect_type_string(btype)
-
-Convert the [`p8est_connect_type_t`](@ref) into a const string.
-
-### Parameters
-* `btype`:\\[in\\] The balance type to convert.
-### Returns
-Returns a pointer to a constant string.
-### Prototype
-```c
-const char *p8est_connect_type_string (p8est_connect_type_t btype);
-```
-"""
-function p8est_connect_type_string(btype)
-    @ccall libt8.p8est_connect_type_string(btype::p8est_connect_type_t)::Cstring
-end
-
-"""
-    p8est_connectivity
-
-This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
-
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
-
-The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
-
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
-
-The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
-
-The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
-
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
-
-The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
-
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
-
-| Field                | Note                                                                                 |
-| :------------------- | :----------------------------------------------------------------------------------- |
-| num\\_vertices       | the number of vertices that define the *embedding* of the forest (not the topology)  |
-| num\\_trees          | the number of trees                                                                  |
-| num\\_edges          | the number of edges that help define the topology                                    |
-| num\\_corners        | the number of corners that help define the topology                                  |
-| vertices             | an array of size (3 * *num_vertices*)                                                |
-| tree\\_to\\_vertex   | embed each tree into  ```c++ R^3 ```  for e.g. visualization (see p8est\\_vtk.h)     |
-| tree\\_attr\\_bytes  | bytes per tree in tree\\_to\\_attr                                                   |
-| tree\\_to\\_attr     | not touched by p4est                                                                 |
-| tree\\_to\\_tree     | (6 * *num_trees*) neighbors across faces                                             |
-| tree\\_to\\_face     | (6 * *num_trees*) face to face+orientation (see description)                         |
-| tree\\_to\\_edge     | (12 * *num_trees*) or NULL (see description)                                         |
-| ett\\_offset         | edge to offset in *edge_to_tree* and *edge_to_edge*                                  |
-| edge\\_to\\_tree     | list of trees that meet at an edge                                                   |
-| edge\\_to\\_edge     | list of tree-edges+orientations that meet at an edge (see description)               |
-| tree\\_to\\_corner   | (8 * *num_trees*) or NULL (see description)                                          |
-| ctt\\_offset         | corner to offset in *corner_to_tree* and *corner_to_corner*                          |
-| corner\\_to\\_tree   | list of trees that meet at a corner                                                  |
-| corner\\_to\\_corner | list of tree-corners that meet at a corner                                           |
-"""
-struct p8est_connectivity
-    num_vertices::p4est_topidx_t
-    num_trees::p4est_topidx_t
-    num_edges::p4est_topidx_t
-    num_corners::p4est_topidx_t
-    vertices::Ptr{Cdouble}
-    tree_to_vertex::Ptr{p4est_topidx_t}
-    tree_attr_bytes::Csize_t
-    tree_to_attr::Cstring
-    tree_to_tree::Ptr{p4est_topidx_t}
-    tree_to_face::Ptr{Int8}
-    tree_to_edge::Ptr{p4est_topidx_t}
-    ett_offset::Ptr{p4est_topidx_t}
-    edge_to_tree::Ptr{p4est_topidx_t}
-    edge_to_edge::Ptr{Int8}
-    tree_to_corner::Ptr{p4est_topidx_t}
-    ctt_offset::Ptr{p4est_topidx_t}
-    corner_to_tree::Ptr{p4est_topidx_t}
-    corner_to_corner::Ptr{Int8}
-end
-
-"""
-This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
-
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
-
-The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
-
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
-
-The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
-
-The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
-
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
-
-The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
-
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
-"""
-const p8est_connectivity_t = p8est_connectivity
-
-"""
-    p8est_connectivity_memory_used(conn)
-
-Calculate memory usage of a connectivity structure.
-
-### Parameters
-* `conn`:\\[in\\] Connectivity structure.
-### Returns
-Memory used in bytes.
-### Prototype
-```c
-size_t p8est_connectivity_memory_used (p8est_connectivity_t * conn);
-```
-"""
-function p8est_connectivity_memory_used(conn)
-    @ccall libt8.p8est_connectivity_memory_used(conn::Ptr{p8est_connectivity_t})::Csize_t
-end
-
-struct p8est_edge_transform_t
-    ntree::p4est_topidx_t
-    nedge::Int8
-    naxis::NTuple{3, Int8}
-    nflip::Int8
-    corners::Int8
-end
-
-struct p8est_edge_info_t
-    iedge::Int8
-    edge_transforms::sc_array_t
-end
-
-struct p8est_corner_transform_t
-    ntree::p4est_topidx_t
-    ncorner::Int8
-end
-
-struct p8est_corner_info_t
-    icorner::p4est_topidx_t
-    corner_transforms::sc_array_t
-end
-
-"""
-    p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
-
-Transform a corner across one of the adjacent faces into a neighbor tree. It expects a face permutation index that has been precomputed.
-
-### Parameters
-* `c`:\\[in\\] A corner number in 0..7.
-* `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `set`:\\[in\\] A value from *p8est_face_permutation_sets* that is obtained using *f*, *nf*, and a valid orientation: ref = p8est\\_face\\_permutation\\_refs[f][nf]; set = p8est\\_face\\_permutation\\_sets[ref][orientation];
-### Returns
-The corner number in 0..7 seen from the other face.
-### Prototype
-```c
-int p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set);
-```
-"""
-function p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
-    @ccall libt8.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint, set::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-
-Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `fc`:\\[in\\] A face corner number in 0..3.
-* `f`:\\[in\\] A face that the face corner *fc* is relative to.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The face corner number relative to the neighbor's face.
-### Prototype
-```c
-int p8est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
-```
-"""
-function p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_face_neighbor_corner(c, f, nf, o)
-
-Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `c`:\\[in\\] A corner number in 0..7.
-* `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The number of the corner seen from the neighbor tree.
-### Prototype
-```c
-int p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
-```
-"""
-function p8est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
-
-Transform a face-edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `fe`:\\[in\\] A face edge number in 0..3.
-* `f`:\\[in\\] A face number that touches the edge *e*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The face edge number seen from the neighbor tree.
-### Prototype
-```c
-int p8est_connectivity_face_neighbor_face_edge (int fe, int f, int nf, int o);
-```
-"""
-function p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_face_neighbor_edge(e, f, nf, o)
-
-Transform an edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
-
-### Parameters
-* `e`:\\[in\\] A edge number in 0..11.
-* `f`:\\[in\\] A face 0..5 that touches the edge *e*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
-### Returns
-The edge's number seen from the neighbor.
-### Prototype
-```c
-int p8est_connectivity_face_neighbor_edge (int e, int f, int nf, int o);
-```
-"""
-function p8est_connectivity_face_neighbor_edge(e, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_edge_neighbor_edge_corner(ec, o)
-
-Transform an edge corner across one of the adjacent edges into a neighbor tree.
-
-### Parameters
-* `ec`:\\[in\\] An edge corner number in 0..1.
-* `o`:\\[in\\] The orientation of a tree boundary edge connection.
-### Returns
-The edge corner number seen from the other tree.
-### Prototype
-```c
-int p8est_connectivity_edge_neighbor_edge_corner (int ec, int o);
-```
-"""
-function p8est_connectivity_edge_neighbor_edge_corner(ec, o)
-    @ccall libt8.p8est_connectivity_edge_neighbor_edge_corner(ec::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
-
-Transform a corner across one of the adjacent edges into a neighbor tree. This version expects the neighbor edge and orientation separately.
-
-### Parameters
-* `c`:\\[in\\] A corner number in 0..7.
-* `e`:\\[in\\] An edge 0..11 that touches the corner *c*.
-* `ne`:\\[in\\] A neighbor edge that is on the other side of *.*
-* `o`:\\[in\\] The orientation between tree boundary edges *e* and *.*
-### Returns
-Corner number seen from the neighbor.
-### Prototype
-```c
-int p8est_connectivity_edge_neighbor_corner (int c, int e, int ne, int o);
-```
-"""
-function p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
-    @ccall libt8.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint, o::Cint)::Cint
-end
-
-"""
-    p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
-
-Allocate a connectivity structure. The attribute fields are initialized to NULL.
-
-### Parameters
-* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
-* `num_trees`:\\[in\\] Number of trees in the forest.
-* `num_edges`:\\[in\\] Number of tree-connecting edges.
-* `num_ett`:\\[in\\] Number of total trees in edge\\_to\\_tree array.
-* `num_corners`:\\[in\\] Number of tree-connecting corners.
-* `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
-### Returns
-A connectivity structure with allocated arrays.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_ett, p4est_topidx_t num_corners, p4est_topidx_t num_ctt);
-```
-"""
-function p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
-    @ccall libt8.p8est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_ett::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
-
-Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
-
-### Parameters
-* `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
-* `num_trees`:\\[in\\] Number of trees in the forest.
-* `num_edges`:\\[in\\] Number of tree-connecting edges.
-* `num_corners`:\\[in\\] Number of tree-connecting corners.
-* `eoff`:\\[in\\] Edge-to-tree offsets (num\\_edges + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
-* `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
-### Returns
-The connectivity is checked for validity.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * tte, const p4est_topidx_t * eoff, const p4est_topidx_t * ett, const int8_t * ete, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
-```
-"""
-function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
-    @ccall libt8.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, tte::Ptr{p4est_topidx_t}, eoff::Ptr{p4est_topidx_t}, ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_bcast(conn_in, root, comm)
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
-```
-"""
-function p8est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_destroy(connectivity)
-
-Destroy a connectivity structure. Also destroy all attributes.
-
-### Prototype
-```c
-void p8est_connectivity_destroy (p8est_connectivity_t * connectivity);
-```
-"""
-function p8est_connectivity_destroy(connectivity)
-    @ccall libt8.p8est_connectivity_destroy(connectivity::Ptr{p8est_connectivity_t})::Cvoid
-end
-
-"""
-    p8est_connectivity_set_attr(conn, bytes_per_tree)
-
-Allocate or free the attribute fields in a connectivity.
-
-### Parameters
-* `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
-* `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
-### Prototype
-```c
-void p8est_connectivity_set_attr (p8est_connectivity_t * conn, size_t bytes_per_tree);
-```
-"""
-function p8est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libt8.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
-end
-
-"""
-    p8est_connectivity_is_valid(connectivity)
-
-Examine a connectivity structure.
-
-### Returns
-Returns true if structure is valid, false otherwise.
-### Prototype
-```c
-int p8est_connectivity_is_valid (p8est_connectivity_t * connectivity);
-```
-"""
-function p8est_connectivity_is_valid(connectivity)
-    @ccall libt8.p8est_connectivity_is_valid(connectivity::Ptr{p8est_connectivity_t})::Cint
-end
-
-"""
-    p8est_connectivity_is_equal(conn1, conn2)
-
-Check two connectivity structures for equality.
-
-### Returns
-Returns true if structures are equal, false otherwise.
-### Prototype
-```c
-int p8est_connectivity_is_equal (p8est_connectivity_t * conn1, p8est_connectivity_t * conn2);
-```
-"""
-function p8est_connectivity_is_equal(conn1, conn2)
-    @ccall libt8.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
-end
-
-"""
-    p8est_connectivity_sink(conn, sink)
-
-Write connectivity to a sink object.
-
-### Parameters
-* `conn`:\\[in\\] The connectivity to be written.
-* `sink`:\\[in,out\\] The connectivity is written into this sink.
-### Returns
-0 on success, nonzero on error.
-### Prototype
-```c
-int p8est_connectivity_sink (p8est_connectivity_t * conn, sc_io_sink_t * sink);
-```
-"""
-function p8est_connectivity_sink(conn, sink)
-    @ccall libt8.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
-end
-
-"""
-    p8est_connectivity_deflate(conn, code)
-
-Allocate memory and store the connectivity information there.
-
-### Parameters
-* `conn`:\\[in\\] The connectivity structure to be exported to memory.
-* `code`:\\[in\\] Encoding and compression method for serialization.
-### Returns
-Newly created array that contains the information.
-### Prototype
-```c
-sc_array_t *p8est_connectivity_deflate (p8est_connectivity_t * conn, p8est_connectivity_encode_t code);
-```
-"""
-function p8est_connectivity_deflate(conn, code)
-    @ccall libt8.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t}, code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
-end
-
-"""
-    p8est_connectivity_save(filename, connectivity)
-
-Save a connectivity structure to disk.
-
-### Parameters
-* `filename`:\\[in\\] Name of the file to write.
-* `connectivity`:\\[in\\] Valid connectivity structure.
-### Returns
-Returns 0 on success, nonzero on file error.
-### Prototype
-```c
-int p8est_connectivity_save (const char *filename, p8est_connectivity_t * connectivity);
-```
-"""
-function p8est_connectivity_save(filename, connectivity)
-    @ccall libt8.p8est_connectivity_save(filename::Cstring, connectivity::Ptr{p8est_connectivity_t})::Cint
-end
-
-"""
-    p8est_connectivity_source(source)
-
-Read connectivity from a source object.
-
-### Parameters
-* `source`:\\[in,out\\] The connectivity is read from this source.
-### Returns
-The newly created connectivity, or NULL on error.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_source (sc_io_source_t * source);
-```
-"""
-function p8est_connectivity_source(source)
-    @ccall libt8.p8est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_inflate(buffer)
-
-Create new connectivity from a memory buffer.
-
-### Parameters
-* `buffer`:\\[in\\] The connectivity is created from this memory buffer.
-### Returns
-The newly created connectivity, or NULL on error.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
-```
-"""
-function p8est_connectivity_inflate(buffer)
-    @ccall libt8.p8est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_load(filename, bytes)
-
-Load a connectivity structure from disk.
-
-### Parameters
-* `filename`:\\[in\\] Name of the file to read.
-* `bytes`:\\[out\\] Size in bytes of connectivity on disk or NULL.
-### Returns
-Returns valid connectivity, or NULL on file error.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_load (const char *filename, size_t *bytes);
-```
-"""
-function p8est_connectivity_load(filename, bytes)
-    @ccall libt8.p8est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_unitcube()
-
-Create a connectivity structure for the unit cube.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
-```
-"""
-function p8est_connectivity_new_unitcube()
-    @ccall libt8.p8est_connectivity_new_unitcube()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_periodic()
-
-Create a connectivity structure for an all-periodic unit cube.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_periodic (void);
-```
-"""
-function p8est_connectivity_new_periodic()
-    @ccall libt8.p8est_connectivity_new_periodic()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_rotwrap()
-
-Create a connectivity structure for a mostly periodic unit cube. The left and right faces are identified, and bottom and top rotated. Front and back are not identified.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
-```
-"""
-function p8est_connectivity_new_rotwrap()
-    @ccall libt8.p8est_connectivity_new_rotwrap()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_twocubes()
-
-Create a connectivity structure that contains two cubes.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
-```
-"""
-function p8est_connectivity_new_twocubes()
-    @ccall libt8.p8est_connectivity_new_twocubes()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_twotrees(l_face, r_face, orientation)
-
-Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way.
-
-### Parameters
-* `l_face`:\\[in\\] index of left face
-* `r_face`:\\[in\\] index of right face
-* `orientation`:\\[in\\] orientation of trees w.r.t. each other
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face, int r_face, int orientation);
-```
-"""
-function p8est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libt8.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_twowrap()
-
-Create a connectivity structure that contains two cubes where the two far ends are identified periodically.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
-```
-"""
-function p8est_connectivity_new_twowrap()
-    @ccall libt8.p8est_connectivity_new_twowrap()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_rotcubes()
-
-Create a connectivity structure that contains a few cubes. These are rotated against each other to stress the topology routines.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
-```
-"""
-function p8est_connectivity_new_rotcubes()
-    @ccall libt8.p8est_connectivity_new_rotcubes()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
-
-An m by n by p array with periodicity in x, y, and z if periodic\\_a, periodic\\_b, and periodic\\_c are true, respectively.
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p, int periodic_a, int periodic_b, int periodic_c);
-```
-"""
-function p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
-    @ccall libt8.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint, periodic_a::Cint, periodic_b::Cint, periodic_c::Cint)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_shell()
-
-Create a connectivity structure that builds a spherical shell. It is made up of six connected parts [-1,1]x[-1,1]x[1,2]. This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_shell (void);
-```
-"""
-function p8est_connectivity_new_shell()
-    @ccall libt8.p8est_connectivity_new_shell()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_sphere()
-
-Create a connectivity structure that builds a solid sphere. It is made up of two layers and a cube in the center. This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
-
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_sphere (void);
-```
-"""
-function p8est_connectivity_new_sphere()
-    @ccall libt8.p8est_connectivity_new_sphere()::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_torus(nSegments)
-
-Create a connectivity structure that builds a revolution torus.
-
-This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
-
-This connectivity reuses ideas from disk2d connectivity. More precisely the torus is divided into segments arround the revolution axis, each segments is made of 5 trees (à la disk2d). The total number of trees if 5 times the number of segments.
-
-This connectivity is meant to be used with p8est_geometry_new_torus
-
-### Parameters
-* `nSegments`:\\[in\\] number of trees along the great circle
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_torus (int nSegments);
-```
-"""
-function p8est_connectivity_new_torus(nSegments)
-    @ccall libt8.p8est_connectivity_new_torus(nSegments::Cint)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_new_byname(name)
-
-Create connectivity structure from predefined catalogue.
-
-### Parameters
-* `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick235 brick (2, 3, 5, 0, 0, 0) periodic periodic rotcubes rotcubes rotwrap rotwrap shell shell sphere sphere twocubes twocubes twowrap twowrap unit unitcube
-### Returns
-An initialized connectivity if name is defined, NULL else.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
-```
-"""
-function p8est_connectivity_new_byname(name)
-    @ccall libt8.p8est_connectivity_new_byname(name::Cstring)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_connectivity_refine(conn, num_per_edge)
-
-Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
-
-### Parameters
-* `conn`:\\[in\\] A valid connectivity
-* `num_per_edge`:\\[in\\] The number of new trees in each direction. Must use no more than P8EST_OLD_QMAXLEVEL bits.
-### Returns
-a refined connectivity.
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, int num_per_edge);
-```
-"""
-function p8est_connectivity_refine(conn, num_per_edge)
-    @ccall libt8.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_edge::Cint)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    p8est_expand_face_transform(iface, nface, ftransform)
-
-Fill an array with the axis combination of a face neighbor transform.
-
-### Parameters
-* `iface`:\\[in\\] The number of the originating face.
-* `nface`:\\[in\\] Encoded as nface = r * 6 + nf, where nf = 0..5 is the neigbbor's connecting face number and r = 0..3 is the relative orientation to the neighbor's face. This encoding matches [`p8est_connectivity_t`](@ref).
-* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face, the first two referring to the tangentials and the third to the normal. A permutation of (0, 1, 2). [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reversal flags for tangential axes (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q
-### Prototype
-```c
-void p8est_expand_face_transform (int iface, int nface, int ftransform[]);
-```
-"""
-function p8est_expand_face_transform(iface, nface, ftransform)
-    @ccall libt8.p8est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
-end
-
-"""
-    p8est_find_face_transform(connectivity, itree, iface, ftransform)
-
-Fill an array with the axis combination of a face neighbor transform.
-
-### Parameters
-* `itree`:\\[in\\] The number of the originating tree.
-* `iface`:\\[in\\] The number of the originating tree's face.
-* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face. [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reverse flag for axes t1, t2; face code for n.
-### Returns
-The face neighbor tree if it exists, -1 otherwise.
-### Prototype
-```c
-p4est_topidx_t p8est_find_face_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
-```
-"""
-function p8est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libt8.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
-end
-
-"""
-    p8est_find_edge_transform(connectivity, itree, iedge, ei)
-
-Fills an array with information about edge neighbors.
-
-### Parameters
-* `itree`:\\[in\\] The number of the originating tree.
-* `iedge`:\\[in\\] The number of the originating edge.
-* `ei`:\\[in,out\\] A `p8est_edge_info_t` structure with initialized array.
-### Prototype
-```c
-void p8est_find_edge_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int iedge, p8est_edge_info_t * ei);
-```
-"""
-function p8est_find_edge_transform(connectivity, itree, iedge, ei)
-    @ccall libt8.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iedge::Cint, ei::Ptr{p8est_edge_info_t})::Cvoid
-end
-
-"""
-    p8est_find_corner_transform(connectivity, itree, icorner, ci)
-
-Fills an array with information about corner neighbors.
-
-### Parameters
-* `itree`:\\[in\\] The number of the originating tree.
-* `icorner`:\\[in\\] The number of the originating corner.
-* `ci`:\\[in,out\\] A `p8est_corner_info_t` structure with initialized array.
-### Prototype
-```c
-void p8est_find_corner_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int icorner, p8est_corner_info_t * ci);
-```
-"""
-function p8est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libt8.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p8est_corner_info_t})::Cvoid
-end
-
-"""
-    p8est_connectivity_complete(conn)
-
-Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p8est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The edge and corner fields will be freed and allocated anew.
-### Prototype
-```c
-void p8est_connectivity_complete (p8est_connectivity_t * conn);
-```
-"""
-function p8est_connectivity_complete(conn)
-    @ccall libt8.p8est_connectivity_complete(conn::Ptr{p8est_connectivity_t})::Cvoid
-end
-
-"""
-    p8est_connectivity_reduce(conn)
-
-Removes corner and edge information of a connectivity such that enough information is left to run [`p8est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p8est_connectivity_is_valid`](@ref).
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity to be reduced.
-### Prototype
-```c
-void p8est_connectivity_reduce (p8est_connectivity_t * conn);
-```
-"""
-function p8est_connectivity_reduce(conn)
-    @ccall libt8.p8est_connectivity_reduce(conn::Ptr{p8est_connectivity_t})::Cvoid
-end
-
-"""
-    p8est_connectivity_permute(conn, perm, is_current_to_new)
-
-[`p8est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
-
-### Parameters
-* `conn`:\\[in,out\\] The connectivity whose trees are permuted.
-* `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
-* `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
-### Prototype
-```c
-void p8est_connectivity_permute (p8est_connectivity_t * conn, sc_array_t * perm, int is_current_to_new);
-```
-"""
-function p8est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libt8.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
-end
-
-"""
-    p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-
-[`p8est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
-
-### Parameters
-* `conn`:\\[in,out\\] connectivity that will be altered.
-* `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
-* `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
-* `face_left`:\\[in\\] face of *tree_left* that will be joined.
-* `face_right`:\\[in\\] face of *tree_right* that will be joined.
-* `orientation`:\\[in\\] the orientation of *face_left* and *face_right* once joined (see the description of [`p8est_connectivity_t`](@ref) to understand orientation).
-### Prototype
-```c
-void p8est_connectivity_join_faces (p8est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
-```
-"""
-function p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libt8.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
-end
-
-"""
-    p8est_connectivity_is_equivalent(conn1, conn2)
-
-[`p8est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
-
-### Parameters
-* `conn1`:\\[in\\] a valid connectivity
-* `conn2`:\\[out\\] a valid connectivity
-### Prototype
-```c
-int p8est_connectivity_is_equivalent (p8est_connectivity_t * conn1, p8est_connectivity_t * conn2);
-```
-"""
-function p8est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libt8.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
-end
-
-"""
-    p8est_edge_array_index(array, it)
-
-### Prototype
-```c
-static inline p8est_edge_transform_t * p8est_edge_array_index (sc_array_t * array, size_t it);
-```
-"""
-function p8est_edge_array_index(array, it)
-    @ccall libt8.p8est_edge_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_edge_transform_t}
-end
-
-"""
-    p8est_corner_array_index(array, it)
-
-### Prototype
-```c
-static inline p8est_corner_transform_t * p8est_corner_array_index (sc_array_t * array, size_t it);
-```
-"""
-function p8est_corner_array_index(array, it)
-    @ccall libt8.p8est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_corner_transform_t}
-end
-
-"""
-    p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-
-Read an ABAQUS input file from a file stream.
-
-This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
-
-A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
-
-4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
-
-and in 3D they are given as:
-
-8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
-
-```c++
- *Heading
-  box.inp
- *Node
-     1,    5,   -5,    5
-     2,    5,    5,    5
-     3,    5,    0,    5
-     4,   -5,    5,    5
-     5,    0,    5,    5
-     6,   -5,   -5,    5
-     7,   -5,    0,    5
-     8,    0,   -5,    5
-     9,    0,    0,    5
-    10,    5,    5,   -5
-    11,    5,   -5,   -5
-    12,    5,    0,   -5
-    13,   -5,   -5,   -5
-    14,    0,   -5,   -5
-    15,   -5,    5,   -5
-    16,   -5,    0,   -5
-    17,    0,    5,   -5
-    18,    0,    0,   -5
-    19,   -5,   -5,    0
-    20,    5,   -5,    0
-    21,    0,   -5,    0
-    22,   -5,    5,    0
-    23,   -5,    0,    0
-    24,    5,    5,    0
-    25,    0,    5,    0
-    26,    5,    0,    0
-    27,    0,    0,    0
- *Element, type=C3D8, ELSET=EB1
-     1,       6,      19,      23,       7,       8,      21,      27,       9
-     2,      19,      13,      16,      23,      21,      14,      18,      27
-     3,       7,      23,      22,       4,       9,      27,      25,       5
-     4,      23,      16,      15,      22,      27,      18,      17,      25
-     5,       8,      21,      27,       9,       1,      20,      26,       3
-     6,      21,      14,      18,      27,      20,      11,      12,      26
-     7,       9,      27,      25,       5,       3,      26,      24,       2
-     8,      27,      18,      17,      25,      26,      12,      10,      24
-```
-
-This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
-
-### Parameters
-* `stream`:\\[in,out\\] file stream to read the connectivity from
-* `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
-* `num_trees`:\\[in,out\\] the number of trees in the connectivity
-* `vertices`:\\[out\\] the list of `vertices` of the connectivity
-* `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
-### Returns
-0 if successful and nonzero if not
-### Prototype
-```c
-int p8est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
-```
-"""
-function p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libt8.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
-end
-
-"""
-    p8est_connectivity_read_inp(filename)
-
-Create a p4est connectivity from an ABAQUS input file.
-
-This utility function reads a basic ABAQUS file supporting element type with the prefix C2D4, CPS4, and S4 in 2D and of type C3D8 reading them as bilinear quadrilateral and trilinear hexahedral trees respectively.
-
-A basic 2D mesh is given below. The `*Node` section gives the vertex number and x, y, and z components for each vertex. The `*Element` section gives the 4 vertices in 2D (8 vertices in 3D) of each element in counter clockwise order. So in 2D the nodes are given as:
-
-4 3 +-------------------+ | | | | | | | | | | | | +-------------------+ 1 2
-
-and in 3D they are given as:
-
-8 7 +---------------------+ |\\ |\\ | \\ | \\ | \\ | \\ | \\ | \\ | 5+---------------------+6 | | | | +----|----------------+ | 4\\ | 3 \\ | \\ | \\ | \\ | \\ | \\| \\| +---------------------+ 1 2
-
-```c++
- *Heading
-  box.inp
- *Node
-     1,    5,   -5,    5
-     2,    5,    5,    5
-     3,    5,    0,    5
-     4,   -5,    5,    5
-     5,    0,    5,    5
-     6,   -5,   -5,    5
-     7,   -5,    0,    5
-     8,    0,   -5,    5
-     9,    0,    0,    5
-    10,    5,    5,   -5
-    11,    5,   -5,   -5
-    12,    5,    0,   -5
-    13,   -5,   -5,   -5
-    14,    0,   -5,   -5
-    15,   -5,    5,   -5
-    16,   -5,    0,   -5
-    17,    0,    5,   -5
-    18,    0,    0,   -5
-    19,   -5,   -5,    0
-    20,    5,   -5,    0
-    21,    0,   -5,    0
-    22,   -5,    5,    0
-    23,   -5,    0,    0
-    24,    5,    5,    0
-    25,    0,    5,    0
-    26,    5,    0,    0
-    27,    0,    0,    0
- *Element, type=C3D8, ELSET=EB1
-     1,       6,      19,      23,       7,       8,      21,      27,       9
-     2,      19,      13,      16,      23,      21,      14,      18,      27
-     3,       7,      23,      22,       4,       9,      27,      25,       5
-     4,      23,      16,      15,      22,      27,      18,      17,      25
-     5,       8,      21,      27,       9,       1,      20,      26,       3
-     6,      21,      14,      18,      27,      20,      11,      12,      26
-     7,       9,      27,      25,       5,       3,      26,      24,       2
-     8,      27,      18,      17,      25,      26,      12,      10,      24
-```
-
-This function reads a mesh from *filename* and returns an associated p4est connectivity.
-
-### Parameters
-* `filename`:\\[in\\] file to read the connectivity from
-### Returns
-an allocated connectivity associated with the mesh in *filename*
-### Prototype
-```c
-p8est_connectivity_t *p8est_connectivity_read_inp (const char *filename);
-```
-"""
-function p8est_connectivity_read_inp(filename)
-    @ccall libt8.p8est_connectivity_read_inp(filename::Cstring)::Ptr{p8est_connectivity_t}
-end
-
-"""
-    t8_cmesh_new_from_p4est(conn, comm, do_partition)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_from_p4est (p4est_connectivity_t * conn, sc_MPI_Comm comm, int do_partition);
-```
-"""
-function t8_cmesh_new_from_p4est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p4est(conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_from_p8est(conn, comm, do_partition)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_from_p8est (p8est_connectivity_t * conn, sc_MPI_Comm comm, int do_partition);
-```
-"""
-function t8_cmesh_new_from_p8est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p8est(conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_empty(comm, do_partition, dimension)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_empty (sc_MPI_Comm comm, int do_partition, int dimension);
-```
-"""
-function t8_cmesh_new_empty(comm, do_partition, dimension)
-    @ccall libt8.t8_cmesh_new_empty(comm::MPI_Comm, do_partition::Cint, dimension::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_from_class(eclass, comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_from_class (t8_eclass_t eclass, sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_from_class(eclass, comm)
-    @ccall libt8.t8_cmesh_new_from_class(eclass::t8_eclass_t, comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_hypercube (t8_eclass_t eclass, sc_MPI_Comm comm, int do_bcast, int do_partition, int periodic);
-```
-"""
-function t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube(eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_hypercube_hybrid (sc_MPI_Comm comm, int do_partition, int periodic);
-```
-"""
-function t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube_hybrid(comm::MPI_Comm, do_partition::Cint, periodic::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_periodic(comm, dim)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic (sc_MPI_Comm comm, int dim);
-```
-"""
-function t8_cmesh_new_periodic(comm, dim)
-    @ccall libt8.t8_cmesh_new_periodic(comm::MPI_Comm, dim::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_periodic_tri(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic_tri (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_periodic_tri(comm)
-    @ccall libt8.t8_cmesh_new_periodic_tri(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_periodic_hybrid(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic_hybrid (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_periodic_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_periodic_hybrid(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_periodic_line_more_trees(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic_line_more_trees (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_periodic_line_more_trees(comm)
-    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_bigmesh(eclass, num_trees, comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_bigmesh (t8_eclass_t eclass, int num_trees, sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_bigmesh(eclass, num_trees, comm)
-    @ccall libt8.t8_cmesh_new_bigmesh(eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_line_zigzag(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_line_zigzag (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_line_zigzag(comm)
-    @ccall libt8.t8_cmesh_new_line_zigzag(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_prism_cake(comm, num_of_prisms)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_prism_cake (sc_MPI_Comm comm, int num_of_prisms);
-```
-"""
-function t8_cmesh_new_prism_cake(comm, num_of_prisms)
-    @ccall libt8.t8_cmesh_new_prism_cake(comm::MPI_Comm, num_of_prisms::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_prism_deformed(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_prism_deformed (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_prism_deformed(comm)
-    @ccall libt8.t8_cmesh_new_prism_deformed(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_pyramid_deformed(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_pyramid_deformed (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_pyramid_deformed(comm)
-    @ccall libt8.t8_cmesh_new_pyramid_deformed(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_prism_cake_funny_oriented(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_prism_cake_funny_oriented (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_prism_cake_funny_oriented(comm)
-    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_prism_geometry(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_prism_geometry (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_prism_geometry(comm)
-    @ccall libt8.t8_cmesh_new_prism_geometry(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_disjoint_bricks (t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_disjoint_bricks(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_tet_orientation_test(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_tet_orientation_test (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_tet_orientation_test(comm)
-    @ccall libt8.t8_cmesh_new_tet_orientation_test(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_hybrid_gate(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_hybrid_gate (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_hybrid_gate(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_hybrid_gate_deformed(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_hybrid_gate_deformed (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_hybrid_gate_deformed(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_full_hybrid(comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_full_hybrid (sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_full_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_full_hybrid(comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_pyramid_cake (sc_MPI_Comm comm, int num_of_pyra);
-```
-"""
-function t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
-    @ccall libt8.t8_cmesh_new_pyramid_cake(comm::MPI_Comm, num_of_pyra::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_long_brick_pyramid (sc_MPI_Comm comm, int num_cubes);
-```
-"""
-function t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
-    @ccall libt8.t8_cmesh_new_long_brick_pyramid(comm::MPI_Comm, num_cubes::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_new_row_of_cubes(num_trees, set_attributes, comm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_row_of_cubes (t8_locidx_t num_trees, const int set_attributes, sc_MPI_Comm comm);
-```
-"""
-function t8_cmesh_new_row_of_cubes(num_trees, set_attributes, comm)
-    @ccall libt8.t8_cmesh_new_row_of_cubes(num_trees::t8_locidx_t, set_attributes::Cint, comm::MPI_Comm)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
-
-Get the name of the geometry stored for a tree in a cmesh.
-
-### Parameters
-* `cmesh`:\\[in\\] A committed cmesh.
-* `gtreeid`:\\[in\\] A global tree in *cmesh*.
-### Returns
-The name of the tree's geometry or NULL if no geometry is set for this tree.
-### Prototype
-```c
-const char *t8_cmesh_get_tree_geom_name (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
-```
-"""
-function t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
-    @ccall libt8.t8_cmesh_get_tree_geom_name(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Cstring
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:40:21, please use with caution
-"""
-    t8_get_number_of_comm_only_cmesh_testcases()
-
-The functions t8\\_get\\_*\\_cmesh\\_testcases
-
-### Returns
-the number of testcases for a given cmesh type.  To get all possible inputs, we multiply  the number of different inputs of all variables. The function t8\\_get\\_comm\\_only\\_cmesh\\_testcases() returns the number of testcases for all cmeshes that only take a comm as input all added together.
-### Prototype
-```c
-int t8_get_number_of_comm_only_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_comm_only_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_comm_only_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:44:21, please use with caution
-"""
-    t8_get_number_of_new_hypercube_cmesh_testcases()
-
-The function t8\\_get\\_new\\_hypercube\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the hypercube cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_hypercube_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_hypercube_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_hypercube_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:48:21, please use with caution
-"""
-    t8_get_number_of_new_empty_cmesh_testcases()
-
-The function t8\\_get\\_new\\_empty\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the empty cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_empty_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_empty_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_empty_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:52:21, please use with caution
-"""
-    t8_get_number_of_new_from_class_cmesh_testcases()
-
-The function t8\\_get\\_new\\_from\\_class\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_from\\_class cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_from_class_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_from_class_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_from_class_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:56:21, please use with caution
-"""
-    t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
-
-The function t8\\_get\\_new\\_hypercube\\_hybrid\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_hypercube\\_hybrid cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_hypercube_hybrid_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:60:21, please use with caution
-"""
-    t8_get_number_of_new_periodic_cmesh_testcases()
-
-The function t8\\_get\\_new\\_periodic\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_periodic cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_periodic_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_periodic_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_periodic_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:64:21, please use with caution
-"""
-    t8_get_number_of_new_bigmesh_cmesh_testcases()
-
-The function t8\\_get\\_new\\_bigmesh\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_bigmesh cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_bigmesh_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_bigmesh_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_bigmesh_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:68:21, please use with caution
-"""
-    t8_get_number_of_new_prism_cake_cmesh_testcases()
-
-The function t8\\_get\\_new\\_prism\\_cake\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_prism\\_cake cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_prism_cake_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_prism_cake_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_prism_cake_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:72:21, please use with caution
-"""
-    t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
-
-The function t8\\_get\\_new\\_disjoint\\_bricks\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_disjoint\\_bricks cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_disjoint_bricks_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_disjoint_bricks_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:78:21, please use with caution
-"""
-    t8_get_number_of_all_testcases()
-
-The function t8\\_get\\_all\\_testcases()
-
-### Returns
-the number of testcases for all cmesh types.  We need to know this, because test\\_cmesh\\_copy\\_all needs to know how  many ids to check.
-### Prototype
-```c
-int t8_get_number_of_all_testcases ();
-```
-"""
-function t8_get_number_of_all_testcases()
-    @ccall libt8.t8_get_number_of_all_testcases()::Cint
-end
-
-"""
-    t8_test_create_comm_only_cmesh(cmesh_id)
-
-The function [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The switch inside [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id) chooses the cmesh-type.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh which only takes comm as input.
-### Returns
-the wanted cmesh with the wanted comm for the given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_comm_only_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_comm_only_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_comm_only_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_hypercube_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_hypercube_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. It avoids the case (eclass = pyramid & periodic=1) since this is not allowed.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube cmesh.
-### Returns
-a new hypercube cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_hypercube_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_hypercube_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_hypercube_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_empty_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_empty_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_empty cmesh.
-### Returns
-a new empty cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_empty_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_empty_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_empty_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_from_class_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_from_class_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_from\\_class cmesh.
-### Returns
-a new create\\_new\\_from\\_class cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_from_class_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_from_class_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_from_class_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_hypercube_hybrid_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube\\_hybrid cmesh.
-### Returns
-a new\\_hypercube\\_hybrid cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_hypercube_hybrid_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_periodic_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_periodic_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal dimension is 1.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_periodic cmesh.
-### Returns
-a new\\_periodic cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_periodic_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_periodic_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_periodic_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_bigmesh_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_bigmesh_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 1.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_bigmesh cmesh.
-### Returns
-a new\\_bigmesh cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_bigmesh_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_bigmesh_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_bigmesh_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_new_prism_cake_cmesh(cmesh_id)
-
-The function [`t8_test_create_new_prism_cake_cmesh`](@ref) (int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 3.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_prism\\_cake cmesh.
-### Returns
-a new\\_prism\\_cake cmesh with a unique input for every given id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_new_prism_cake_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_new_prism_cake_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_prism_cake_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_test_create_cmesh(cmesh_id)
-
-The function [`t8_test_create_cmesh`](@ref) (int cmesh\\_id) combines all t8\\_test\\_create\\_*\\_cmesh functions  so that depending on the range the id is in, we get another cmesh type by calling its  t8\\_test\\_create\\_*\\_cmesh function.
-
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh.
-### Returns
-A cmesh specified by its cmesh\\_id.
-### Prototype
-```c
-t8_cmesh_t t8_test_create_cmesh (int cmesh_id);
-```
-"""
-function t8_test_create_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_cmesh(cmesh_id::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_forest_adapt(forest)
-
-### Prototype
-```c
-void t8_forest_adapt (t8_forest_t forest);
-```
-"""
-function t8_forest_adapt(forest)
-    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
-end
-
 mutable struct t8_tree end
 
 const t8_tree_t = Ptr{t8_tree}
@@ -11827,11 +16114,12 @@ const t8_tree_t = Ptr{t8_tree}
 
 This type controls, which neighbors count as ghost elements. Currently, we support face-neighbors. Vertex and edge neighbors will eventually be added.
 
-| Enumerator         | Note                                                   |
-| :----------------- | :----------------------------------------------------- |
-| T8\\_GHOST\\_NONE  | Do not create ghost layer.                             |
-| T8\\_GHOST\\_FACES | Consider all face (codimension 1) neighbors.           |
-| T8\\_GHOST\\_EDGES | Consider all edge (codimension 2) and face neighbors.  |
+| Enumerator            | Note                                                              |
+| :-------------------- | :---------------------------------------------------------------- |
+| T8\\_GHOST\\_NONE     | Do not create ghost layer.                                        |
+| T8\\_GHOST\\_FACES    | Consider all face (codimension 1) neighbors.                      |
+| T8\\_GHOST\\_EDGES    | Consider all edge (codimension 2) and face neighbors.             |
+| T8\\_GHOST\\_VERTICES | Consider all vertex (codimension 3) and edge and face neighbors.  |
 """
 @cenum t8_ghost_type_t::UInt32 begin
     T8_GHOST_NONE = 0
@@ -12528,6 +16816,241 @@ function t8_forest_ghost_exchange_data(forest, element_data)
 end
 
 """
+    t8_forest_set_profiling(forest, set_profiling)
+
+Enable or disable profiling for a forest. If profiling is enabled, runtimes and statistics are collected during forest\\_commit.
+
+Profiling is disabled by default. The forest must not be committed before calling this function.
+
+### Parameters
+* `forest`:\\[in,out\\] The forest to be updated.
+* `set_profiling`:\\[in\\] If true, profiling will be enabled, if false disabled.
+### See also
+[`t8_forest_print_profile`](@ref)
+
+### Prototype
+```c
+void t8_forest_set_profiling (t8_forest_t forest, int set_profiling);
+```
+"""
+function t8_forest_set_profiling(forest, set_profiling)
+    @ccall libt8.t8_forest_set_profiling(forest::t8_forest_t, set_profiling::Cint)::Cvoid
+end
+
+"""
+    t8_forest_compute_profile(forest)
+
+### Prototype
+```c
+void t8_forest_compute_profile (t8_forest_t forest);
+```
+"""
+function t8_forest_compute_profile(forest)
+    @ccall libt8.t8_forest_compute_profile(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_profile_get_adapt_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_adapt_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_adapt_stats(forest)
+    @ccall libt8.t8_forest_profile_get_adapt_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_profile_get_ghost_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_ghost_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_ghost_stats(forest)
+    @ccall libt8.t8_forest_profile_get_ghost_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_profile_get_partition_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_partition_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_partition_stats(forest)
+    @ccall libt8.t8_forest_profile_get_partition_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_profile_get_commit_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_commit_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_commit_stats(forest)
+    @ccall libt8.t8_forest_profile_get_commit_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_profile_get_balance_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_balance_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_balance_stats(forest)
+    @ccall libt8.t8_forest_profile_get_balance_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_profile_get_balance_rounds_stats(forest)
+
+### Prototype
+```c
+const sc_statinfo_t *t8_forest_profile_get_balance_rounds_stats (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_balance_rounds_stats(forest)
+    @ccall libt8.t8_forest_profile_get_balance_rounds_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
+end
+
+"""
+    t8_forest_print_profile(forest)
+
+Print the collected statistics from a forest profile.
+
+*forest* must be committed before calling this function.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+### See also
+[`t8_forest_set_profiling`](@ref)
+
+### Prototype
+```c
+void t8_forest_print_profile (t8_forest_t forest);
+```
+"""
+function t8_forest_print_profile(forest)
+    @ccall libt8.t8_forest_print_profile(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_profile_get_adapt_time(forest)
+
+Get the runtime of the last call to t8_forest_adapt.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+### Returns
+The runtime of adapt if profiling was activated. 0 otherwise. *forest* must be committed before calling this function.
+### See also
+[`t8_forest_set_profiling`](@ref), [`t8_forest_set_adapt`](@ref)
+
+### Prototype
+```c
+double t8_forest_profile_get_adapt_time (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_adapt_time(forest)
+    @ccall libt8.t8_forest_profile_get_adapt_time(forest::t8_forest_t)::Cdouble
+end
+
+"""
+    t8_forest_profile_get_partition_time(forest, procs_sent)
+
+Get the runtime of the last call to t8_forest_partition.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `procs_sent`:\\[out\\] On output the number of processes that this rank sent elements to in partition if profiling was activated.
+### Returns
+The runtime of partition if profiling was activated. 0 otherwise. *forest* must be committed before calling this function.
+### See also
+[`t8_forest_set_profiling`](@ref), [`t8_forest_set_partition`](@ref)
+
+### Prototype
+```c
+double t8_forest_profile_get_partition_time (t8_forest_t forest, int *procs_sent);
+```
+"""
+function t8_forest_profile_get_partition_time(forest, procs_sent)
+    @ccall libt8.t8_forest_profile_get_partition_time(forest::t8_forest_t, procs_sent::Ptr{Cint})::Cdouble
+end
+
+"""
+    t8_forest_profile_get_balance_time(forest, balance_rounds)
+
+Get the runtime of the last call to t8_forest_balance.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `balance_rounts`:\\[out\\] On output the number of rounds in balance if profiling was activated.
+### Returns
+The runtime of balance if profiling was activated. 0 otherwise. *forest* must be committed before calling this function.
+### See also
+[`t8_forest_set_profiling`](@ref), [`t8_forest_set_balance`](@ref)
+
+### Prototype
+```c
+double t8_forest_profile_get_balance_time (t8_forest_t forest, int *balance_rounds);
+```
+"""
+function t8_forest_profile_get_balance_time(forest, balance_rounds)
+    @ccall libt8.t8_forest_profile_get_balance_time(forest::t8_forest_t, balance_rounds::Ptr{Cint})::Cdouble
+end
+
+"""
+    t8_forest_profile_get_ghost_time(forest, ghosts_sent)
+
+Get the runtime of the last call to t8_forest_create_ghosts.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ghosts_sent`:\\[out\\] On output the number of ghost elements sent to other processes if profiling was activated.
+### Returns
+The runtime of ghost if profiling was activated. 0 otherwise. *forest* must be committed before calling this function.
+### See also
+[`t8_forest_set_profiling`](@ref), [`t8_forest_set_ghost`](@ref)
+
+### Prototype
+```c
+double t8_forest_profile_get_ghost_time (t8_forest_t forest, t8_locidx_t *ghosts_sent);
+```
+"""
+function t8_forest_profile_get_ghost_time(forest, ghosts_sent)
+    @ccall libt8.t8_forest_profile_get_ghost_time(forest::t8_forest_t, ghosts_sent::Ptr{t8_locidx_t})::Cdouble
+end
+
+"""
+    t8_forest_profile_get_ghostexchange_waittime(forest)
+
+Get the waittime of the last call to t8_forest_ghost_exchange_data.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+### Returns
+The time of ghost\\_exchange\\_data that was spent waiting for other MPI processes, if profiling was activated. 0 otherwise. *forest* must be committed before calling this function.
+### See also
+[`t8_forest_set_profiling`](@ref), [`t8_forest_ghost_exchange_data`](@ref)
+
+### Prototype
+```c
+double t8_forest_profile_get_ghostexchange_waittime (t8_forest_t forest);
+```
+"""
+function t8_forest_profile_get_ghostexchange_waittime(forest)
+    @ccall libt8.t8_forest_profile_get_ghostexchange_waittime(forest::t8_forest_t)::Cdouble
+end
+
+"""
     t8_forest_ghost_print(forest)
 
 Print the ghost structure of a forest. Only used for debugging.
@@ -12970,6 +17493,84 @@ function t8_forest_element_face_neighbor(forest, ltreeid, elem, neigh, neigh_sch
 end
 
 """
+    t8_forest_save(forest)
+
+### Prototype
+```c
+void t8_forest_save (t8_forest_t forest);
+```
+"""
+function t8_forest_save(forest)
+    @ccall libt8.t8_forest_save(forest::t8_forest_t)::Cvoid
+end
+
+@cenum t8_vtk_data_type_t::UInt32 begin
+    T8_VTK_SCALAR = 0
+    T8_VTK_VECTOR = 1
+end
+
+"""
+    t8_vtk_data_field_t
+
+| Field       | Note                                       |
+| :---------- | :----------------------------------------- |
+| type        | Describes of which type the data array is  |
+| description | String that describes the data.            |
+"""
+struct t8_vtk_data_field_t
+    type::t8_vtk_data_type_t
+    description::NTuple{8192, Cchar}
+    data::Ptr{Cdouble}
+end
+
+"""
+    t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
+
+Write the forest in a parallel vtu format. Extended version. See t8_forest_write_vtk for the standard version of this function. Writes one master .pvtu file and each process writes in its own .vtu file. If linked and not otherwise specified, the VTK API is used. If the VTK library is not linked, an ASCII file is written. This may change in accordance with *write_ghosts*, *write_curved* and  *do_not_use_API*, because the export of ghosts is not yet available with  the VTK API and the export of curved elements is not available with the inbuilt function to write ASCII files. The function will for example still use the VTK API to satisfy *write_curved*, even if *do_not_use_API*  is set to true. Forest must be committed when calling this function. This function is collective and must be called on each process.
+
+### Parameters
+* `forest`:\\[in\\] The forest to write.
+* `fileprefix`:\\[in\\] The prefix of the files where the vtk will be stored. The master file is then fileprefix.pvtu and the process with rank r writes in the file fileprefix\\_r.vtu.
+* `write_treeid`:\\[in\\] If true, the global tree id is written for each element.
+* `write_mpirank`:\\[in\\] If true, the mpirank is written for each element.
+* `write_level`:\\[in\\] If true, the refinement level is written for each element.
+* `write_element_id`:\\[in\\] If true, the global element id is written for each element.
+* `write_ghosts`:\\[in\\] If true, each process additionally writes its ghost elements. For ghost element the treeid is -1.
+* `write_curved`:\\[in\\] If true, write the elements as curved element types from vtk.
+* `do_not_use_API`:\\[in\\] Do not use the VTK API, even if linked and available.
+* `num_data`:\\[in\\] Number of user defined double valued data fields to write.
+* `data`:\\[in\\] Array of [`t8_vtk_data_field_t`](@ref) of length *num_data* providing the user defined per element data. If scalar and vector fields are used, all scalar fields must come first in the array.
+### Returns
+True if successful, false if not (process local). See also t8_forest_write_vtk .
+### Prototype
+```c
+int t8_forest_write_vtk_ext (t8_forest_t forest, const char *fileprefix, int write_treeid, int write_mpirank, int write_level, int write_element_id, int write_ghosts, int write_curved, int do_not_use_API, int num_data, t8_vtk_data_field_t *data);
+```
+"""
+function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
+    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+end
+
+"""
+    t8_forest_write_vtk(forest, fileprefix)
+
+Write the forest in a parallel vtu format. Writes one master .pvtu file and each process writes in its own .vtu file. If linked, the VTK API is used. If the VTK library is not linked, an ASCII file is written. This function writes the forest elements, the tree id, element level, mpirank and element id as data. Forest must be committed when calling this function. This function is collective and must be called on each process. For more options use t8_forest_write_vtk_ext
+
+### Parameters
+* `forest`:\\[in\\] The forest to write.
+* `fileprefix`:\\[in\\] The prefix of the files where the vtk will be stored. The master file is then fileprefix.pvtu and the process with rank r writes in the file fileprefix\\_r.vtu.
+### Returns
+True if successful, false if not (process local).
+### Prototype
+```c
+int t8_forest_write_vtk (t8_forest_t forest, const char *fileprefix);
+```
+"""
+function t8_forest_write_vtk(forest, fileprefix)
+    @ccall libt8.t8_forest_write_vtk(forest::t8_forest_t, fileprefix::Cstring)::Cint
+end
+
+"""
     t8_forest_iterate(forest)
 
 ### Prototype
@@ -12979,6 +17580,154 @@ void t8_forest_iterate (t8_forest_t forest);
 """
 function t8_forest_iterate(forest)
     @ccall libt8.t8_forest_iterate(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
+
+Compute the coordinates of a given vertex of an element if a geometry for this tree is registered in the forest's cmesh.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+* `corner_number`:\\[in\\] The corner number, in Z-order, of the vertex which should be computed.
+* `coordinates`:\\[out\\] On input an allocated array to store 3 doubles, on output the x, y and z coordinates of the vertex.
+### Prototype
+```c
+void t8_forest_element_coordinate (t8_forest_t forest, t8_locidx_t ltree_id, const t8_element_t *element, int corner_number, double *coordinates);
+```
+"""
+function t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
+    @ccall libt8.t8_forest_element_coordinate(forest::t8_forest_t, ltree_id::t8_locidx_t, element::Ptr{t8_element_t}, corner_number::Cint, coordinates::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_forest_element_centroid(forest, ltreeid, element, coordinates)
+
+Compute the coordinates of the centroid of an element if a geometry for this tree is registered in the forest's cmesh. The centroid is the sum of all corner vertices divided by the number of corners. The centroid can be seen as the midpoint of an element and thus can for example be used to compute level-set values or the distance between two elements.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+* `coordinates`:\\[out\\] On input an allocated array to store 3 doubles, on output the x, y and z coordinates of the centroid.
+### Prototype
+```c
+void t8_forest_element_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, double *coordinates);
+```
+"""
+function t8_forest_element_centroid(forest, ltreeid, element, coordinates)
+    @ccall libt8.t8_forest_element_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_forest_element_diam(forest, ltreeid, element)
+
+Compute the diameter of an element if a geometry for this tree is registered in the forest's cmesh. This is only an approximation.
+
+!!! note
+
+    For lines the value is exact while for other element types it is only an approximation.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+### Returns
+The diameter of the element.
+### Prototype
+```c
+double t8_forest_element_diam (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element);
+```
+"""
+function t8_forest_element_diam(forest, ltreeid, element)
+    @ccall libt8.t8_forest_element_diam(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+end
+
+"""
+    t8_forest_element_volume(forest, ltreeid, element)
+
+Compute the volume of an element if a geometry for this tree is registered in the forest's cmesh. This is only an approximation.
+
+!!! note
+
+    This function assumes d-linear interpolation for the tree vertex coordinates. *forest* must be committed when calling this function.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+### Returns
+The diameter of the element.
+### Prototype
+```c
+double t8_forest_element_volume (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element);
+```
+"""
+function t8_forest_element_volume(forest, ltreeid, element)
+    @ccall libt8.t8_forest_element_volume(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+end
+
+"""
+    t8_forest_element_face_area(forest, ltreeid, element, face)
+
+Compute the area of an element's face if a geometry for this tree is registered in the forest's cmesh. Currently implemented for 2D elements only. This is only an approximation.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+* `face`:\\[in\\] A face of *element*.
+### Returns
+The area of *face*. *forest* must be committed when calling this function.
+### Prototype
+```c
+double t8_forest_element_face_area (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face);
+```
+"""
+function t8_forest_element_face_area(forest, ltreeid, element, face)
+    @ccall libt8.t8_forest_element_face_area(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint)::Cdouble
+end
+
+"""
+    t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
+
+Compute the vertex coordinates of the centroid of an element's face if a geometry for this tree is registered in the forest's cmesh.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+* `face`:\\[in\\] A face of *element*.
+* `normal`:\\[out\\] On output the centroid of *face*. *forest* must be committed when calling this function.
+### Prototype
+```c
+void t8_forest_element_face_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face, double centroid[3]);
+```
+"""
+function t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
+    @ccall libt8.t8_forest_element_face_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, centroid::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
+
+Compute the normal vector of an element's face if a geometry for this tree is registered in the forest's cmesh. Currently implemented for 2D elements only.
+
+### Parameters
+* `forest`:\\[in\\] The forest.
+* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
+* `element`:\\[in\\] The element.
+* `face`:\\[in\\] A face of *element*.
+* `normal`:\\[out\\] On output the normal vector of *element* at *face*. *forest* must be committed when calling this function.
+### Prototype
+```c
+void t8_forest_element_face_normal (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face, double normal[3]);
+```
+"""
+function t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
+    @ccall libt8.t8_forest_element_face_normal(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, normal::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -13079,123 +17828,1199 @@ function t8_forest_unref(pforest)
 end
 
 """
-    t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
+    t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
 
 ### Prototype
 ```c
-void t8_forest_element_coordinate (t8_forest_t forest, t8_locidx_t ltree_id, const t8_element_t *element, int corner_number, double *coordinates);
+void t8_forest_write_netcdf (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm);
 ```
 """
-function t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
-    @ccall libt8.t8_forest_element_coordinate(forest::Cint, ltree_id::t8_locidx_t, element::Ptr{t8_element_t}, corner_number::Cint, coordinates::Ptr{Cdouble})::Cvoid
+function t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
+    @ccall libt8.t8_forest_write_netcdf(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_forest_element_centroid(forest, ltreeid, element, coordinates)
+    t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
 
 ### Prototype
 ```c
-void t8_forest_element_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, double *coordinates);
+void t8_forest_write_netcdf_ext (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm, int netcdf_var_storage_mode, int netcdf_var_mpi_access);
 ```
 """
-function t8_forest_element_centroid(forest, ltreeid, element, coordinates)
-    @ccall libt8.t8_forest_element_centroid(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
+    @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
+end
+
+mutable struct t8_mesh end
+
+const t8_mesh_t = t8_mesh
+
+"""
+    t8_mesh_new(dimension, Kglobal, Klocal)
+
+*********************** preallocate *************************
+
+### Prototype
+```c
+t8_mesh_t *t8_mesh_new (int dimension, t8_gloidx_t Kglobal, t8_locidx_t Klocal);
+```
+"""
+function t8_mesh_new(dimension, Kglobal, Klocal)
+    @ccall libt8.t8_mesh_new(dimension::Cint, Kglobal::t8_gloidx_t, Klocal::t8_locidx_t)::Ptr{t8_mesh_t}
 end
 
 """
-    t8_forest_element_diam(forest, ltreeid, element)
+    t8_mesh_new_unitcube(theclass)
+
+*********** all-in-one convenience constructors *************
 
 ### Prototype
 ```c
-double t8_forest_element_diam (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element);
+t8_mesh_t *t8_mesh_new_unitcube (t8_eclass_t theclass);
 ```
 """
-function t8_forest_element_diam(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_diam(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+function t8_mesh_new_unitcube(theclass)
+    @ccall libt8.t8_mesh_new_unitcube(theclass::t8_eclass_t)::Ptr{t8_mesh_t}
 end
 
 """
-    t8_forest_element_volume(forest, ltreeid, element)
+    t8_mesh_set_comm(mesh, comm)
 
 ### Prototype
 ```c
-double t8_forest_element_volume (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element);
+void t8_mesh_set_comm (t8_mesh_t *mesh, sc_MPI_Comm comm);
 ```
 """
-function t8_forest_element_volume(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_volume(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+function t8_mesh_set_comm(mesh, comm)
+    @ccall libt8.t8_mesh_set_comm(mesh::Ptr{t8_mesh_t}, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_forest_element_face_area(forest, ltreeid, element, face)
+    t8_mesh_set_partition(mesh, enable)
+
+Determine whether we partition in t8_mesh_build. Default true.
 
 ### Prototype
 ```c
-double t8_forest_element_face_area (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face);
+void t8_mesh_set_partition (t8_mesh_t *mesh, int enable);
 ```
 """
-function t8_forest_element_face_area(forest, ltreeid, element, face)
-    @ccall libt8.t8_forest_element_face_area(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint)::Cdouble
+function t8_mesh_set_partition(mesh, enable)
+    @ccall libt8.t8_mesh_set_partition(mesh::Ptr{t8_mesh_t}, enable::Cint)::Cvoid
 end
 
 """
-    t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
+    t8_mesh_set_element(mesh, theclass, gloid, locid)
 
 ### Prototype
 ```c
-void t8_forest_element_face_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face, double centroid[3]);
+void t8_mesh_set_element (t8_mesh_t *mesh, t8_eclass_t theclass, t8_gloidx_t gloid, t8_locidx_t locid);
 ```
 """
-function t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
-    @ccall libt8.t8_forest_element_face_centroid(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, centroid::Ptr{Cdouble})::Cvoid
+function t8_mesh_set_element(mesh, theclass, gloid, locid)
+    @ccall libt8.t8_mesh_set_element(mesh::Ptr{t8_mesh_t}, theclass::t8_eclass_t, gloid::t8_gloidx_t, locid::t8_locidx_t)::Cvoid
 end
 
 """
-    t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
+    t8_mesh_set_local_to_global(mesh, ltog_length, ltog)
 
 ### Prototype
 ```c
-void t8_forest_element_face_normal (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face, double normal[3]);
+void t8_mesh_set_local_to_global (t8_mesh_t *mesh, t8_locidx_t ltog_length, const t8_gloidx_t *ltog);
 ```
 """
-function t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
-    @ccall libt8.t8_forest_element_face_normal(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, normal::Ptr{Cdouble})::Cvoid
+function t8_mesh_set_local_to_global(mesh, ltog_length, ltog)
+    @ccall libt8.t8_mesh_set_local_to_global(mesh::Ptr{t8_mesh_t}, ltog_length::t8_locidx_t, ltog::Ptr{t8_gloidx_t})::Cvoid
 end
 
 """
-    t8_forest_save(forest)
+    t8_mesh_set_face(mesh, locid1, face1, locid2, face2, orientation)
 
 ### Prototype
 ```c
-void t8_forest_save (t8_forest_t forest);
+void t8_mesh_set_face (t8_mesh_t *mesh, t8_locidx_t locid1, int face1, t8_locidx_t locid2, int face2, int orientation);
 ```
 """
-function t8_forest_save(forest)
-    @ccall libt8.t8_forest_save(forest::Cint)::Cvoid
+function t8_mesh_set_face(mesh, locid1, face1, locid2, face2, orientation)
+    @ccall libt8.t8_mesh_set_face(mesh::Ptr{t8_mesh_t}, locid1::t8_locidx_t, face1::Cint, locid2::t8_locidx_t, face2::Cint, orientation::Cint)::Cvoid
 end
 
 """
-    t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
+    t8_mesh_set_element_vertices(mesh, locid, vids_length, vids)
 
 ### Prototype
 ```c
-int t8_forest_write_vtk_ext (t8_forest_t forest, const char *fileprefix, int write_treeid, int write_mpirank, int write_level, int write_element_id, int write_ghosts, int write_curved, int do_not_use_API, int num_data, t8_vtk_data_field_t *data);
+void t8_mesh_set_element_vertices (t8_mesh_t *mesh, t8_locidx_t locid, t8_locidx_t vids_length, const t8_locidx_t *vids);
 ```
 """
-function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
-    @ccall libt8.t8_forest_write_vtk_ext(forest::Cint, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_mesh_set_element_vertices(mesh, locid, vids_length, vids)
+    @ccall libt8.t8_mesh_set_element_vertices(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, vids_length::t8_locidx_t, vids::Ptr{t8_locidx_t})::Cvoid
 end
 
 """
-    t8_forest_write_vtk(forest, fileprefix)
+    t8_mesh_build(mesh)
+
+Setup a mesh and turn it into a usable object.
 
 ### Prototype
 ```c
-int t8_forest_write_vtk (t8_forest_t forest, const char *fileprefix);
+void t8_mesh_build (t8_mesh_t *mesh);
 ```
 """
-function t8_forest_write_vtk(forest, fileprefix)
-    @ccall libt8.t8_forest_write_vtk(forest::Cint, fileprefix::Cstring)::Cint
+function t8_mesh_build(mesh)
+    @ccall libt8.t8_mesh_build(mesh::Ptr{t8_mesh_t})::Cvoid
+end
+
+"""
+    t8_mesh_get_comm(mesh)
+
+### Prototype
+```c
+sc_MPI_Comm t8_mesh_get_comm (t8_mesh_t *mesh);
+```
+"""
+function t8_mesh_get_comm(mesh)
+    @ccall libt8.t8_mesh_get_comm(mesh::Ptr{t8_mesh_t})::Cint
+end
+
+"""
+    t8_mesh_get_element_count(mesh, theclass)
+
+### Prototype
+```c
+t8_locidx_t t8_mesh_get_element_count (t8_mesh_t *mesh, t8_eclass_t theclass);
+```
+"""
+function t8_mesh_get_element_count(mesh, theclass)
+    @ccall libt8.t8_mesh_get_element_count(mesh::Ptr{t8_mesh_t}, theclass::t8_eclass_t)::t8_locidx_t
+end
+
+"""
+    t8_mesh_get_element_class(mesh, locid)
+
+### Parameters
+* `locid`:\\[in\\] The local number can specify a point of any dimension that is locally relevant. The points are ordered in reverse to the element classes in t8_eclass_t. The local index is cumulative in this order.
+### Prototype
+```c
+t8_locidx_t t8_mesh_get_element_class (t8_mesh_t *mesh, t8_locidx_t locid);
+```
+"""
+function t8_mesh_get_element_class(mesh, locid)
+    @ccall libt8.t8_mesh_get_element_class(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_locidx_t
+end
+
+"""
+    t8_mesh_get_element_locid(mesh, gloid)
+
+### Prototype
+```c
+t8_locidx_t t8_mesh_get_element_locid (t8_mesh_t *mesh, t8_gloidx_t gloid);
+```
+"""
+function t8_mesh_get_element_locid(mesh, gloid)
+    @ccall libt8.t8_mesh_get_element_locid(mesh::Ptr{t8_mesh_t}, gloid::t8_gloidx_t)::t8_locidx_t
+end
+
+"""
+    t8_mesh_get_element_gloid(mesh, locid)
+
+### Prototype
+```c
+t8_gloidx_t t8_mesh_get_element_gloid (t8_mesh_t *mesh, t8_locidx_t locid);
+```
+"""
+function t8_mesh_get_element_gloid(mesh, locid)
+    @ccall libt8.t8_mesh_get_element_gloid(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_gloidx_t
+end
+
+"""
+    t8_mesh_get_element(mesh, locid)
+
+### Prototype
+```c
+t8_element_t t8_mesh_get_element (t8_mesh_t *mesh, t8_locidx_t locid);
+```
+"""
+function t8_mesh_get_element(mesh, locid)
+    @ccall libt8.t8_mesh_get_element(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t)::t8_element_t
+end
+
+"""
+    t8_mesh_get_element_boundary(mesh, locid, length_boundary, elemid, orientation)
+
+### Prototype
+```c
+void t8_mesh_get_element_boundary (t8_mesh_t *mesh, t8_locidx_t locid, int length_boundary, t8_locidx_t *elemid, int *orientation);
+```
+"""
+function t8_mesh_get_element_boundary(mesh, locid, length_boundary, elemid, orientation)
+    @ccall libt8.t8_mesh_get_element_boundary(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, length_boundary::Cint, elemid::Ptr{t8_locidx_t}, orientation::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_mesh_get_maximum_support(mesh)
+
+Return the maximum of the length of the support of any local element.
+
+### Prototype
+```c
+int t8_mesh_get_maximum_support (t8_mesh_t *mesh);
+```
+"""
+function t8_mesh_get_maximum_support(mesh)
+    @ccall libt8.t8_mesh_get_maximum_support(mesh::Ptr{t8_mesh_t})::Cint
+end
+
+"""
+    t8_mesh_get_element_support(mesh, locid, length_support, elemid, orientation)
+
+### Parameters
+* `length_support`:\\[in,out\\]
+### Prototype
+```c
+void t8_mesh_get_element_support (t8_mesh_t *mesh, t8_locidx_t locid, int *length_support, t8_locidx_t *elemid, int *orientation);
+```
+"""
+function t8_mesh_get_element_support(mesh, locid, length_support, elemid, orientation)
+    @ccall libt8.t8_mesh_get_element_support(mesh::Ptr{t8_mesh_t}, locid::t8_locidx_t, length_support::Ptr{Cint}, elemid::Ptr{t8_locidx_t}, orientation::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_mesh_destroy(mesh)
+
+*************************** destruct ************************
+
+### Prototype
+```c
+void t8_mesh_destroy (t8_mesh_t *mesh);
+```
+"""
+function t8_mesh_destroy(mesh)
+    @ccall libt8.t8_mesh_destroy(mesh::Ptr{t8_mesh_t})::Cvoid
+end
+
+const t8_nc_int64_t = Int64
+
+const t8_nc_int32_t = Int32
+
+"""
+    t8_netcdf_create_var(var_type, var_name, var_long_name, var_unit, var_data)
+
+Create an extern double variable which additionally should be put out to the NetCDF File
+
+### Parameters
+* `var_type`:\\[in\\] Defines the datatype of the variable, either T8\\_NETCDF\\_INT, T8\\_NETCDF\\_INT64 or T8\\_NETCDF\\_DOUBLE.
+* `var_name`:\\[in\\] A String which will be the name of the created variable.
+* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
+* `var_unit`:\\[in\\] The units in which the data is provided.
+* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
+* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
+### Prototype
+```c
+t8_netcdf_variable_t *t8_netcdf_create_var (t8_netcdf_variable_type_t var_type, const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
+```
+"""
+function t8_netcdf_create_var(var_type, var_name, var_long_name, var_unit, var_data)
+    @ccall libt8.t8_netcdf_create_var(var_type::t8_netcdf_variable_type_t, var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
+end
+
+"""
+    t8_netcdf_create_integer_var(var_name, var_long_name, var_unit, var_data)
+
+Create an extern integer variable which additionally should be put out to the NetCDF File (The disctinction if it wille be a NC\\_INT or NC\\_INT64 variable is based on the elementsize of the given [`sc_array_t`](@ref))
+
+### Parameters
+* `var_name`:\\[in\\] A String which will be the name of the created variable.
+* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
+* `var_unit`:\\[in\\] The units in which the data is provided.
+* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
+* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
+### Prototype
+```c
+t8_netcdf_variable_t *t8_netcdf_create_integer_var (const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
+```
+"""
+function t8_netcdf_create_integer_var(var_name, var_long_name, var_unit, var_data)
+    @ccall libt8.t8_netcdf_create_integer_var(var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
+end
+
+"""
+    t8_netcdf_create_double_var(var_name, var_long_name, var_unit, var_data)
+
+Create an extern double variable which additionally should be put out to the NetCDF File
+
+### Parameters
+* `var_name`:\\[in\\] A String which will be the name of the created variable.
+* `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
+* `var_unit`:\\[in\\] The units in which the data is provided.
+* `var_data`:\\[in\\] A [`sc_array_t`](@ref) holding the elementwise data of the variable.
+* `num_extern_netcdf_vars`:\\[in\\] The number of extern user-defined variables which hold elementwise data (if none, set it to 0).
+### Prototype
+```c
+t8_netcdf_variable_t *t8_netcdf_create_double_var (const char *var_name, const char *var_long_name, const char *var_unit, sc_array_t *var_data);
+```
+"""
+function t8_netcdf_create_double_var(var_name, var_long_name, var_unit, var_data)
+    @ccall libt8.t8_netcdf_create_double_var(var_name::Cstring, var_long_name::Cstring, var_unit::Cstring, var_data::Ptr{sc_array_t})::Ptr{t8_netcdf_variable_t}
+end
+
+"""
+    t8_netcdf_variable_destroy(var_destroy)
+
+Free the allocated memory of the a [`t8_netcdf_variable_t`](@ref)
+
+### Parameters
+* `var_destroy`:\\[in\\] A t8\\_netcdf\\_t variable whose allocated memory should be freed.
+### Prototype
+```c
+void t8_netcdf_variable_destroy (t8_netcdf_variable_t * var_destroy);
+```
+"""
+function t8_netcdf_variable_destroy(var_destroy)
+    @ccall libt8.t8_netcdf_variable_destroy(var_destroy::Ptr{t8_netcdf_variable_t})::Cvoid
+end
+
+"""
+    t8_vec_norm(vec)
+
+Vector norm.
+
+### Parameters
+* `vec`:\\[in\\] A 3D vector.
+### Returns
+The norm of *vec*.
+### Prototype
+```c
+double t8_vec_norm (const double vec[3]);
+```
+"""
+function t8_vec_norm(vec)
+    @ccall libt8.t8_vec_norm(vec::Ptr{Cdouble})::Cdouble
+end
+
+"""
+    t8_vec_dist(vec_x, vec_y)
+
+Euclidean distance of X and Y.
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[in\\] A 3D vector.
+### Returns
+The euclidean distance. Equivalent to norm (X-Y).
+### Prototype
+```c
+double t8_vec_dist (const double vec_x[3], const double vec_y[3]);
+```
+"""
+function t8_vec_dist(vec_x, vec_y)
+    @ccall libt8.t8_vec_dist(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
+end
+
+"""
+    t8_vec_ax(vec_x, alpha)
+
+Compute X = alpha * X
+
+### Parameters
+* `vec_x`:\\[in,out\\] A 3D vector. On output set to *alpha* * *vec_x*.
+* `alpha`:\\[in\\] A factor.
+### Prototype
+```c
+void t8_vec_ax (double vec_x[3], const double alpha);
+```
+"""
+function t8_vec_ax(vec_x, alpha)
+    @ccall libt8.t8_vec_ax(vec_x::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_axy(vec_x, vec_y, alpha)
+
+Compute Y = alpha * X
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_z`:\\[out\\] On output set to *alpha* * *vec_x*.
+* `alpha`:\\[in\\] A factor.
+### Prototype
+```c
+void t8_vec_axy (const double vec_x[3], double vec_y[3], const double alpha);
+```
+"""
+function t8_vec_axy(vec_x, vec_y, alpha)
+    @ccall libt8.t8_vec_axy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_axb(vec_x, vec_y, alpha, b)
+
+Y = alpha * X + b
+
+!!! note
+
+    It is possible that vec\\_x = vec\\_y on input to overwrite x
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[out\\] On input, a 3D vector. On output set to *alpha* * *vec_x* + *b*.
+* `alpha`:\\[in\\] A factor.
+* `b`:\\[in\\] An offset.
+### Prototype
+```c
+void t8_vec_axb (const double vec_x[3], double vec_y[3], const double alpha, const double b);
+```
+"""
+function t8_vec_axb(vec_x, vec_y, alpha, b)
+    @ccall libt8.t8_vec_axb(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble, b::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_axpy(vec_x, vec_y, alpha)
+
+Y = Y + alpha * X
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[in,out\\] On input, a 3D vector. On output set *to* vec\\_y + *alpha* * *vec_x*
+* `alpha`:\\[in\\] A factor.
+### Prototype
+```c
+void t8_vec_axpy (const double vec_x[3], double vec_y[3], const double alpha);
+```
+"""
+function t8_vec_axpy(vec_x, vec_y, alpha)
+    @ccall libt8.t8_vec_axpy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_axpyz(vec_x, vec_y, vec_z, alpha)
+
+Z = Y + alpha * X
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[in\\] A 3D vector.
+* `vec_z`:\\[out\\] On output set *to* vec\\_y + *alpha* * *vec_x*
+### Prototype
+```c
+void t8_vec_axpyz (const double vec_x[3], const double vec_y[3], double vec_z[3], const double alpha);
+```
+"""
+function t8_vec_axpyz(vec_x, vec_y, vec_z, alpha)
+    @ccall libt8.t8_vec_axpyz(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, vec_z::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_dot(vec_x, vec_y)
+
+Dot product of X and Y.
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[in\\] A 3D vector.
+### Returns
+The dot product *vec_x* * *vec_y*
+### Prototype
+```c
+double t8_vec_dot (const double vec_x[3], const double vec_y[3]);
+```
+"""
+function t8_vec_dot(vec_x, vec_y)
+    @ccall libt8.t8_vec_dot(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
+end
+
+"""
+    t8_vec_cross(vec_x, vec_y, cross)
+
+Cross product of X and Y
+
+### Parameters
+* `vec_x`:\\[in\\] A 3D vector.
+* `vec_y`:\\[in\\] A 3D vector.
+* `cross`:\\[out\\] On output, the cross product of *vec_x* and *vec_y*.
+### Prototype
+```c
+void t8_vec_cross (const double vec_x[3], const double vec_y[3], double cross[3]);
+```
+"""
+function t8_vec_cross(vec_x, vec_y, cross)
+    @ccall libt8.t8_vec_cross(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, cross::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
+
+### Prototype
+```c
+int t8_write_pvtu (const char *filename, int num_procs, int write_tree, int write_rank, int write_level, int write_id, int num_data, t8_vtk_data_field_t *data);
+```
+"""
+function t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
+    @ccall libt8.t8_write_pvtu(filename::Cstring, num_procs::Cint, write_tree::Cint, write_rank::Cint, write_level::Cint, write_id::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+end
+
+"""
+    t8_cmesh_new_from_p4est(conn, comm, do_partition)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_from_p4est (p4est_connectivity_t * conn, sc_MPI_Comm comm, int do_partition);
+```
+"""
+function t8_cmesh_new_from_p4est(conn, comm, do_partition)
+    @ccall libt8.t8_cmesh_new_from_p4est(conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_from_p8est(conn, comm, do_partition)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_from_p8est (p8est_connectivity_t * conn, sc_MPI_Comm comm, int do_partition);
+```
+"""
+function t8_cmesh_new_from_p8est(conn, comm, do_partition)
+    @ccall libt8.t8_cmesh_new_from_p8est(conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_empty(comm, do_partition, dimension)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_empty (sc_MPI_Comm comm, int do_partition, int dimension);
+```
+"""
+function t8_cmesh_new_empty(comm, do_partition, dimension)
+    @ccall libt8.t8_cmesh_new_empty(comm::MPI_Comm, do_partition::Cint, dimension::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_from_class(eclass, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_from_class (t8_eclass_t eclass, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_from_class(eclass, comm)
+    @ccall libt8.t8_cmesh_new_from_class(eclass::t8_eclass_t, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_hypercube (t8_eclass_t eclass, sc_MPI_Comm comm, int do_bcast, int do_partition, int periodic);
+```
+"""
+function t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
+    @ccall libt8.t8_cmesh_new_hypercube(eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_hypercube_hybrid (sc_MPI_Comm comm, int do_partition, int periodic);
+```
+"""
+function t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid(comm::MPI_Comm, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_periodic(comm, dim)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_periodic (sc_MPI_Comm comm, int dim);
+```
+"""
+function t8_cmesh_new_periodic(comm, dim)
+    @ccall libt8.t8_cmesh_new_periodic(comm::MPI_Comm, dim::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_periodic_tri(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_periodic_tri (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_periodic_tri(comm)
+    @ccall libt8.t8_cmesh_new_periodic_tri(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_periodic_hybrid(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_periodic_hybrid (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_periodic_hybrid(comm)
+    @ccall libt8.t8_cmesh_new_periodic_hybrid(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_periodic_line_more_trees(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_periodic_line_more_trees (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_periodic_line_more_trees(comm)
+    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_bigmesh(eclass, num_trees, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_bigmesh (t8_eclass_t eclass, int num_trees, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_bigmesh(eclass, num_trees, comm)
+    @ccall libt8.t8_cmesh_new_bigmesh(eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_line_zigzag(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_line_zigzag (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_line_zigzag(comm)
+    @ccall libt8.t8_cmesh_new_line_zigzag(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prism_cake(comm, num_of_prisms)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prism_cake (sc_MPI_Comm comm, int num_of_prisms);
+```
+"""
+function t8_cmesh_new_prism_cake(comm, num_of_prisms)
+    @ccall libt8.t8_cmesh_new_prism_cake(comm::MPI_Comm, num_of_prisms::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prism_deformed(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prism_deformed (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_prism_deformed(comm)
+    @ccall libt8.t8_cmesh_new_prism_deformed(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_pyramid_deformed(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_pyramid_deformed (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_pyramid_deformed(comm)
+    @ccall libt8.t8_cmesh_new_pyramid_deformed(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prism_cake_funny_oriented(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prism_cake_funny_oriented (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_prism_cake_funny_oriented(comm)
+    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prism_geometry(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prism_geometry (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_prism_geometry(comm)
+    @ccall libt8.t8_cmesh_new_prism_geometry(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_disjoint_bricks (t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+    @ccall libt8.t8_cmesh_new_disjoint_bricks(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_tet_orientation_test(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_tet_orientation_test (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_tet_orientation_test(comm)
+    @ccall libt8.t8_cmesh_new_tet_orientation_test(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_hybrid_gate(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_hybrid_gate (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_hybrid_gate(comm)
+    @ccall libt8.t8_cmesh_new_hybrid_gate(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_hybrid_gate_deformed(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_hybrid_gate_deformed (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_hybrid_gate_deformed(comm)
+    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_full_hybrid(comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_full_hybrid (sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_full_hybrid(comm)
+    @ccall libt8.t8_cmesh_new_full_hybrid(comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_pyramid_cake (sc_MPI_Comm comm, int num_of_pyra);
+```
+"""
+function t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
+    @ccall libt8.t8_cmesh_new_pyramid_cake(comm::MPI_Comm, num_of_pyra::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_long_brick_pyramid (sc_MPI_Comm comm, int num_cubes);
+```
+"""
+function t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
+    @ccall libt8.t8_cmesh_new_long_brick_pyramid(comm::MPI_Comm, num_cubes::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_row_of_cubes(num_trees, set_attributes, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_row_of_cubes (t8_locidx_t num_trees, const int set_attributes, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_row_of_cubes(num_trees, set_attributes, comm)
+    @ccall libt8.t8_cmesh_new_row_of_cubes(num_trees::t8_locidx_t, set_attributes::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
+
+Get the name of the geometry stored for a tree in a cmesh.
+
+### Parameters
+* `cmesh`:\\[in\\] A committed cmesh.
+* `gtreeid`:\\[in\\] A global tree in *cmesh*.
+### Returns
+The name of the tree's geometry or NULL if no geometry is set for this tree.
+### Prototype
+```c
+const char *t8_cmesh_get_tree_geom_name (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
+```
+"""
+function t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
+    @ccall libt8.t8_cmesh_get_tree_geom_name(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Cstring
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:40:21, please use with caution
+"""
+    t8_get_number_of_comm_only_cmesh_testcases()
+
+The functions t8\\_get\\_*\\_cmesh\\_testcases
+
+### Returns
+the number of testcases for a given cmesh type.  To get all possible inputs, we multiply  the number of different inputs of all variables. The function t8\\_get\\_comm\\_only\\_cmesh\\_testcases() returns the number of testcases for all cmeshes that only take a comm as input all added together.
+### Prototype
+```c
+int t8_get_number_of_comm_only_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_comm_only_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_comm_only_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:44:21, please use with caution
+"""
+    t8_get_number_of_new_hypercube_cmesh_testcases()
+
+The function t8\\_get\\_new\\_hypercube\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the hypercube cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_hypercube_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_hypercube_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_hypercube_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:48:21, please use with caution
+"""
+    t8_get_number_of_new_empty_cmesh_testcases()
+
+The function t8\\_get\\_new\\_empty\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the empty cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_empty_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_empty_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_empty_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:52:21, please use with caution
+"""
+    t8_get_number_of_new_from_class_cmesh_testcases()
+
+The function t8\\_get\\_new\\_from\\_class\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_from\\_class cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_from_class_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_from_class_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_from_class_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:56:21, please use with caution
+"""
+    t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
+
+The function t8\\_get\\_new\\_hypercube\\_hybrid\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_hypercube\\_hybrid cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_hypercube_hybrid_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:60:21, please use with caution
+"""
+    t8_get_number_of_new_periodic_cmesh_testcases()
+
+The function t8\\_get\\_new\\_periodic\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_periodic cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_periodic_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_periodic_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_periodic_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:64:21, please use with caution
+"""
+    t8_get_number_of_new_bigmesh_cmesh_testcases()
+
+The function t8\\_get\\_new\\_bigmesh\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_bigmesh cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_bigmesh_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_bigmesh_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_bigmesh_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:68:21, please use with caution
+"""
+    t8_get_number_of_new_prism_cake_cmesh_testcases()
+
+The function t8\\_get\\_new\\_prism\\_cake\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_prism\\_cake cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_prism_cake_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_prism_cake_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_prism_cake_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:72:21, please use with caution
+"""
+    t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
+
+The function t8\\_get\\_new\\_disjoint\\_bricks\\_cmesh\\_testcases()
+
+### Returns
+the number of testcases for the new\\_disjoint\\_bricks cmesh.
+### Prototype
+```c
+int t8_get_number_of_new_disjoint_bricks_cmesh_testcases ();
+```
+"""
+function t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
+    @ccall libt8.t8_get_number_of_new_disjoint_bricks_cmesh_testcases()::Cint
+end
+
+# no prototype is found for this function at t8_cmesh_testcases.h:78:21, please use with caution
+"""
+    t8_get_number_of_all_testcases()
+
+The function t8\\_get\\_all\\_testcases()
+
+### Returns
+the number of testcases for all cmesh types.  We need to know this, because test\\_cmesh\\_copy\\_all needs to know how  many ids to check.
+### Prototype
+```c
+int t8_get_number_of_all_testcases ();
+```
+"""
+function t8_get_number_of_all_testcases()
+    @ccall libt8.t8_get_number_of_all_testcases()::Cint
+end
+
+"""
+    t8_test_create_comm_only_cmesh(cmesh_id)
+
+The function [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The switch inside [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id) chooses the cmesh-type.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh which only takes comm as input.
+### Returns
+the wanted cmesh with the wanted comm for the given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_comm_only_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_comm_only_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_comm_only_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_hypercube_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_hypercube_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. It avoids the case (eclass = pyramid & periodic=1) since this is not allowed.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube cmesh.
+### Returns
+a new hypercube cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_hypercube_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_hypercube_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_hypercube_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_empty_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_empty_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_empty cmesh.
+### Returns
+a new empty cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_empty_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_empty_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_empty_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_from_class_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_from_class_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_from\\_class cmesh.
+### Returns
+a new create\\_new\\_from\\_class cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_from_class_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_from_class_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_from_class_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_hypercube_hybrid_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube\\_hybrid cmesh.
+### Returns
+a new\\_hypercube\\_hybrid cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_hypercube_hybrid_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_periodic_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_periodic_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal dimension is 1.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_periodic cmesh.
+### Returns
+a new\\_periodic cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_periodic_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_periodic_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_periodic_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_bigmesh_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_bigmesh_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 1.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_bigmesh cmesh.
+### Returns
+a new\\_bigmesh cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_bigmesh_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_bigmesh_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_bigmesh_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_new_prism_cake_cmesh(cmesh_id)
+
+The function [`t8_test_create_new_prism_cake_cmesh`](@ref) (int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 3.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_prism\\_cake cmesh.
+### Returns
+a new\\_prism\\_cake cmesh with a unique input for every given id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_new_prism_cake_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_new_prism_cake_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_new_prism_cake_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_test_create_cmesh(cmesh_id)
+
+The function [`t8_test_create_cmesh`](@ref) (int cmesh\\_id) combines all t8\\_test\\_create\\_*\\_cmesh functions  so that depending on the range the id is in, we get another cmesh type by calling its  t8\\_test\\_create\\_*\\_cmesh function.
+
+### Parameters
+* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh.
+### Returns
+A cmesh specified by its cmesh\\_id.
+### Prototype
+```c
+t8_cmesh_t t8_test_create_cmesh (int cmesh_id);
+```
+"""
+function t8_test_create_cmesh(cmesh_id)
+    @ccall libt8.t8_test_create_cmesh(cmesh_id::Cint)::t8_cmesh_t
+end
+
+"""
+    t8_forest_adapt(forest)
+
+### Prototype
+```c
+void t8_forest_adapt (t8_forest_t forest);
+```
+"""
+function t8_forest_adapt(forest)
+    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
 end
 
 # typedef int ( * t8_forest_iterate_face_fn ) ( t8_forest_t forest , t8_locidx_t ltreeid , const t8_element_t * element , int face , void * user_data , t8_locidx_t tree_leaf_index )
@@ -13351,174 +19176,6 @@ void t8_forest_partition_data (t8_forest_t forest_from, t8_forest_t forest_to, c
 """
 function t8_forest_partition_data(forest_from, forest_to, data_in, data_out)
     @ccall libt8.t8_forest_partition_data(forest_from::t8_forest_t, forest_to::t8_forest_t, data_in::Ptr{sc_array_t}, data_out::Ptr{sc_array_t})::Cvoid
-end
-
-"""
-    t8_forest_set_profiling(forest, set_profiling)
-
-### Prototype
-```c
-void t8_forest_set_profiling (t8_forest_t forest, int set_profiling);
-```
-"""
-function t8_forest_set_profiling(forest, set_profiling)
-    @ccall libt8.t8_forest_set_profiling(forest::Cint, set_profiling::Cint)::Cvoid
-end
-
-"""
-    t8_forest_compute_profile(forest)
-
-### Prototype
-```c
-void t8_forest_compute_profile (t8_forest_t forest);
-```
-"""
-function t8_forest_compute_profile(forest)
-    @ccall libt8.t8_forest_compute_profile(forest::Cint)::Cvoid
-end
-
-"""
-    t8_forest_profile_get_adapt_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t *t8_forest_profile_get_adapt_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_adapt_stats(forest)
-    @ccall libt8.t8_forest_profile_get_adapt_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_profile_get_ghost_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t *t8_forest_profile_get_ghost_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_ghost_stats(forest)
-    @ccall libt8.t8_forest_profile_get_ghost_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_profile_get_partition_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t *t8_forest_profile_get_partition_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_partition_stats(forest)
-    @ccall libt8.t8_forest_profile_get_partition_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_profile_get_commit_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t *t8_forest_profile_get_commit_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_commit_stats(forest)
-    @ccall libt8.t8_forest_profile_get_commit_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_profile_get_balance_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t *t8_forest_profile_get_balance_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_balance_stats(forest)
-    @ccall libt8.t8_forest_profile_get_balance_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_profile_get_balance_rounds_stats(forest)
-
-### Prototype
-```c
-const sc_statinfo_t * t8_forest_profile_get_balance_rounds_stats (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_balance_rounds_stats(forest)
-    @ccall libt8.t8_forest_profile_get_balance_rounds_stats(forest::Cint)::Ptr{sc_statinfo_t}
-end
-
-"""
-    t8_forest_print_profile(forest)
-
-### Prototype
-```c
-void t8_forest_print_profile (t8_forest_t forest);
-```
-"""
-function t8_forest_print_profile(forest)
-    @ccall libt8.t8_forest_print_profile(forest::Cint)::Cvoid
-end
-
-"""
-    t8_forest_profile_get_adapt_time(forest)
-
-### Prototype
-```c
-double t8_forest_profile_get_adapt_time (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_adapt_time(forest)
-    @ccall libt8.t8_forest_profile_get_adapt_time(forest::Cint)::Cdouble
-end
-
-"""
-    t8_forest_profile_get_partition_time(forest, procs_sent)
-
-### Prototype
-```c
-double t8_forest_profile_get_partition_time (t8_forest_t forest, int *procs_sent);
-```
-"""
-function t8_forest_profile_get_partition_time(forest, procs_sent)
-    @ccall libt8.t8_forest_profile_get_partition_time(forest::Cint, procs_sent::Ptr{Cint})::Cdouble
-end
-
-"""
-    t8_forest_profile_get_balance_time(forest, balance_rounds)
-
-### Prototype
-```c
-double t8_forest_profile_get_balance_time (t8_forest_t forest, int *balance_rounds);
-```
-"""
-function t8_forest_profile_get_balance_time(forest, balance_rounds)
-    @ccall libt8.t8_forest_profile_get_balance_time(forest::Cint, balance_rounds::Ptr{Cint})::Cdouble
-end
-
-"""
-    t8_forest_profile_get_ghost_time(forest, ghosts_sent)
-
-### Prototype
-```c
-double t8_forest_profile_get_ghost_time (t8_forest_t forest, t8_locidx_t *ghosts_sent);
-```
-"""
-function t8_forest_profile_get_ghost_time(forest, ghosts_sent)
-    @ccall libt8.t8_forest_profile_get_ghost_time(forest::Cint, ghosts_sent::Ptr{t8_locidx_t})::Cdouble
-end
-
-"""
-    t8_forest_profile_get_ghostexchange_waittime(forest)
-
-### Prototype
-```c
-double t8_forest_profile_get_ghostexchange_waittime (t8_forest_t forest);
-```
-"""
-function t8_forest_profile_get_ghostexchange_waittime(forest)
-    @ccall libt8.t8_forest_profile_get_ghostexchange_waittime(forest::Cint)::Cdouble
 end
 
 """
@@ -13903,9 +19560,405 @@ function t8_eclass_scheme_is_default(ts)
     @ccall libt8.t8_eclass_scheme_is_default(ts::Ptr{t8_eclass_scheme_c})::Cint
 end
 
+struct __JL_Ctag_1172
+    which_tree::p4est_topidx_t
+    owner_rank::Cint
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1172}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :owner_rank && return Ptr{Cint}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1172, f::Symbol)
+    r = Ref{__JL_Ctag_1172}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1172}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1172}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1173
+    which_tree::p4est_topidx_t
+    from_tree::p4est_topidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1173}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :from_tree && return Ptr{p4est_topidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1173, f::Symbol)
+    r = Ref{__JL_Ctag_1173}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1173}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1173}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1174
+    which_tree::p4est_topidx_t
+    local_num::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1174}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :local_num && return Ptr{p4est_locidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1174, f::Symbol)
+    r = Ref{__JL_Ctag_1174}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1174}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1174}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1175
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1175
+    is_ghost::Int8
+    quad::Ptr{p4est_quadrant_t}
+    quadid::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1175}, f::Symbol)
+    f === :is_ghost && return Ptr{Int8}(x + 0)
+    f === :quad && return Ptr{Ptr{p4est_quadrant_t}}(x + 8)
+    f === :quadid && return Ptr{p4est_locidx_t}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1175, f::Symbol)
+    r = Ref{__JL_Ctag_1175}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1175}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1175}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1176
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1176
+    is_ghost::NTuple{2, Int8}
+    quad::NTuple{2, Ptr{p4est_quadrant_t}}
+    quadid::NTuple{2, p4est_locidx_t}
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1176}, f::Symbol)
+    f === :is_ghost && return Ptr{NTuple{2, Int8}}(x + 0)
+    f === :quad && return Ptr{NTuple{2, Ptr{p4est_quadrant_t}}}(x + 8)
+    f === :quadid && return Ptr{NTuple{2, p4est_locidx_t}}(x + 24)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1176, f::Symbol)
+    r = Ref{__JL_Ctag_1176}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1176}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1176}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1177
+    which_tree::p4est_topidx_t
+    owner_rank::Cint
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1177}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :owner_rank && return Ptr{Cint}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1177, f::Symbol)
+    r = Ref{__JL_Ctag_1177}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1177}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1177}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1178
+    which_tree::p4est_topidx_t
+    from_tree::p4est_topidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1178}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :from_tree && return Ptr{p4est_topidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1178, f::Symbol)
+    r = Ref{__JL_Ctag_1178}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1178}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1178}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1179
+    which_tree::p4est_topidx_t
+    local_num::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1179}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :local_num && return Ptr{p4est_locidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1179, f::Symbol)
+    r = Ref{__JL_Ctag_1179}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1179}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1179}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1180
+    which_tree::p4est_topidx_t
+    owner_rank::Cint
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1180}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :owner_rank && return Ptr{Cint}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1180, f::Symbol)
+    r = Ref{__JL_Ctag_1180}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1180}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1180}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1181
+    which_tree::p4est_topidx_t
+    from_tree::p4est_topidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1181}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :from_tree && return Ptr{p4est_topidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1181, f::Symbol)
+    r = Ref{__JL_Ctag_1181}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1181}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1181}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+struct __JL_Ctag_1182
+    which_tree::p4est_topidx_t
+    local_num::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1182}, f::Symbol)
+    f === :which_tree && return Ptr{p4est_topidx_t}(x + 0)
+    f === :local_num && return Ptr{p4est_locidx_t}(x + 4)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1182, f::Symbol)
+    r = Ref{__JL_Ctag_1182}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1182}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1182}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1183
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1183
+    is_ghost::Int8
+    quad::Ptr{p8est_quadrant_t}
+    quadid::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1183}, f::Symbol)
+    f === :is_ghost && return Ptr{Int8}(x + 0)
+    f === :quad && return Ptr{Ptr{p8est_quadrant_t}}(x + 8)
+    f === :quadid && return Ptr{p4est_locidx_t}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1183, f::Symbol)
+    r = Ref{__JL_Ctag_1183}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1183}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1183}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1184
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1184
+    is_ghost::NTuple{4, Int8}
+    quad::NTuple{4, Ptr{p8est_quadrant_t}}
+    quadid::NTuple{4, p4est_locidx_t}
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1184}, f::Symbol)
+    f === :is_ghost && return Ptr{NTuple{4, Int8}}(x + 0)
+    f === :quad && return Ptr{NTuple{4, Ptr{p8est_quadrant_t}}}(x + 8)
+    f === :quadid && return Ptr{NTuple{4, p4est_locidx_t}}(x + 40)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1184, f::Symbol)
+    r = Ref{__JL_Ctag_1184}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1184}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1184}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1185
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1185
+    is_ghost::Int8
+    quad::Ptr{p8est_quadrant_t}
+    quadid::p4est_locidx_t
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1185}, f::Symbol)
+    f === :is_ghost && return Ptr{Int8}(x + 0)
+    f === :quad && return Ptr{Ptr{p8est_quadrant_t}}(x + 8)
+    f === :quadid && return Ptr{p4est_locidx_t}(x + 16)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1185, f::Symbol)
+    r = Ref{__JL_Ctag_1185}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1185}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1185}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
+"""
+    __JL_Ctag_1186
+
+| Field      | Note                             |
+| :--------- | :------------------------------- |
+| is\\_ghost | boolean: local (0) or ghost (1)  |
+| quad       | the actual quadrant              |
+| quadid     | index in tree or ghost array     |
+"""
+struct __JL_Ctag_1186
+    is_ghost::NTuple{2, Int8}
+    quad::NTuple{2, Ptr{p8est_quadrant_t}}
+    quadid::NTuple{2, p4est_locidx_t}
+end
+function Base.getproperty(x::Ptr{__JL_Ctag_1186}, f::Symbol)
+    f === :is_ghost && return Ptr{NTuple{2, Int8}}(x + 0)
+    f === :quad && return Ptr{NTuple{2, Ptr{p8est_quadrant_t}}}(x + 8)
+    f === :quadid && return Ptr{NTuple{2, p4est_locidx_t}}(x + 24)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::__JL_Ctag_1186, f::Symbol)
+    r = Ref{__JL_Ctag_1186}(x)
+    ptr = Base.unsafe_convert(Ptr{__JL_Ctag_1186}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{__JL_Ctag_1186}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+
 const SC_CC = "mpicc"
 
-const SC_CFLAGS = "-g -O2"
+const SC_CFLAGS = "-O3"
 
 const SC_CPP = "mpicc -E"
 
@@ -13919,8 +19972,6 @@ const SC_ENABLE_MPICOMMSHARED = 1
 
 const SC_ENABLE_MPIIO = 1
 
-const SC_ENABLE_MPISHARED = 1
-
 const SC_ENABLE_MPITHREAD = 1
 
 const SC_ENABLE_MPIWINSHARED = 1
@@ -13929,19 +19980,13 @@ const SC_ENABLE_USE_COUNTERS = 1
 
 const SC_ENABLE_USE_REALLOC = 1
 
-const SC_ENABLE_V4L2 = 1
-
 const SC_HAVE_BACKTRACE = 1
 
 const SC_HAVE_BACKTRACE_SYMBOLS = 1
 
 const SC_HAVE_FSYNC = 1
 
-const SC_HAVE_GNU_QSORT_R = 1
-
 const SC_HAVE_POSIX_MEMALIGN = 1
-
-const SC_HAVE_QSORT_R = 1
 
 const SC_HAVE_STRTOL = 1
 
@@ -13967,17 +20012,17 @@ const SC_MPIIO = 1
 
 const SC_PACKAGE = "libsc"
 
-const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
+const SC_PACKAGE_BUGREPORT = "info@p4est.org"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 2.8.3"
+const SC_PACKAGE_STRING = "libsc 2.8.1.5-0b70"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "2.8.3"
+const SC_PACKAGE_VERSION = "2.8.1.5-0b70"
 
 const SC_SIZEOF_INT = 4
 
@@ -13995,13 +20040,13 @@ const SC_USE_COUNTERS = 1
 
 const SC_USE_REALLOC = 1
 
-const SC_VERSION = "2.8.3"
+const SC_VERSION = "2.8.1.5-0b70"
 
 const SC_VERSION_MAJOR = 2
 
 const SC_VERSION_MINOR = 8
 
-const SC_VERSION_POINT = 3
+# Skipping MacroDefinition: SC_VERSION_POINT 1.5 - 0b70
 
 
 const sc_MPI_COMM_WORLD = MPI_COMM_WORLD
@@ -14035,6 +20080,7 @@ const sc_MPI_UNSIGNED_LONG_LONG = MPI_UNSIGNED_LONG_LONG
 const sc_MPI_FLOAT = MPI_FLOAT
 
 const sc_MPI_DOUBLE = MPI_DOUBLE
+
 
 const sc_MPI_Comm = MPI_Comm
 
@@ -14074,6 +20120,201 @@ const SC_LP_SILENT = 9
 
 const SC_LP_THRESHOLD = SC_LP_INFO
 
+const P4EST_BUILD_2D = 1
+
+const P4EST_BUILD_3D = 1
+
+const P4EST_BUILD_P6EST = 1
+
+const P4EST_CC = "mpicc"
+
+const P4EST_CFLAGS = "-O3"
+
+const P4EST_CPP = "mpicc -E"
+
+const P4EST_CPPFLAGS = "-I/workspace/destdir/include"
+
+const P4EST_ENABLE_BUILD_2D = 1
+
+const P4EST_ENABLE_BUILD_3D = 1
+
+const P4EST_ENABLE_BUILD_P6EST = 1
+
+const P4EST_ENABLE_MEMALIGN = 1
+
+const P4EST_ENABLE_MPI = 1
+
+const P4EST_ENABLE_MPICOMMSHARED = 1
+
+const P4EST_ENABLE_MPIIO = 1
+
+const P4EST_ENABLE_MPITHREAD = 1
+
+const P4EST_ENABLE_MPIWINSHARED = 1
+
+const P4EST_ENABLE_VTK_BINARY = 1
+
+const P4EST_ENABLE_VTK_COMPRESSION = 1
+
+const P4EST_HAVE_POSIX_MEMALIGN = 1
+
+const P4EST_HAVE_ZLIB = 1
+
+const P4EST_LDFLAGS = "-L/workspace/destdir/lib"
+
+const P4EST_LIBS = "-lz -lm "
+
+const P4EST_LT_OBJDIR = ".libs/"
+
+const P4EST_MEMALIGN = 1
+
+const P4EST_SIZEOF_VOID_P = 8
+
+const P4EST_MEMALIGN_BYTES = P4EST_SIZEOF_VOID_P
+
+const P4EST_MPI = 1
+
+const P4EST_MPIIO = 1
+
+const P4EST_PACKAGE = "p4est"
+
+const P4EST_PACKAGE_BUGREPORT = "info@p4est.org"
+
+const P4EST_PACKAGE_NAME = "p4est"
+
+const P4EST_PACKAGE_STRING = "p4est 2.2.259-ec120"
+
+const P4EST_PACKAGE_TARNAME = "p4est"
+
+const P4EST_PACKAGE_URL = ""
+
+const P4EST_PACKAGE_VERSION = "2.2.259-ec120"
+
+const P4EST_STDC_HEADERS = 1
+
+const P4EST_VERSION = "2.2.259-ec120"
+
+const P4EST_VERSION_MAJOR = 2
+
+const P4EST_VERSION_MINOR = 2
+
+
+const P4EST_VTK_BINARY = 1
+
+const P4EST_VTK_COMPRESSION = 1
+
+const p4est_qcoord_compare = sc_int32_compare
+
+const P4EST_MPI_QCOORD = sc_MPI_INT
+
+const P4EST_VTK_QCOORD = "Int32"
+
+
+const P4EST_QCOORD_MIN = INT32_MIN
+
+const P4EST_QCOORD_MAX = INT32_MAX
+
+const P4EST_QCOORD_1 = p4est_qcoord_t(1)
+
+const p4est_topidx_compare = sc_int32_compare
+
+const P4EST_MPI_TOPIDX = sc_MPI_INT
+
+const P4EST_VTK_TOPIDX = "Int32"
+
+
+const P4EST_TOPIDX_MIN = INT32_MIN
+
+const P4EST_TOPIDX_MAX = INT32_MAX
+
+const P4EST_TOPIDX_FITS_32 = 1
+
+const P4EST_TOPIDX_1 = p4est_topidx_t(1)
+
+const p4est_locidx_compare = sc_int32_compare
+
+const P4EST_MPI_LOCIDX = sc_MPI_INT
+
+const P4EST_VTK_LOCIDX = "Int32"
+
+
+const P4EST_LOCIDX_MIN = INT32_MIN
+
+const P4EST_LOCIDX_MAX = INT32_MAX
+
+const P4EST_LOCIDX_1 = p4est_locidx_t(1)
+
+const p4est_gloidx_compare = sc_int64_compare
+
+const P4EST_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
+
+const P4EST_VTK_GLOIDX = "Int64"
+
+
+const P4EST_GLOIDX_MIN = INT64_MIN
+
+const P4EST_GLOIDX_MAX = INT64_MAX
+
+const P4EST_GLOIDX_1 = p4est_gloidx_t(1)
+
+
+
+
+
+const P4EST_DIM = 2
+
+const P4EST_FACES = 2P4EST_DIM
+
+const P4EST_CHILDREN = 4
+
+const P4EST_HALF = P4EST_CHILDREN ÷ 2
+
+const P4EST_INSUL = 9
+
+const P4EST_FTRANSFORM = 9
+
+const P4EST_STRING = "p4est"
+
+const P4EST_ONDISK_FORMAT = 0x02000009
+
+const P4EST_MAXLEVEL = 30
+
+const P4EST_QMAXLEVEL = 29
+
+const P4EST_ROOT_LEN = p4est_qcoord_t(1) << P4EST_MAXLEVEL
+
+P4EST_QUADRANT_LEN(l) = p4est_qcoord_t(1) << (P4EST_MAXLEVEL - l)
+
+P4EST_LAST_OFFSET(l) = P4EST_ROOT_LEN - P4EST_QUADRANT_LEN(l)
+
+const P8EST_DIM = 3
+
+const P8EST_FACES = 2P8EST_DIM
+
+const P8EST_CHILDREN = 8
+
+const P8EST_HALF = P8EST_CHILDREN ÷ 2
+
+const P8EST_EDGES = 12
+
+const P8EST_INSUL = 27
+
+const P8EST_FTRANSFORM = 9
+
+const P8EST_STRING = "p8est"
+
+const P8EST_ONDISK_FORMAT = 0x03000009
+
+const P8EST_MAXLEVEL = 19
+
+const P8EST_QMAXLEVEL = 18
+
+const P8EST_ROOT_LEN = p4est_qcoord_t(1) << P8EST_MAXLEVEL
+
+P8EST_QUADRANT_LEN(l) = p4est_qcoord_t(1) << (P8EST_MAXLEVEL - l)
+
+P8EST_LAST_OFFSET(l) = P8EST_ROOT_LEN - P8EST_QUADRANT_LEN(l)
+
 
 
 const T8_MPI_LOCIDX = sc_MPI_INT
@@ -14085,8 +20326,6 @@ const T8_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
 const T8_MPI_LINEARIDX = sc_MPI_UNSIGNED_LONG_LONG
 
 # Skipping MacroDefinition: T8_PADDING_SIZE ( sizeof ( void * ) )
-
-const T8_PRECISION_EPS = SC_EPS
 
 const T8_SHMEM_BEST_TYPE = SC_SHMEM_WINDOW
 
@@ -14112,15 +20351,9 @@ const T8_ENABLE_MPICOMMSHARED = 1
 
 const T8_ENABLE_MPIIO = 1
 
-const T8_ENABLE_MPISHARED = 1
-
 const T8_ENABLE_MPITHREAD = 1
 
 const T8_ENABLE_MPIWINSHARED = 1
-
-const T8_HAVE_GNU_QSORT_R = 1
-
-const T8_HAVE_MATH = 1
 
 const T8_HAVE_POSIX_MEMALIGN = 1
 
@@ -14142,40 +20375,30 @@ const T8_MPI = 1
 
 const T8_MPIIO = 1
 
-const T8_P4EST = 1
-
 const T8_PACKAGE = "t8"
 
 const T8_PACKAGE_BUGREPORT = "johannes.holke@dlr.de, burstedde@ins.uni-bonn.de"
 
 const T8_PACKAGE_NAME = "t8"
 
-const T8_PACKAGE_STRING = "t8 1.2.0.37-a5c5-dirty"
+const T8_PACKAGE_STRING = "t8 1.1.0.207-d6a74"
 
 const T8_PACKAGE_TARNAME = "t8"
 
 const T8_PACKAGE_URL = ""
 
-const T8_PACKAGE_VERSION = "1.2.0.37-a5c5-dirty"
-
-const T8_SC = 1
+const T8_PACKAGE_VERSION = "1.1.0.207-d6a74"
 
 const T8_STDC_HEADERS = 1
 
-const T8_USING_AUTOCONF = 1
-
-const T8_VERSION = "1.2.0.37-a5c5-dirty"
+const T8_VERSION = "1.1.0.207-d6a74"
 
 const T8_VERSION_MAJOR = 1
 
-const T8_VERSION_MINOR = 2
+const T8_VERSION_MINOR = 1
 
 
 const T8_WITH_NETCDF_PAR = 0
-
-const T8_WITH_P4EST = 1
-
-const T8_WITH_SC = 1
 
 # Skipping MacroDefinition: T8_MPI_ECLASS_TYPE ( T8_ASSERT ( sizeof ( int ) == sizeof ( t8_eclass_t ) ) , sc_MPI_INT )
 
@@ -14209,199 +20432,12 @@ const T8_VTK_ASCII = 1
 
 const T8_VTK_FORMAT_STRING = "ascii"
 
-const P4EST_BUILD_2D = 1
-
-const P4EST_BUILD_3D = 1
-
-const P4EST_BUILD_P6EST = 1
-
-const P4EST_CC = "mpicc"
-
-const P4EST_CFLAGS = "-g -O2"
-
-const P4EST_CPP = "mpicc -E"
-
-const P4EST_CPPFLAGS = "-I/workspace/destdir/include"
-
-const P4EST_ENABLE_BUILD_2D = 1
-
-const P4EST_ENABLE_BUILD_3D = 1
-
-const P4EST_ENABLE_BUILD_P6EST = 1
-
-const P4EST_ENABLE_MEMALIGN = 1
-
-const P4EST_ENABLE_MPI = 1
-
-const P4EST_ENABLE_MPICOMMSHARED = 1
-
-const P4EST_ENABLE_MPIIO = 1
-
-const P4EST_ENABLE_MPISHARED = 1
-
-const P4EST_ENABLE_MPITHREAD = 1
-
-const P4EST_ENABLE_MPIWINSHARED = 1
-
-const P4EST_ENABLE_VTK_BINARY = 1
-
-const P4EST_ENABLE_VTK_COMPRESSION = 1
-
-const P4EST_HAVE_GNU_QSORT_R = 1
-
-const P4EST_HAVE_POSIX_MEMALIGN = 1
-
-const P4EST_HAVE_ZLIB = 1
-
-const P4EST_LDFLAGS = "-L/workspace/destdir/lib"
-
-const P4EST_LIBS = "-lz -lm "
-
-const P4EST_LT_OBJDIR = ".libs/"
-
-const P4EST_MEMALIGN = 1
-
-const P4EST_SIZEOF_VOID_P = 8
-
-const P4EST_MEMALIGN_BYTES = P4EST_SIZEOF_VOID_P
-
-const P4EST_MPI = 1
-
-const P4EST_MPIIO = 1
-
-const P4EST_PACKAGE = "p4est"
-
-const P4EST_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
-
-const P4EST_PACKAGE_NAME = "p4est"
-
-const P4EST_PACKAGE_STRING = "p4est 2.8"
-
-const P4EST_PACKAGE_TARNAME = "p4est"
-
-const P4EST_PACKAGE_URL = ""
-
-const P4EST_PACKAGE_VERSION = "2.8"
-
-const P4EST_STDC_HEADERS = 1
-
-const P4EST_VERSION = "2.8"
-
-const P4EST_VERSION_MAJOR = 2
-
-const P4EST_VERSION_MINOR = 8
-
-
-const P4EST_VTK_BINARY = 1
-
-const P4EST_VTK_COMPRESSION = 1
-
-const p4est_qcoord_compare = sc_int32_compare
-
-const P4EST_QCOORD_BITS = 32
-
-const P4EST_MPI_QCOORD = sc_MPI_INT
-
-const P4EST_VTK_QCOORD = "Int32"
-
-
-const P4EST_QCOORD_MIN = INT32_MIN
-
-const P4EST_QCOORD_MAX = INT32_MAX
-
-const P4EST_QCOORD_1 = p4est_qcoord_t(1)
-
-const p4est_topidx_compare = sc_int32_compare
-
-const P4EST_TOPIDX_BITS = 32
-
-const P4EST_MPI_TOPIDX = sc_MPI_INT
-
-const P4EST_VTK_TOPIDX = "Int32"
-
-
-const P4EST_TOPIDX_MIN = INT32_MIN
-
-const P4EST_TOPIDX_MAX = INT32_MAX
-
-const P4EST_TOPIDX_FITS_32 = 1
-
-const P4EST_TOPIDX_1 = p4est_topidx_t(1)
-
-const p4est_locidx_compare = sc_int32_compare
-
-const P4EST_LOCIDX_BITS = 32
-
-const P4EST_MPI_LOCIDX = sc_MPI_INT
-
-const P4EST_VTK_LOCIDX = "Int32"
-
-
-const P4EST_LOCIDX_MIN = INT32_MIN
-
-const P4EST_LOCIDX_MAX = INT32_MAX
-
-const P4EST_LOCIDX_1 = p4est_locidx_t(1)
-
-const p4est_gloidx_compare = sc_int64_compare
-
-const P4EST_GLOIDX_BITS = 64
-
-const P4EST_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
-
-const P4EST_VTK_GLOIDX = "Int64"
-
-
-const P4EST_GLOIDX_MIN = INT64_MIN
-
-const P4EST_GLOIDX_MAX = INT64_MAX
-
-const P4EST_GLOIDX_1 = p4est_gloidx_t(1)
-
-
-
-
-
-const P4EST_DIM = 2
-
-const P4EST_FACES = 2P4EST_DIM
-
-const P4EST_CHILDREN = 4
-
-const P4EST_HALF = P4EST_CHILDREN ÷ 2
-
-const P4EST_INSUL = 9
-
-const P4EST_FTRANSFORM = 9
-
-const P4EST_STRING = "p4est"
-
-const P4EST_ONDISK_FORMAT = 0x02000009
-
-const P8EST_DIM = 3
-
-const P8EST_FACES = 2P8EST_DIM
-
-const P8EST_CHILDREN = 8
-
-const P8EST_HALF = P8EST_CHILDREN ÷ 2
-
-const P8EST_EDGES = 12
-
-const P8EST_INSUL = 27
-
-const P8EST_FTRANSFORM = 9
-
-const P8EST_STRING = "p8est"
-
-const P8EST_ONDISK_FORMAT = 0x03000009
-
 const T8_CMESH_FORMAT = 0x0002
 
 
 
 # exports
-const PREFIXES = ["t8_", "T8_"]
+const PREFIXES = ["t8_", "p4est_", "p6est_", "p8est_", "sc_", "T8_", "P4EST_", "P6EST_", "P8EST_", "SC_"]
 for name in names(@__MODULE__; all=true), prefix in PREFIXES
     if startswith(string(name), prefix)
         @eval export $name

@@ -107,8 +107,6 @@ using MPI
 using P4est
 using T8code
 
-sizeof_t8_forest_t = 9024 # bytes
-
 # In this function we create a new forest that repartitions a given forest
 # and has a layer of ghost elements. 
 function t8_step4_partition_ghost(forest)

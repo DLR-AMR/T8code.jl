@@ -1,7 +1,6 @@
-** Note: This project is work in progress. **
-
 # T8code.jl
 
+[![Build Status](https://github.com/DLR-AMR/T8code.jl/workflows/test.yml/badge.svg)](https://github.com/DLR-AMR/T8code.jl/actions?query=workflow%3Atest.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
 [T8code.jl](https://github.com/DLR-AMR/T8code.jl) is a Julia package
@@ -48,11 +47,11 @@ copy the generated files to the appropriate places in `src`.
 
 ## Authors
 
-T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de).  It is
-an adapted fork from [P4est.jl](https://github.com/trixi-framework/P4est.jl) maintained
-by [Michael Schlottke-Lakemper](https://lakemper.eu) (RWTH Aachen University,
-Germany) and [Hendrik Ranocha](https://ranocha.de) (University of Hamburg,
-Germany).
+T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de) (German
+Aerospace Center (DLR), Germany).  It is an adapted fork from
+[P4est.jl](https://github.com/trixi-framework/P4est.jl) maintained by [Michael
+Schlottke-Lakemper](https://lakemper.eu) (RWTH Aachen University, Germany) and
+[Hendrik Ranocha](https://ranocha.de) (University of Hamburg, Germany).
 
 The [`t8code`](https://github.com/DLR-AMR/t8code) library itself is written by
 Johannes Holke and Carsten Burstedde, and others.

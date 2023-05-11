@@ -46,6 +46,11 @@ pre-generated Julia bindings to all exported C interface functions of the underl
 generate new bindings, please follow the instructions in the `dev` folder and
 copy the generated files to the appropriate places in `src`.
 
+## Open Issues
+
+  - No support for custom version of MPI and/or p4est and t8code yet.
+  - No support for Windows platform yet.
+
 ## Authors
 
 T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de) (German

@@ -15,6 +15,7 @@ on:
       - '.github/workflows/TagBot.yml'
       - '.gitignore'
   pull_request:
+    paths-ignore:
       - 'AUTHORS.md'
       - 'CITATION.bib'
       - 'CONTRIBUTING.md'
@@ -38,9 +39,9 @@ jobs:
         julia-version: ['1.6', '1', 'nightly']
         julia-arch: [x64, x86]
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        exclude:
-          - os: macOS-latest
-            julia-arch: x86
+        # exclude:
+        #   - os: macOS-latest
+        #     julia-arch: x86
 
     steps:
       - uses: actions/checkout@v2

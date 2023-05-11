@@ -1,7 +1,8 @@
 # T8code.jl
 
-[![Build Status](https://github.com/DLR-AMR/T8code.jl/workflows/test.yml/badge.svg)](https://github.com/DLR-AMR/T8code.jl/actions?query=workflow%3Atest.yml)
+[![All Tests Status](https://github.com/DLR-AMR/T8code.jl/actions/workflows/test.yml/badge.svg)](https://github.com/DLR-AMR/T8code.jl/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
+
 
 [T8code.jl](https://github.com/DLR-AMR/T8code.jl) is a Julia package
 that wraps [`t8code`](https://github.com/DLR-AMR/t8code), a C/C++ library to manage

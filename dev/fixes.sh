@@ -25,6 +25,8 @@ sed -i "s/mpifile::Cint/mpifile::MPI_File/g" "${LIB_JL}"
 sed -i "s/mpidatatype::Cint/mpidatatype::MPI_Datatype/g" "${LIB_JL}"
 sed -i "s/\bt::Cint/t::MPI_Datatype/g" "${LIB_JL}"
 
+sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
+
 # Fix type of `sc_array` field `array`
 sed -i "s/array::Cstring/array::Ptr{Int8}/g" "${LIB_JL}"
 

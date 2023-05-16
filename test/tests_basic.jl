@@ -26,7 +26,10 @@ using T8code
 end
 
 @testset "general tests" begin
-  include("test_refcount.jl")
+  if !Sys.iswindows()
+    # These tests do not work in Windows since the DLL loader does not search for symbols beyond libt8.dll.
+    include("test_refcount.jl")
+  end
 end
 
 @testset "cmesh" begin

@@ -104,8 +104,11 @@ level = 3
 # Initialize MPI. This has to happen before we initialize sc or t8code.
 mpiret = MPI.Init()
 
+# We will use MPI_COMM_WORLD as a communicator.
+mpicom = MPI.COMM_WORLD.val
+
 # Initialize the sc library, has to happen before we initialize t8code.
-sc_init(sc_MPI_COMM_WORLD, 1, 1, C_NULL, SC_LP_ESSENTIAL)
+sc_init(mpicom, 1, 1, C_NULL, SC_LP_ESSENTIAL)
 # Initialize t8code with log level SC_LP_PRODUCTION. See sc.h for more info on the log levels.
 t8_init(SC_LP_PRODUCTION)
 
@@ -115,13 +118,11 @@ t8_global_productionf(" [step2] Hello, this is the step2 example of t8code.\n")
 t8_global_productionf(" [step2] In this example we build our first uniform forest and output it to vtu files.\n")
 t8_global_productionf(" [step2] \n")
 
-# We will use MPI_COMM_WORLD as a communicator.
-comm = MPI.COMM_WORLD
 # Create the cmesh from step1.
-cmesh = t8_step2_build_prismcube_coarse_mesh(comm)
+cmesh = t8_step2_build_prismcube_coarse_mesh(mpicom)
 
 # Build the uniform forest, it is automatically partitioned among the processes.
-forest = t8_step2_build_uniform_forest(comm, cmesh, level)
+forest = t8_step2_build_uniform_forest(mpicom, cmesh, level)
 # Get the local number of elements.
 local_num_elements = t8_forest_get_local_num_elements(forest)
 # Get the global number of elements.

@@ -58,7 +58,6 @@ prefix = "t8_step1_tetcube"
 
 # Initialize MPI. This has to happen before we initialize sc or t8code.
 mpiret = MPI.Init()
-
 mpicom = MPI.COMM_WORLD.val
 
 # Initialize the sc library, has to happen before we initialize t8code.

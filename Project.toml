@@ -17,3 +17,4 @@ t8code_jll = "4ee9bed8-4011-53f7-90c2-22363c2f500d"
 
 [compat]
 CEnum = "0.4"
+Clang = "0.17"

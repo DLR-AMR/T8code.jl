@@ -72,12 +72,12 @@ end
 
   @testset "test_msh_file_vers2_ascii" begin
 
-    fileprefix = "testfiles/test_msh_file_vers2_ascii"
+    fileprefix = "cmesh/testfiles/test_msh_file_vers2_ascii"
     filename = fileprefix * ".msh"
 
     @assert isfile(filename) "File not found: " * filename
 
-    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, MPI.COMM_WORLD, 2, 0, 0)
+    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
 
     @assert cmesh != C_NULL "Could not read cmesh from ascii version 2, but should be able to: " * filename
 
@@ -88,12 +88,12 @@ end
 
   @testset "test_msh_file_vers4_ascii" begin
 
-    fileprefix = "testfiles/test_msh_file_vers4_ascii"
+    fileprefix = "cmesh/testfiles/test_msh_file_vers4_ascii"
     filename = fileprefix * ".msh"
 
     @assert isfile(filename) "File not found: " * filename
 
-    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, MPI.COMM_WORLD, 2, 0, 0)
+    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
 
     @assert cmesh != C_NULL "Could not read cmesh from ascii version 4, but should be able to: " * filename
 
@@ -103,12 +103,12 @@ end
 
   @testset "test_msh_file_vers2_bin" begin
 
-    fileprefix = "testfiles/test_msh_file_vers2_bin"
+    fileprefix = "cmesh/testfiles/test_msh_file_vers2_bin"
     filename = fileprefix * ".msh"
 
     @assert isfile(filename) "File not found: " * filename
 
-    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, MPI.COMM_WORLD, 2, 0, 0)
+    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
 
     @assert cmesh == C_NULL "Expected fail of reading binary msh file v.2, but did not fail."
 
@@ -120,12 +120,12 @@ end
 
   @testset "test_msh_file_vers4_bin" begin
 
-    fileprefix = "testfiles/test_msh_file_vers4_bin"
+    fileprefix = "cmesh/testfiles/test_msh_file_vers4_bin"
     filename = fileprefix * ".msh"
 
     @assert isfile(filename) "File not found: " * filename
 
-    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, MPI.COMM_WORLD, 2, 0, 0)
+    cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
 
     @assert cmesh == C_NULL "Expected fail of reading binary msh file v.4, but did not fail."
 

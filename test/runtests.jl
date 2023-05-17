@@ -6,7 +6,6 @@ using T8code
 import MPIPreferences
 @info "Testing T8code.jl with" MPIPreferences.binary MPIPreferences.abi
 
-
 @time @testset "T8code.jl tests" begin
   # For some weird reason, the MPI tests must come first since they fail
   # otherwise with a custom MPI installation.
@@ -19,7 +18,7 @@ import MPIPreferences
     @info "Starting parallel tests"
 
     mpiexec() do cmd
-      run(`$cmd -n 2 $(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("tests_basic.jl"))`)
+      run(`$cmd -n 2 $(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("test_all.jl"))`)
     end
 
     @info "Finished parallel tests"
@@ -28,7 +27,7 @@ import MPIPreferences
   @time @testset "serial" begin
     @info "Starting serial tests"
 
-    include("tests_basic.jl")
+    include("test_all.jl")
 
     @info "Finished serial tests"
   end

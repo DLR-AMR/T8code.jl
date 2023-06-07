@@ -1,5 +1,7 @@
 module T8code
 
+using P4est
+
 using Reexport: @reexport
 
 # We need to load the preference setting from here and not from `LibP4est.jl`
@@ -14,6 +16,7 @@ include("Libt8.jl")
 
 export @t8_adapt_callback
 export @T8_ASSERT
+export t8_free
 
 export t8_quad_root_len
 export t8_quad_len
@@ -48,6 +51,10 @@ const t8_hex_root_len = 1 << T8_HEX_MAXLEVEL
 
 macro T8_ASSERT(q)
   :( $(esc(q)) ? nothing : throw(AssertionError($(string(q)))) )
+end
+
+function t8_free(ptr)
+  sc_free(t8_get_package_id(), ptr)
 end
 
 # typedef int         (*t8_forest_adapt_t) (t8_forest_t forest,

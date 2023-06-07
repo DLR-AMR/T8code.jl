@@ -86,7 +86,7 @@ function t8_step5_create_element_data(forest)
 
   # Get the number of local elements of forest.
   num_local_elements = t8_forest_get_local_num_elements(forest)
-  # Get the number of ghost elements of forest. */
+  # Get the number of ghost elements of forest.
   num_ghost_elements = t8_forest_get_num_ghosts(forest)
 
   # Now we need to build an array of our data that is as long as the number
@@ -179,6 +179,11 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
   # This array has one entry per local element. */
   element_volumes = Vector{Cdouble}(undef, num_elements)
 
+  # Copy the elment's volumes from our data array to the output array.
+  for ielem = 1:num_elements
+    element_volumes[ielem] = element_data[ielem].volume
+  end
+
   # The number of user defined data fields to write.
   num_data = 1
   # For each user defined data field we need one t8_vtk_data_field_t variable.
@@ -187,11 +192,6 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     NTuple{8192, Cchar}(rpad("Element volume\0", 8192, ' ')), # The name of the field as should be written to the file.
     pointer(element_volumes), # Pointer to the data.
   )
-
-  # Copy the elment's volumes from our data array to the output array.
-  for ielem = 1:num_elements
-    element_volumes[ielem] = element_data[ielem].volume
-  end
 
   # To write user defined data, we need to extended output function
   # t8_forest_vtk_write_file from t8_forest_vtk.h. Despite writin user data,

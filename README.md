@@ -46,10 +46,58 @@ pre-generated Julia bindings to all exported C interface functions of the underl
 generate new bindings, please follow the instructions in the `dev` folder and
 copy the generated files to the appropriate places in `src`.
 
-## Open Issues
+### Using a custom version of MPI and/or `t8code`
 
-  - No support for custom version of MPI and/or p4est and t8code yet.
-  - No support for Windows platform yet.
+[`t8code`](https://github.com/DLR-AMR/t8code) needs to be compiled against the
+same MPI implementation used by
+[MPI.jl](https://github.com/JuliaParallel/MPI.jl). Thus, if you want to
+configure [MPI.jl](https://github.com/JuliaParallel/MPI.jl) to not use the
+default MPI binary provided by JLL wrappers, you also need to build
+[`t8code`](https://github.com/DLR-AMR/t8code) locally using the same MPI
+implementation. This is typically the situation on HPC clusters. If you are
+just using a single workstation, the default installation instructions should
+be sufficient.
+
+[T8code.jl](https://github.com/DLR-AMR/T8code.jl) allows using a
+[`t8code`](https://github.com/DLR-AMR/t8code) binary different from the default
+one provided by T8code\_jll.jl.
+To enable this, you first need to obtain a local binary installation of
+[`t8code`](https://github.com/DLR-AMR/t8code). Next, you need to configure
+[MPI.jl](https://github.com/JuliaParallel/MPI.jl) to use the same MPI
+implementation used to build your local installation of
+[`t8code`](https://github.com/DLR-AMR/t8code), see
+[the documentation of MPI.jl](https://juliaparallel.org/MPI.jl/stable/configuration/).
+At the time of writing, this can be done via
+
+```julia
+julia> using MPIPreferences
+
+julia> MPIPreferences.use_system_binary()
+```
+
+if you use the default system MPI binary installation to build
+[`t8code`](https://github.com/DLR-AMR/t8code).
+
+Next, you need to set up the
+[Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl)
+setting containing the path to your local build of the shared library of
+[`t8code`](https://github.com/DLR-AMR/t8code).
+
+```julia
+julia> using Preferences, UUIDs
+
+julia> set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libt8" => "/path/to/your/libt8.so", force = true)
+```
+
+One has to repeat the same procedure for [P4est.jl](https://github.com/trixi-framework/P4est.jl)
+as described in [Using a custom version of MPI and/or p4est](https://github.com/trixi-framework/P4est.jl#using-a-custom-version-of-mpi-andor-p4est).
+
+Note that you should restart your Julia session after changing the preferences.
+
+Currently, custom builds of [`t8code`](https://github.com/DLR-AMR/t8code)
+without MPI support are not supported.
 
 ## Authors
 

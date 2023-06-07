@@ -260,9 +260,9 @@ function t8_step6_compute_stencil(forest, element_data)
         end
 
         # Free allocated memory.
-        t8_free(neighbors_ref[])
-        t8_free(dual_faces_ref[])
-        t8_free(neighids_ref[])
+        sc_free(t8_get_package_id(), neighbors_ref[])
+        sc_free(t8_get_package_id(), dual_faces_ref[])
+        sc_free(t8_get_package_id(), neighids_ref[])
       end
 
       # Prepare finite difference computations. The code also accounts for non-conforming interfaces.
@@ -411,4 +411,4 @@ t8_global_productionf(" Wrote forest and data to %s*.\n", prefix_forest_with_dat
 t8_forest_unref(Ref(forest))
 t8_global_productionf(" Destroyed forest.\n")
 
-sc_finalize()
+# sc_finalize()

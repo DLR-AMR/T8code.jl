@@ -99,6 +99,10 @@ Note that you should restart your Julia session after changing the preferences.
 Currently, custom builds of [`t8code`](https://github.com/DLR-AMR/t8code)
 without MPI support are not supported.
 
+## Issues
+
+MPI parallelization segfaults.
+
 ## Authors
 
 T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de) (German

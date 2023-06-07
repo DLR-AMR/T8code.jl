@@ -11,7 +11,7 @@ using T8code
 mpiret = MPI.Init()
 
 # Initialize the sc library, has to happen before we initialize t8code.
-sc_init(MPI.COMM_WORLD.val, 1, 1, C_NULL, SC_LP_ESSENTIAL)
+sc_init(MPI.COMM_WORLD, 1, 1, C_NULL, SC_LP_ESSENTIAL)
 
 # Initialize t8code with log level SC_LP_PRODUCTION. See sc.h for more info on the log levels.
 t8_init(SC_LP_PRODUCTION)

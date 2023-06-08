@@ -73,3 +73,15 @@ sed -i "/P4EST_F90_LOCIDX/d" "${LIB_JL}"
 sed -i "/P4EST_F90_GLOIDX/d" "${LIB_JL}"
 
 sed -i "/MPI_ERR_GROUP/d" "${LIB_JL}"
+
+sed -i "/SC_VERSION_POINT/d" "${LIB_JL}"
+
+sed -i "/= MPI_MODE_/d" "${LIB_JL}"
+sed -i "/= MPI_SEEK_/d" "${LIB_JL}"
+sed -i "/= MPI_ERR_/d" "${LIB_JL}"
+sed -i "/= MPI_MAX_/d" "${LIB_JL}"
+sed -i "/= MPI_Type_/d" "${LIB_JL}"
+sed -i "/= MPI_Offset/d" "${LIB_JL}"
+sed -i "/= MPI_File_/d" "${LIB_JL}"
+
+sed -i "s/= MPI_/= MPI./" "${LIB_JL}"

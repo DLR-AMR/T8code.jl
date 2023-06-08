@@ -2,8 +2,11 @@ module TestAll
 
 using Test
 using MPI: MPI
-using P4est
+
 using T8code
+using T8code.Libt8: SC_LP_DEFAULT
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
 
 MPI.Init()
 

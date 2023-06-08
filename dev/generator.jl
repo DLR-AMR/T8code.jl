@@ -36,7 +36,7 @@ push!(args, "-I$include_dir")
 # push!(args, "-include math.h")
 # push!(args, "-D__GLIBC_USE\\(...\\)=0")
 
-push!(args, "-D__MATHDECL_VEC(type, function,suffix, args) __SIMD_DECL (__MATH_PRECNAME (function, suffix)) __MATHDECL(type, function,suffix, args)")
+# push!(args, "-D__MATHDECL_VEC(type, function,suffix, args) __SIMD_DECL (__MATH_PRECNAME (function, suffix)) __MATHDECL(type, function,suffix, args)")
 
 headers_rel = [
   # "/usr/include/math.h"

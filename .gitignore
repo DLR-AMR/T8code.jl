@@ -1,4 +1,4 @@
 **/Manifest.toml
 dev/t8code_include
-dev/p4est_include
+dev/Libt8.jl
 Localpreferences.toml

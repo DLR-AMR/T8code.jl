@@ -27,8 +27,11 @@
 #     Do not refine an element if it has reached the maximum level. (Hint: ts->t8_element_level)
 
 using MPI
-using P4est
 using T8code
+using T8code.Libt8: sc_init
+using T8code.Libt8: sc_finalize
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
 
 include("t8_step3_common.jl")
 

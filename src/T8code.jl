@@ -1,7 +1,5 @@
 module T8code
 
-using P4est
-
 using Reexport: @reexport
 
 # We need to load the preference setting from here and not from `LibP4est.jl`

@@ -40,14 +40,19 @@
 #     data into the output file.
 
 using MPI
-using P4est
 using T8code
+using T8code.Libt8: sc_init
+using T8code.Libt8: sc_finalize
+using T8code.Libt8: sc_array_new_data
+using T8code.Libt8: sc_array_destroy
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
 
 include("t8_step3_common.jl")
 
 # The data that we want to store for each element.
 # In this example we want to store the element's level and volume. */
-mutable struct t8_step5_data_per_element_t
+struct t8_step5_data_per_element_t
   level   :: Cint
   volume  :: Cdouble
 end
@@ -89,44 +94,42 @@ function t8_step5_create_element_data(forest)
   # Get the number of ghost elements of forest.
   num_ghost_elements = t8_forest_get_num_ghosts(forest)
 
-  # Now we need to build an array of our data that is as long as the number
-  # of elements plus the number of ghosts. You can use any allocator such as
-  # new, malloc or the t8code provide allocation macro T8_ALLOC. 
-  # Note that in the latter case you need
-  # to use T8_FREE in order to free the memory.
-  # element_data = T8_ALLOC(struct t8_step5_data_per_element, num_local_elements + num_ghost_elements)
-  element_data = [t8_step5_data_per_element_t(0,0.0) for i = 1:num_local_elements + num_ghost_elements]
+  # Now we need to build an array of our data that is as long as the number of
+  # elements plus the number of ghosts. You can use any allocator such as new,
+  # malloc or the t8code provide allocation macro T8_ALLOC.  Note that in the
+  # latter case you need to use T8_FREE in order to free the memory.
+  element_data = Array{t8_step5_data_per_element_t}(undef, num_local_elements + num_ghost_elements)
 
   # Note: We will later need to associate this data with an sc_array in order to exchange the values for
   #       the ghost elements, which we can do with sc_array_new_data (see t8_step5_exchange_ghost_data).
   #       We could also have directly allocated the data here in an sc_array with
   #       sc_array_new_count (sizeof (struct data_per_element), num_local_elements + num_ghost_elements)
 
-  # Let us now fill the data with something.
-  # For this, we iterate through all trees and for each tree through all its elements, calling
+  # Let us now fill the data with something.  For this, we iterate through all
+  # trees and for each tree through all its elements, calling
   # t8_forest_get_element_in_tree to get a pointer to the current element.
-  # This is the recommended and most performant way.
-  # An alternative is to iterate over the number of local elements and use
-  # t8_forest_get_element. However, this function needs to perform a binary search
-  # for the element and the tree it is in, while t8_forest_get_element_in_tree has a
-  # constant look up time. You should only use t8_forest_get_element if you do not know
-  # in which tree an element is.
+  # This is the recommended and most performant way.  An alternative is to
+  # iterate over the number of local elements and use t8_forest_get_element.
+  # However, this function needs to perform a binary search for the element and
+  # the tree it is in, while t8_forest_get_element_in_tree has a constant look
+  # up time. You should only use t8_forest_get_element if you do not know in
+  # which tree an element is.
 
   # Get the number of trees that have elements of this process.
   num_local_trees = t8_forest_get_num_local_trees(forest)
 
   current_index = 0
   for itree = 0:num_local_trees-1
-    # This loop iterates through all local trees in the forest. */
+    # This loop iterates through all local trees in the forest.
     # Each tree may have a different element class (quad/tri/hex/tet etc.) and therefore
     # also a different way to interpret its elements. In order to be able to handle elements
-    # of a tree, we need to get its eclass_scheme, and in order to so we first get its eclass. */
+    # of a tree, we need to get its eclass_scheme, and in order to so we first get its eclass.
     tree_class = t8_forest_get_tree_class(forest, itree)
     eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
 
     # Get the number of elements of this tree.
     num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
-    # This loop iterates through all the local elements of the forest in the current tree. */
+    # This loop iterates through all the local elements of the forest in the current tree.
     for ielement = 0:num_elements_in_tree-1
       current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.
 
@@ -135,11 +138,13 @@ function t8_step5_create_element_data(forest)
       # compute the data based on the element in question, we need to get a
       # pointer to this element.
       element = t8_forest_get_element_in_tree(forest, itree, ielement)
-      # We want to store the elements level and its volume as data. We compute these
-      # via the eclass_scheme and the forest_element interface. */
 
-      element_data[current_index].level = t8_element_level(eclass_scheme, element)
-      element_data[current_index].volume = t8_forest_element_volume(forest, itree, element)
+      # We want to store the elements level and its volume as data. We compute these
+      # via the eclass_scheme and the forest_element interface.
+      level = t8_element_level(eclass_scheme, element)
+      volume = t8_forest_element_volume(forest, itree, element)
+
+      element_data[current_index] = t8_step5_data_per_element_t(level,volume)
     end
   end
 
@@ -152,12 +157,9 @@ end
 # entries of our element data array with the value on the process that owns the
 # corresponding element. */
 function t8_step5_exchange_ghost_data(forest, element_data)
-  num_elements = t8_forest_get_local_num_elements(forest)
-  num_ghosts = t8_forest_get_num_ghosts(forest)
-
   # t8_forest_ghost_exchange_data expects an sc_array (of length num_local_elements + num_ghosts).
   # We wrap our data array to an sc_array.
-  sc_array_wrapper = sc_array_new_data(pointer(element_data), sizeof(t8_step5_data_per_element_t), num_elements + num_ghosts)
+  sc_array_wrapper = sc_array_new_data(pointer(element_data), sizeof(t8_step5_data_per_element_t), length(element_data))
 
   # Carry out the data exchange. The entries with indices > num_local_elements will get overwritten.
   t8_forest_ghost_exchange_data(forest, sc_array_wrapper)

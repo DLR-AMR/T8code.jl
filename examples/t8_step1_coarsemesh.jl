@@ -13,8 +13,11 @@
 #    from t8_cmesh.h to create a different cmesh.
 
 using MPI
-using P4est
 using T8code
+using T8code.Libt8: sc_init
+using T8code.Libt8: sc_finalize
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
 
 #  Builds cmesh of 6 tetrahedra that build up a unit cube.
 #  \param [in] comm   MPI Communicator to use.

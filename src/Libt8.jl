@@ -237,6 +237,35 @@ function sc_int64_compare(v1, v2)
     @ccall libt8.sc_int64_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
+"""
+    sc_tag_t
+
+Enumerate all MPI tags used internally to the sc library.
+
+| Enumerator                        | Note                               |
+| :-------------------------------- | :--------------------------------- |
+| SC\\_TAG\\_FIRST                  | Anything really.                   |
+| SC\\_TAG\\_AG\\_ALLTOALL          | Used in MPI alltoall replacement.  |
+| SC\\_TAG\\_AG\\_RECURSIVE\\_A     | Internal tag; do not use.          |
+| SC\\_TAG\\_AG\\_RECURSIVE\\_B     |                                    |
+| SC\\_TAG\\_AG\\_RECURSIVE\\_C     |                                    |
+| SC\\_TAG\\_NOTIFY\\_CENSUS        | Internal tag to sc_notify.         |
+| SC\\_TAG\\_NOTIFY\\_CENSUSV       |                                    |
+| SC\\_TAG\\_NOTIFY\\_NBX           |                                    |
+| SC\\_TAG\\_NOTIFY\\_NBXV          |                                    |
+| SC\\_TAG\\_NOTIFY\\_WRAPPER       |                                    |
+| SC\\_TAG\\_NOTIFY\\_WRAPPERV      |                                    |
+| SC\\_TAG\\_NOTIFY\\_RANGES        |                                    |
+| SC\\_TAG\\_NOTIFY\\_PAYLOAD       |                                    |
+| SC\\_TAG\\_NOTIFY\\_SUPER\\_TRUE  |                                    |
+| SC\\_TAG\\_NOTIFY\\_SUPER\\_EXTRA |                                    |
+| SC\\_TAG\\_NOTIFY\\_RECURSIVE     |                                    |
+| SC\\_TAG\\_NOTIFY\\_NARY          |                                    |
+| SC\\_TAG\\_REDUCE                 | Used in MPI reduce replacement.    |
+| SC\\_TAG\\_PSORT\\_LO             | Internal tag to sc_psort.          |
+| SC\\_TAG\\_PSORT\\_HI             |                                    |
+| SC\\_TAG\\_LAST                   | End marker of tag enumeration.     |
+"""
 @cenum sc_tag_t::UInt32 begin
     SC_TAG_FIRST = 214
     SC_TAG_AG_ALLTOALL = 214
@@ -259,6 +288,57 @@ end
     SC_TAG_PSORT_LO = 293
     SC_TAG_PSORT_HI = 294
     SC_TAG_LAST = 295
+end
+
+"""
+    sc_MPI_Testall(arg1, arg2, arg3, arg4)
+
+### Prototype
+```c
+int sc_MPI_Testall (int, sc_MPI_Request *, int *, sc_MPI_Status *);
+```
+"""
+function sc_MPI_Testall(arg1, arg2, arg3, arg4)
+    @ccall libt8.sc_MPI_Testall(arg1::Cint, arg2::Ptr{Cint}, arg3::Ptr{Cint}, arg4::Ptr{Cint})::Cint
+end
+
+"""
+    sc_MPI_Error_class(errorcode, errorclass)
+
+Turn an MPI error code into its error class. When MPI is enabled, we pass version 1.1 errors to MPI\\_Error\\_class. When MPI I/O is not enabled, we process file errors outside of MPI. Thus, within libsc, it is always legal to call this function with any errorcode defined above in this header file.
+
+### Parameters
+* `errorcode`:\\[in\\] Returned from a direct MPI call or libsc.
+* `errorclass`:\\[out\\] Non-NULL pointer. Filled with matching error class on success.
+### Returns
+[`sc_MPI_SUCCESS`](@ref) on successful conversion, Other MPI error code otherwise.
+### Prototype
+```c
+int sc_MPI_Error_class (int errorcode, int *errorclass);
+```
+"""
+function sc_MPI_Error_class(errorcode, errorclass)
+    @ccall libt8.sc_MPI_Error_class(errorcode::Cint, errorclass::Ptr{Cint})::Cint
+end
+
+"""
+    sc_MPI_Error_string(errorcode, string, resultlen)
+
+Turn MPI error code into a string.
+
+### Parameters
+* `errorcode`:\\[in\\] This (MPI) error code is converted.
+* `string`:\\[in,out\\] At least [`sc_MPI_MAX_ERROR_STRING`](@ref) bytes.
+* `resultlen`:\\[out\\] Length of string on return.
+### Returns
+[`sc_MPI_SUCCESS`](@ref) on success or other MPI error cocde on invalid arguments.
+### Prototype
+```c
+int sc_MPI_Error_string (int errorcode, char *string, int *resultlen);
+```
+"""
+function sc_MPI_Error_string(errorcode, string, resultlen)
+    @ccall libt8.sc_MPI_Error_string(errorcode::Cint, string::Cstring, resultlen::Ptr{Cint})::Cint
 end
 
 """
@@ -328,6 +408,7 @@ const sc_handler_t = Ptr{Cvoid}
 const sc_log_handler_t = Ptr{Cvoid}
 
 # typedef void ( * sc_abort_handler_t ) ( void )
+"""Type of the abort handler function."""
 const sc_abort_handler_t = Ptr{Cvoid}
 
 """
@@ -453,7 +534,7 @@ function sc_atol(nptr)
 end
 
 """
-    sc_set_log_defaults(log_stream, log_handler, log_thresold)
+    sc_set_log_defaults(log_stream, log_handler, log_threshold)
 
 Controls the default SC log behavior.
 
@@ -463,20 +544,20 @@ Controls the default SC log behavior.
 * `log_threshold`:\\[in\\] Set default SC log threshold (or `SC_LP_DEFAULT`). May be `SC_LP_ALWAYS` or `SC_LP_SILENT`.
 ### Prototype
 ```c
-void sc_set_log_defaults (FILE * log_stream, sc_log_handler_t log_handler, int log_thresold);
+void sc_set_log_defaults (FILE * log_stream, sc_log_handler_t log_handler, int log_threshold);
 ```
 """
-function sc_set_log_defaults(log_stream, log_handler, log_thresold)
-    @ccall libt8.sc_set_log_defaults(log_stream::Ptr{Libc.FILE}, log_handler::sc_log_handler_t, log_thresold::Cint)::Cvoid
+function sc_set_log_defaults(log_stream, log_handler, log_threshold)
+    @ccall libt8.sc_set_log_defaults(log_stream::Ptr{Libc.FILE}, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
     sc_set_abort_handler(abort_handler)
 
-Controls the default SC abort behavior.
+Set the default SC abort behavior.
 
 ### Parameters
-* `abort_handler`:\\[in\\] Set default SC above handler (NULL selects builtin). ***This function should not return!***
+* `abort_handler`:\\[in\\] Set default SC above handler (NULL selects builtin). If it returns, we abort (2) then.
 ### Prototype
 ```c
 void sc_set_abort_handler (sc_abort_handler_t abort_handler);
@@ -763,7 +844,7 @@ end
 Provide a string copy function.
 
 ### Parameters
-* `dest`:\\[out\\] Buffer of length at least *size*. On output, not touched if NULL or *size* == 0.
+* `dest`:\\[out\\] Buffer of length at least *size*. On output, not touched if NULL or *size* == 0. Otherwise, *src* is copied to *dest* and *dest* is padded with '\\0' from the right if strlen (src) < size - 1.
 * `size`:\\[in\\] Allocation length of *dest*.
 * `src`:\\[in\\] Null-terminated string.
 ### Returns
@@ -828,6 +909,22 @@ int sc_version_minor (void);
 """
 function sc_version_minor()
     @ccall libt8.sc_version_minor()::Cint
+end
+
+"""
+    sc_have_json()
+
+Return whether we have found a JSON library at configure time.
+
+### Returns
+True if and only if SC\\_HAVE\\_JSON is defined.
+### Prototype
+```c
+int sc_have_json (void);
+```
+"""
+function sc_have_json()
+    @ccall libt8.sc_have_json()::Cint
 end
 
 # typedef unsigned int ( * sc_hash_function_t ) ( const void * v , const void * u )
@@ -1040,6 +1137,25 @@ void sc_array_init_view (sc_array_t * view, sc_array_t * array, size_t offset, s
 """
 function sc_array_init_view(view, array, offset, length)
     @ccall libt8.sc_array_init_view(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
+end
+
+"""
+    sc_array_init_reshape(view, array, elem_size, elem_count)
+
+Initialize an already allocated (or static) view from existing [`sc_array_t`](@ref). The total data size of the view is the same, but size and count may differ. The array view returned does not require [`sc_array_reset`](@ref) (doesn't hurt though).
+
+### Parameters
+* `view`:\\[in,out\\] Array structure to be initialized.
+* `array`:\\[in\\] The array must not be resized while view is alive.
+* `elem_size`:\\[in\\] Size of one array element of the view in bytes. The product of size and count of *array* must be the same as *elem_size* * *elem_count*.
+* `elem_count`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length. It is not necessary to call [`sc_array_reset`](@ref) later.
+### Prototype
+```c
+void sc_array_init_reshape (sc_array_t * view, sc_array_t * array, size_t elem_size, size_t elem_count);
+```
+"""
+function sc_array_init_reshape(view, array, elem_size, elem_count)
+    @ccall libt8.sc_array_init_reshape(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1596,7 +1712,7 @@ end
 Free all memory in a stamp structure and all items previously returned.
 
 ### Parameters
-* `Properly`:\\[in,out\\] initialized stamp container. On output, the structure is undefined.
+* `mst`:\\[in,out\\] Properly initialized stamp container. On output, the structure is undefined.
 ### Prototype
 ```c
 void sc_mstamp_reset (sc_mstamp_t * mst);
@@ -1612,7 +1728,7 @@ end
 Free all memory in a stamp structure and initialize it anew. Equivalent to calling sc_mstamp_reset followed by sc_mstamp_init with the same stamp\\_unit and elem\\_size.
 
 ### Parameters
-* `Properly`:\\[in,out\\] initialized stamp container. On output, its elements have been freed and it is ready for further use.
+* `mst`:\\[in,out\\] Properly initialized stamp container. On output, its elements have been freed and it is ready for further use.
 ### Prototype
 ```c
 void sc_mstamp_truncate (sc_mstamp_t * mst);
@@ -1628,9 +1744,9 @@ end
 Return a new item. The memory returned will stay legal until container is destroyed or truncated.
 
 ### Parameters
-* `Properly`:\\[in,out\\] initialized stamp container.
+* `mst`:\\[in,out\\] Properly initialized stamp container.
 ### Returns
-Pointer to an item ready to use. Legal until sc_stamp_destroy or sc_stamp_truncate is called on mst.
+Pointer to an item ready to use. Legal until sc_mstamp_reset or sc_mstamp_truncate is called on mst.
 ### Prototype
 ```c
 void *sc_mstamp_alloc (sc_mstamp_t * mst);
@@ -1646,7 +1762,7 @@ end
 Return memory size in bytes of all data allocated in the container.
 
 ### Parameters
-* `Properly`:\\[in\\] initialized stamp container.
+* `mst`:\\[in\\] Properly initialized stamp container.
 ### Returns
 Total container memory size in bytes.
 ### Prototype
@@ -1688,7 +1804,7 @@ const sc_mempool_t = sc_mempool
 Calculate the memory used by a memory pool.
 
 ### Parameters
-* `array`:\\[in\\] The memory pool.
+* `mempool`:\\[in\\] The memory pool.
 ### Returns
 Memory used in bytes.
 ### Prototype
@@ -2818,7 +2934,7 @@ end
 """
     sc_shmem_type_t
 
-sc\\_shmem.h
+` sc_shmem.h `
 
 | Enumerator                    | Note                                         |
 | :---------------------------- | :------------------------------------------- |
@@ -4601,6 +4717,7 @@ struct sc_stats
     sarray::Ptr{sc_array_t}
 end
 
+"""The statistics container allows dynamically adding random variables."""
 const sc_statistics_t = sc_stats
 
 """
@@ -4787,7 +4904,7 @@ mutable struct sc_keyvalue end
 
 """The key-value container is an opaque structure."""
 
-# no prototype is found for this function at sc_keyvalue.h:53:21, please use with caution
+# no prototype is found for this function at sc_keyvalue.h:52:21, please use with caution
 """
     sc_keyvalue_new()
 
@@ -5038,6 +5155,24 @@ Iterate through all stored key-value pairs.
 function sc_keyvalue_foreach(kv, fn, user_data)
 end
 
+"""
+    sc_statinfo
+
+Store information of one random variable.
+
+| Field            | Note                                     |
+| :--------------- | :--------------------------------------- |
+| dirty            | Only update stats if this is true.       |
+| count            | Inout; global count is 52 bit accurate.  |
+| sum\\_values     | Inout; global sum of values.             |
+| sum\\_squares    | Inout; global sum of squares.            |
+| min              | Inout; minimum over values.              |
+| max              | Inout; maximum over values.              |
+| variable         | Name of the variable for output.         |
+| variable\\_owned | NULL or deep copy of variable.           |
+| group            | Grouping identifier.                     |
+| prio             | Priority identifier.                     |
+"""
 struct sc_statinfo
     dirty::Cint
     count::Clong
@@ -5058,6 +5193,7 @@ struct sc_statinfo
     prio::Cint
 end
 
+"""Store information of one random variable."""
 const sc_statinfo_t = sc_statinfo
 
 """
@@ -5271,6 +5407,10 @@ end
 """
     sc_statistics_destroy(stats)
 
+Destroy a statistics structure.
+
+### Parameters
+* `stats`:\\[in,out\\] Valid object is invalidated.
 ### Prototype
 ```c
 void sc_statistics_destroy (sc_statistics_t * stats);
@@ -5341,16 +5481,16 @@ mutable struct sc_options end
 """The options data structure is opaque."""
 const sc_options_t = sc_options
 
-# typedef int ( * sc_options_callback_t ) ( sc_options_t * opt , const char * optarg , void * data )
+# typedef int ( * sc_options_callback_t ) ( sc_options_t * opt , const char * opt_arg , void * data )
 """
-This callback can be invoked during [`sc_options_parse`](@ref).
+This callback can be invoked with sc_options_parse.
 
 ### Parameters
-* `opt`:\\[in\\] Valid options data structure. This is passed in case a file should be loaded.
-* `optarg`:\\[in\\] The option argument or NULL if there is none.
+* `opt`:\\[in\\] Valid options data structure. This is passed as a matter of principle.
+* `opt_arg`:\\[in\\] The option argument or NULL if there is none. This variable is internal. Do not store pointer.
 * `data`:\\[in\\] User-defined data passed to [`sc_options_add_callback`](@ref).
 ### Returns
-Return 0 if successful, -1 on error.
+Return 0 if successful, -1 to indicate a parse error.
 """
 const sc_options_callback_t = Ptr{Cvoid}
 
@@ -5377,7 +5517,7 @@ end
 
 Destroy the options structure and all allocated structures contained. The keyvalue structure passed into sc\\_keyvalue\\_add is destroyed.
 
-\\deprecated This function may go away soon.
+\\deprecated This function is kept for backwards compatibility. It is best to destroy any key-value container outside of the lifetime of the options object.
 
 ### Parameters
 * `opt`:\\[in,out\\] This options structure is deallocated, including all key-value containers referenced.
@@ -5552,7 +5692,7 @@ end
 """
     sc_options_add_inifile(opt, opt_char, opt_name, help_string)
 
-Add an option to read in a file in .ini format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
+Add an option to read in a file in `.ini` format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
 
 ### Parameters
 * `opt`:\\[in,out\\] A valid options structure.
@@ -5569,15 +5709,36 @@ function sc_options_add_inifile(opt, opt_char, opt_name, help_string)
 end
 
 """
-    sc_options_add_callback(opt, opt_char, opt_name, has_arg, fn, data, help_string)
+    sc_options_add_jsonfile(opt, opt_char, opt_name, help_string)
 
-Add an option that calls a user-defined function when parsed. The callback function should be implemented to allow multiple calls. The option does not have an associated variable. The callback can be used to set multiple option variables in bulk that would otherwise require an inconvenient number of individual options. This is, however, currently not possible for options with string values or key-value pairs due to the way the API is set up. This function should not have non-option related side effects. This option is not loaded from or saved to files.
+Add an option to read in a file in JSON format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
+
+This functionality is only active when sc_have_json returns true, equivalent to the define SC\\_HAVE\\_JSON existing, and ignored otherwise.
 
 ### Parameters
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `has_arg`:\\[in\\] Specify if the option needs an option argument.
+* `help_string`:\\[in\\] Help string for usage message, may be NULL.
+### Prototype
+```c
+void sc_options_add_jsonfile (sc_options_t * opt, int opt_char, const char *opt_name, const char *help_string);
+```
+"""
+function sc_options_add_jsonfile(opt, opt_char, opt_name, help_string)
+    @ccall libt8.sc_options_add_jsonfile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
+end
+
+"""
+    sc_options_add_callback(opt, opt_char, opt_name, has_arg, fn, data, help_string)
+
+Add an option that calls a user-defined function when parsed. The callback function should be implemented to allow multiple calls. The callback may be used to set multiple option variables in bulk that would otherwise require an inconvenient number of individual options. This option is not loaded from or saved to files.
+
+### Parameters
+* `opt`:\\[in,out\\] A valid options structure.
+* `opt_char`:\\[in\\] Short option character, may be '\\0'.
+* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
+* `has_arg`:\\[in\\] Specify whether the option needs an option argument. This can be 0 for none, 1 for a required argument, and 2 for an optional argument; see getopt\\_long (3).
 * `fn`:\\[in\\] Function to call when this option is encountered.
 * `data`:\\[in\\] User-defined data passed to the callback.
 * `help_string`:\\[in\\] Help string for usage message, may be NULL.
@@ -5613,7 +5774,7 @@ end
 """
     sc_options_add_suboptions(opt, subopt, prefix)
 
-Copy one set of options to another as a subset, with a prefix.
+Copy one set of options to another as a subset, with a prefix. The variables referenced by the options and the suboptions are the same.
 
 ### Parameters
 * `opt`:\\[in,out\\] A set of options.
@@ -5635,9 +5796,9 @@ Print a usage message. This function uses the `SC_LC_GLOBAL` log category. That 
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
-* `log_priority`:\\[in\\] Log priority for output according to sc.h.
+* `log_priority`:\\[in\\] Priority for output according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
-* `arg_usage`:\\[in\\] If not NULL, an <ARGUMENTS> string is appended to the usage line. If the string is non-empty, it will be printed after the option summary and an "ARGUMENTS:" title line. Line breaks are identified by strtok(3) and honored.
+* `arg_usage`:\\[in\\] If not NULL, an <ARGUMENTS> string is appended to the usage line. If the string is non-empty, it will be printed after the option summary and an "ARGUMENTS:\\n" title line. Line breaks are identified by strtok(3) and honored.
 ### Prototype
 ```c
 void sc_options_print_usage (int package_id, int log_priority, sc_options_t * opt, const char *arg_usage);
@@ -5654,7 +5815,7 @@ Print a summary of all option values. Prints the title "Options:" and a line for
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
-* `log_priority`:\\[in\\] Log priority for output according to sc.h.
+* `log_priority`:\\[in\\] Priority for output according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 ### Prototype
 ```c
@@ -5666,34 +5827,78 @@ function sc_options_print_summary(package_id, log_priority, opt)
 end
 
 """
-    sc_options_load(package_id, err_priority, opt, inifile)
+    sc_options_load(package_id, err_priority, opt, file)
 
-Load a file in .ini format and updates entries found under [Options]. An option whose name contains a colon such as "prefix:basename" will be updated by a "basename =" entry in a [prefix] section.
+Load a file in the default format and update option values. The default is a file in the `.ini` format; see sc_options_load_ini.
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error log priority according to sc.h.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
-* `inifile`:\\[in\\] Filename of the ini file to load.
+* `file`:\\[in\\] Filename of the file to load.
 ### Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
-int sc_options_load (int package_id, int err_priority, sc_options_t * opt, const char *inifile);
+int sc_options_load (int package_id, int err_priority, sc_options_t * opt, const char *file);
 ```
 """
-function sc_options_load(package_id, err_priority, opt, inifile)
-    @ccall libt8.sc_options_load(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
+function sc_options_load(package_id, err_priority, opt, file)
+    @ccall libt8.sc_options_load(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, file::Cstring)::Cint
+end
+
+"""
+    sc_options_load_ini(package_id, err_priority, opt, inifile, re)
+
+Load a file in `.ini` format and update entries found under [Options]. An option whose name contains a colon such as "prefix:basename" will be updated by a "basename =" entry in a [prefix] section.
+
+### Parameters
+* `package_id`:\\[in\\] Registered package id or -1.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
+* `opt`:\\[in\\] The option structure.
+* `inifile`:\\[in\\] Filename of the ini file to load.
+* `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
+### Returns
+Returns 0 on success, -1 on failure.
+### Prototype
+```c
+int sc_options_load_ini (int package_id, int err_priority, sc_options_t * opt, const char *inifile, void *re);
+```
+"""
+function sc_options_load_ini(package_id, err_priority, opt, inifile, re)
+    @ccall libt8.sc_options_load_ini(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring, re::Ptr{Cvoid})::Cint
+end
+
+"""
+    sc_options_load_json(package_id, err_priority, opt, jsonfile, re)
+
+Load a file in JSON format and update entries from object "Options". An option whose name contains a colon such as "Prefix:basename" will be updated by a "basename :" entry in a "Prefix" nested object.
+
+### Parameters
+* `package_id`:\\[in\\] Registered package id or -1.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
+* `opt`:\\[in\\] The option structure.
+* `jsonfile`:\\[in\\] Filename of the JSON file to load.
+* `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
+### Returns
+Returns 0 on success, -1 on failure.
+### Prototype
+```c
+int sc_options_load_json (int package_id, int err_priority, sc_options_t * opt, const char *jsonfile, void *re);
+```
+"""
+function sc_options_load_json(package_id, err_priority, opt, jsonfile, re)
+    @ccall libt8.sc_options_load_json(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, jsonfile::Cstring, re::Ptr{Cvoid})::Cint
 end
 
 """
     sc_options_save(package_id, err_priority, opt, inifile)
 
-Save all options and arguments to a file in .ini format. This function must only be called after successful option parsing. This function should only be called on rank 0. This function will log errors with category `SC_LC_GLOBAL`. An options whose name contains a colon such as "prefix:basename" will be written in a section titled [prefix] as "basename =".
+Save all options and arguments to a file in `.ini` format. This function must only be called after successful option parsing. This function should only be called on rank 0. This function will log errors with category `SC_LC_GLOBAL`. An options whose name contains a colon such as "Prefix:basename" will be written in a section titled [Prefix] as "basename =".
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error log priority according to sc.h.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `inifile`:\\[in\\] Filename of the ini file to save.
 ### Returns
@@ -5708,13 +5913,34 @@ function sc_options_save(package_id, err_priority, opt, inifile)
 end
 
 """
+    sc_options_load_args(package_id, err_priority, opt, inifile)
+
+Load a file in `.ini` format and update entries found under [Arguments]. There needs to be a key Arguments.count specifying the number. Then as many integer keys starting with 0 need to be present.
+
+### Parameters
+* `package_id`:\\[in\\] Registered package id or -1.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
+* `opt`:\\[in\\] The args are stored in this option structure.
+* `inifile`:\\[in\\] Filename of the ini file to load.
+### Returns
+Returns 0 on success, -1 on failure.
+### Prototype
+```c
+int sc_options_load_args (int package_id, int err_priority, sc_options_t * opt, const char *inifile);
+```
+"""
+function sc_options_load_args(package_id, err_priority, opt, inifile)
+    @ccall libt8.sc_options_load_args(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
+end
+
+"""
     sc_options_parse(package_id, err_priority, opt, argc, argv)
 
 Parse command line options.
 
 ### Parameters
 * `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error log priority according to sc.h.
+* `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `argc`:\\[in\\] Length of argument list.
 * `argv`:\\[in,out\\] Argument list may be permuted.
@@ -5727,27 +5953,6 @@ int sc_options_parse (int package_id, int err_priority, sc_options_t * opt, int 
 """
 function sc_options_parse(package_id, err_priority, opt, argc, argv)
     @ccall libt8.sc_options_parse(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, argc::Cint, argv::Ptr{Cstring})::Cint
-end
-
-"""
-    sc_options_load_args(package_id, err_priority, opt, inifile)
-
-Load a file in .ini format and updates entries found under [Arguments]. There needs to be a key Arguments.count specifying the number. Then as many integer keys starting with 0 need to be present.
-
-### Parameters
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error log priority according to sc.h.
-* `opt`:\\[in\\] The args are stored in this option structure.
-* `inifile`:\\[in\\] Filename of the ini file to load.
-### Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_load_args (int package_id, int err_priority, sc_options_t * opt, const char *inifile);
-```
-"""
-function sc_options_load_args(package_id, err_priority, opt, inifile)
-    @ccall libt8.sc_options_load_args(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
 end
 
 """
@@ -8421,6 +8626,30 @@ function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_ex
     @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
 end
 
+"""
+    sc_io_read(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_io_read (sc_MPI_File mpifile, void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_io_read(mpifile, ptr, zcount, t, errmsg)
+    @ccall libt8.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+end
+
+"""
+    sc_io_write(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_io_write (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_io_write(mpifile, ptr, zcount, t, errmsg)
+    @ccall libt8.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+end
+
 """Typedef for quadrant coordinates."""
 const p4est_qcoord_t = Int32
 
@@ -8441,7 +8670,7 @@ Error values for io.
 | Enumerator              | Note                                                                         |
 | :---------------------- | :--------------------------------------------------------------------------- |
 | SC\\_IO\\_ERROR\\_NONE  | The value of zero means no error.                                            |
-| SC\\_IO\\_ERROR\\_FATAL | The io object is now disfunctional.                                          |
+| SC\\_IO\\_ERROR\\_FATAL | The io object is now dysfunctional.                                          |
 | SC\\_IO\\_ERROR\\_AGAIN | Another io operation may resolve it. The function just returned was a noop.  |
 """
 @cenum sc_io_error_t::Int32 begin
@@ -8532,9 +8761,26 @@ end
 
 const sc_io_source_t = sc_io_source
 
+"""
+    sc_io_open_mode_t
+
+Open modes for sc_io_open
+
+| Enumerator               | Note                                                                              |
+| :----------------------- | :-------------------------------------------------------------------------------- |
+| SC\\_IO\\_READ           | open a file in read-only mode                                                     |
+| SC\\_IO\\_WRITE\\_CREATE | open a file in write-only mode; if the file exists, the file will be overwritten  |
+| SC\\_IO\\_WRITE\\_APPEND | append to an already existing file                                                |
+"""
+@cenum sc_io_open_mode_t::UInt32 begin
+    SC_IO_READ = 0
+    SC_IO_WRITE_CREATE = 1
+    SC_IO_WRITE_APPEND = 2
+end
+
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_sink_new(iotype, mode, encode, va_list...)
-        :(@ccall(libt8.sc_io_sink_new(iotype::sc_io_type_t, mode::sc_io_mode_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
+@generated function sc_io_sink_new(iotype, iomode, ioencode, va_list...)
+        :(@ccall(libt8.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
     end
 
 """
@@ -8588,7 +8834,7 @@ Flush all buffered output data to sink. This function may return SC\\_IO\\_ERROR
 0 if completed, nonzero on error.
 ### Prototype
 ```c
-int sc_io_sink_complete (sc_io_sink_t * sink, size_t * bytes_in, size_t * bytes_out);
+int sc_io_sink_complete (sc_io_sink_t * sink, size_t *bytes_in, size_t *bytes_out);
 ```
 """
 function sc_io_sink_complete(sink, bytes_in, bytes_out)
@@ -8615,8 +8861,8 @@ function sc_io_sink_align(sink, bytes_align)
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_source_new(iotype, encode, va_list...)
-        :(@ccall(libt8.sc_io_source_new(iotype::sc_io_type_t, encode::sc_io_encode_t; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
+@generated function sc_io_source_new(iotype, ioencode, va_list...)
+        :(@ccall(libt8.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
     end
 
 """
@@ -8651,7 +8897,7 @@ Read data from a source. The internal counters source->bytes\\_in and source->by
 0 on success, nonzero on error.
 ### Prototype
 ```c
-int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
+int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, size_t *bytes_out);
 ```
 """
 function sc_io_source_read(source, data, bytes_avail, bytes_out)
@@ -8671,7 +8917,7 @@ Determine whether all data buffered from source has been returned by read. If it
 SC\\_IO\\_ERROR\\_AGAIN if buffered data remaining. Otherwise return ERROR\\_NONE and reset counters.
 ### Prototype
 ```c
-int sc_io_source_complete (sc_io_source_t * source, size_t * bytes_in, size_t * bytes_out);
+int sc_io_source_complete (sc_io_source_t * source, size_t *bytes_in, size_t *bytes_out);
 ```
 """
 function sc_io_source_complete(source, bytes_in, bytes_out)
@@ -8726,11 +8972,130 @@ Read data from the source's mirror. Same behaviour as [`sc_io_source_read`](@ref
 0 on success, nonzero on error.
 ### Prototype
 ```c
-int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_avail, size_t * bytes_out);
+int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_avail, size_t *bytes_out);
 ```
 """
 function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
     @ccall libt8.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+end
+
+"""
+    sc_io_have_zlib()
+
+Return a boolean indicating whether zlib has been configured.
+
+### Returns
+True if zlib has been found on running configure, or respectively on calling cmake.
+### Prototype
+```c
+int sc_io_have_zlib (void);
+```
+"""
+function sc_io_have_zlib()
+    @ccall libt8.sc_io_have_zlib()::Cint
+end
+
+"""
+    sc_io_encode(data, out)
+
+Encode a block of arbitrary data with the default sc\\_io format. The corresponding decoder function is sc_io_decode. This function cannot crash unless out of memory.
+
+Currently this function calls sc_io_encode_zlib with compression level Z\\_BEST\\_COMPRESSION (subject to change). Without zlib configured that function works uncompressed.
+
+The encoding method and input data size can be retrieved, optionally, from the encoded data by sc_io_decode_info. This function decodes the method as a character, which is 'z' for sc_io_encode_zlib. We reserve the characters A-C, d-z indefinitely.
+
+### Parameters
+* `data`:\\[in,out\\] If *out* is NULL, we work in place. In this case, the array must on input have an element size of 1 byte, which is preserved. After reading all data from this array, it assumes the identity of the *out* argument below. Otherwise, this is a read-only argument that may have arbitrary element size. On input, all data in the array is used.
+* `out`:\\[in,out\\] If not NULL, a valid array of element size 1. It must be resizable (not a view). We resize the array to the output data, which always includes a final terminating zero.
+### Prototype
+```c
+void sc_io_encode (sc_array_t *data, sc_array_t *out);
+```
+"""
+function sc_io_encode(data, out)
+    @ccall libt8.sc_io_encode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t})::Cvoid
+end
+
+"""
+    sc_io_encode_zlib(data, out, zlib_compression_level)
+
+Encode a block of arbitrary data, compressed, into an ASCII string. This is a two-stage process: zlib compress and then encode to base 64. The output is a NUL-terminated string of printable characters.
+
+We first compress the data into the zlib format (RFC 1950). The compressor must use no preset dictionary (this is the default). If zlib is detected on configuration, we compress with given level. If zlib is not detected, we write data equivalent to Z\\_NO\\_COMPRESSION. The status of zlib detection can be queried at compile time using #ifdef [`SC_HAVE_ZLIB`](@ref) or at run time using sc_io_have_zlib. Both approaches are readable by a standard zlib uncompress call.
+
+Secondly, we process the input data size as an 8-byte big-endian number, then the letter 'z', and then the zlib compressed data, concatenated, with a base 64 encoder. We break lines after 72 code characters. The line breaks are considered part of the output data format. The last line is terminated with a line break and then a NUL.
+
+This routine can work in place or write to an output array. The corresponding decoder function is sc_io_decode. This function cannot crash unless out of memory.
+
+### Parameters
+* `data`:\\[in,out\\] If *out* is NULL, we work in place. In this case, the array must on input have an element size of 1 byte, which is preserved. After reading all data from this array, it assumes the identity of the *out* argument below. Otherwise, this is a read-only argument that may have arbitrary element size. On input, all data in the array is used.
+* `out`:\\[in,out\\] If not NULL, a valid array of element size 1. It must be resizable (not a view). We resize the array to the output data, which always includes a final terminating zero.
+* `zlib_compression_level`:\\[in\\] Compression level between 0 (no compression) and 9 (best compression). The value -1 indicates some default level.
+### Prototype
+```c
+void sc_io_encode_zlib (sc_array_t *data, sc_array_t *out, int zlib_compression_level);
+```
+"""
+function sc_io_encode_zlib(data, out, zlib_compression_level)
+    @ccall libt8.sc_io_encode_zlib(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, zlib_compression_level::Cint)::Cvoid
+end
+
+"""
+    sc_io_decode_info(data, original_size, format_char, re)
+
+Decode length and format of original input from encoded data. We expect at least 12 bytes of the format produced by sc_io_encode. No matter how much data has been encoded by it, this much is available. We decode the original data size and the character indicating the format.
+
+This function does not require zlib. It works with any well-defined data.
+
+Note that this function is not required before sc_io_decode. Calling this function on any result produced by sc_io_encode will succeed and report a legal format. This function cannot crash.
+
+### Parameters
+* `data`:\\[in\\] This must be an array with element size 1. If it contains less than 12 code bytes we error out. It its first 12 bytes do not base 64 decode to 9 bytes we error out. We generally ignore the remaining data.
+* `original_size`:\\[out\\] If not NULL and we do not error out, set to the original size as encoded in the data.
+* `format_char`:\\[out\\] If not NULL and we do not error out, the ninth character of decoded data indicating the format.
+* `re`:\\[in,out\\] Provided for error reporting, presently must be NULL.
+### Returns
+0 on success, negative value on error.
+### Prototype
+```c
+int sc_io_decode_info (sc_array_t *data, size_t *original_size, char *format_char, void *re);
+```
+"""
+function sc_io_decode_info(data, original_size, format_char, re)
+    @ccall libt8.sc_io_decode_info(data::Ptr{sc_array_t}, original_size::Ptr{Csize_t}, format_char::Cstring, re::Ptr{Cvoid})::Cint
+end
+
+"""
+    sc_io_decode(data, out, max_original_size, re)
+
+Decode a block of base 64 encoded compressed data. The base 64 data must contain a line break after every 72 code characters and a final NUL character right after the last line. This function does not require zlib but benefits for speed.
+
+This is a two-stage process: we decode the input from base 64 first. Then we extract the 8-byte big-endian original data size, the character 'z', and execute a zlib decompression on the remaining decoded data. This function detects malformed input by erroring out.
+
+If we should add another format in the future, the format character may be something else than 'z', as permitted by our specification. To this end, we reserve the characters A-C and d-z indefinitely.
+
+Any error condition is indicated by a negative return value. Possible causes for error are:
+
+- the input data string is not NUL-terminated - the first 12 characters of input do not decode properly - the input data is corrupt for decoding or decompression - the output data array has non-unit element size and the length of the output data is not divisible by the size - the output data would exceed the specified threshold - the output array is a view of insufficient length
+
+We also error out if the data requires a compression dictionary, which would be a violation of above encode format specification.
+
+The corresponding encode function is sc_io_encode. When passing an array as output, we resize it properly. This function cannot crash unless out of memory.
+
+### Parameters
+* `data`:\\[in,out\\] If *out* is NULL, we work in place. In that case, output is written into this array after a suitable resize. Either way, we expect a NUL-terminated base 64 encoded string on input that has in turn been obtained by zlib compression. It must be in the exact format produced by sc_io_encode; please see documentation. The element size of the input array must be 1.
+* `out`:\\[in,out\\] If not NULL, a valid array (may be a view). If NULL, the input array becomes the output. If the output array is a view and the output data larger than its view size, we error out. We expect commensurable element and data size and resize the output to fit exactly, which restores the original input passed to encoding. An output view array of matching size may be constructed using sc_io_decode_info.
+* `max_original_size`:\\[in\\] If nonzero, this is the maximal data size that we will accept after uncompression. If exceeded, return a negative value.
+* `re`:\\[in,out\\] Provided for error reporting, presently must be NULL.
+### Returns
+0 on success, negative on malformed input data or insufficient output space.
+### Prototype
+```c
+int sc_io_decode (sc_array_t *data, sc_array_t *out, size_t max_original_size, void *re);
+```
+"""
+function sc_io_decode(data, out, max_original_size, re)
+    @ccall libt8.sc_io_decode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, max_original_size::Csize_t, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -8771,6 +9136,20 @@ int sc_vtk_write_compressed (FILE * vtkfile, char *numeric_data, size_t byte_len
 """
 function sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
     @ccall libt8.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+end
+
+"""
+    sc_fopen(filename, mode, errmsg)
+
+Wrapper for fopen(3). We provide an additional argument that contains the error message.
+
+### Prototype
+```c
+FILE *sc_fopen (const char *filename, const char *mode, const char *errmsg);
+```
+"""
+function sc_fopen(filename, mode, errmsg)
+    @ccall libt8.sc_fopen(filename::Cstring, mode::Cstring, errmsg::Cstring)::Ptr{Libc.FILE}
 end
 
 """
@@ -8838,27 +9217,99 @@ function sc_fflush_fsync_fclose(file)
 end
 
 """
-    sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
+    sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
 
 ### Prototype
 ```c
-void sc_mpi_read (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+int sc_io_open (sc_MPI_Comm mpicomm, const char *filename, sc_io_open_mode_t amode, sc_MPI_Info mpiinfo, sc_MPI_File * mpifile);
 ```
 """
-function sc_mpi_read(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_mpi_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+function sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
+    @ccall libt8.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
 end
 
 """
-    sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
+    sc_io_read_at(mpifile, offset, ptr, zcount, t, ocount)
 
 ### Prototype
 ```c
-void sc_mpi_write (MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
 ```
 """
-function sc_mpi_write(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_mpi_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+function sc_io_read_at(mpifile, offset, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_read_at_all(mpifile, offset, ptr, zcount, t, ocount)
+
+### Prototype
+```c
+int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
+```
+"""
+function sc_io_read_at_all(mpifile, offset, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_read_all(mpifile, ptr, zcount, t, ocount)
+
+### Prototype
+```c
+int sc_io_read_all (sc_MPI_File mpifile, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
+```
+"""
+function sc_io_read_all(mpifile, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_read_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_write_at(mpifile, offset, ptr, zcount, t, ocount)
+
+### Prototype
+```c
+int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
+```
+"""
+function sc_io_write_at(mpifile, offset, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_write_at_all(mpifile, offset, ptr, zcount, t, ocount)
+
+### Prototype
+```c
+int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
+```
+"""
+function sc_io_write_at_all(mpifile, offset, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_write_all(mpifile, ptr, zcount, t, ocount)
+
+### Prototype
+```c
+int sc_io_write_all (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
+```
+"""
+function sc_io_write_all(mpifile, ptr, zcount, t, ocount)
+    @ccall libt8.sc_io_write_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+end
+
+"""
+    sc_io_close(file)
+
+### Prototype
+```c
+int sc_io_close (sc_MPI_File * file);
+```
+"""
+function sc_io_close(file)
+    @ccall libt8.sc_io_close(file::Ptr{Cint})::Cint
 end
 
 """
@@ -8898,26 +9349,24 @@ end
 """Tags for MPI messages"""
 const p4est_comm_tag_t = p4est_comm_tag
 
-# no prototype is found for this function at p4est_base.h:325:1, please use with caution
 """
     p4est_log_indent_push()
 
 ### Prototype
 ```c
-static inline void p4est_log_indent_push ();
+static inline void p4est_log_indent_push (void);
 ```
 """
 function p4est_log_indent_push()
     @ccall libt8.p4est_log_indent_push()::Cvoid
 end
 
-# no prototype is found for this function at p4est_base.h:331:1, please use with caution
 """
     p4est_log_indent_pop()
 
 ### Prototype
 ```c
-static inline void p4est_log_indent_pop ();
+static inline void p4est_log_indent_pop (void);
 ```
 """
 function p4est_log_indent_pop()
@@ -8936,6 +9385,24 @@ void p4est_init (sc_log_handler_t log_handler, int log_threshold);
 """
 function p4est_init(log_handler, log_threshold)
     @ccall libt8.p4est_init(log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+end
+
+"""
+    p4est_is_initialized()
+
+Return whether p4est has been initialized or not. Keep in mind that p4est_init is an optional function but it helps with proper parallel logging.
+
+Currently there is no inverse to p4est_init, and no way to deinit it. This is ok since initialization generally does no harm. Just do not call libsc's finalize function while p4est is still in use.
+
+### Returns
+True if p4est has been initialized with a call to p4est_init and false otherwise.
+### Prototype
+```c
+int p4est_is_initialized (void);
+```
+"""
+function p4est_is_initialized()
+    @ccall libt8.p4est_is_initialized()::Cint
 end
 
 """
@@ -9078,6 +9545,7 @@ Characterize a type of adjacency.
 Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner. [`p4est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
 """
 @cenum p4est_connect_type_t::UInt32 begin
+    P4EST_CONNECT_SELF = 20
     P4EST_CONNECT_FACE = 21
     P4EST_CONNECT_CORNER = 22
     P4EST_CONNECT_FULL = 22
@@ -9228,6 +9696,80 @@ struct p4est_corner_info_t
 end
 
 """
+    p4est_neighbor_transform_t
+
+Generic interface for transformations between a tree and any of its neighbors
+
+| Field             | Note                                                                        |
+| :---------------- | :-------------------------------------------------------------------------- |
+| neighbor\\_type   | type of connection to neighbor                                              |
+| neighbor          | neighbor tree index                                                         |
+| index\\_self      | index of interface from self's perspective                                  |
+| index\\_neighbor  | index of interface from neighbor's perspective                              |
+| perm              | permutation of dimensions when transforming self coords to neighbor coords  |
+| sign              | sign changes when transforming self coords to neighbor coords               |
+| origin\\_neighbor | point on the interface from self's perspective                              |
+"""
+struct p4est_neighbor_transform_t
+    neighbor_type::p4est_connect_type_t
+    neighbor::p4est_topidx_t
+    index_self::Int8
+    index_neighbor::Int8
+    perm::NTuple{2, Int8}
+    sign::NTuple{2, Int8}
+    origin_self::NTuple{2, p4est_qcoord_t}
+    origin_neighbor::NTuple{2, p4est_qcoord_t}
+end
+
+"""
+    p4est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
+
+Transform from self's coordinate system to neighbor's coordinate system.
+
+### Parameters
+* `nt`:\\[in\\] A neighbor transform.
+* `self_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
+* `neigh_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
+### Prototype
+```c
+void p4est_neighbor_transform_coordinates (const p4est_neighbor_transform_t * nt, const p4est_qcoord_t self_coords[P4EST_DIM], p4est_qcoord_t neigh_coords[P4EST_DIM]);
+```
+"""
+function p4est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
+    @ccall libt8.p4est_neighbor_transform_coordinates(nt::Ptr{p4est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+end
+
+"""
+    p4est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
+
+Transform from neighbor's coordinate system to self's coordinate system.
+
+### Parameters
+* `nt`:\\[in\\] A neighbor transform.
+* `neigh_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
+* `self_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
+### Prototype
+```c
+void p4est_neighbor_transform_coordinates_reverse (const p4est_neighbor_transform_t * nt, const p4est_qcoord_t neigh_coords[P4EST_DIM], p4est_qcoord_t self_coords[P4EST_DIM]);
+```
+"""
+function p4est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
+    @ccall libt8.p4est_neighbor_transform_coordinates_reverse(nt::Ptr{p4est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
+
+### Prototype
+```c
+void p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t *conn, p4est_topidx_t tree_id, p4est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
+```
+"""
+function p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
+    @ccall libt8.p4est_connectivity_get_neighbor_transforms(conn::Ptr{p4est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p4est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+end
+
+"""
     p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
 
 Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
@@ -9235,8 +9777,8 @@ Transform a face corner across one of the adjacent faces into a neighbor tree. T
 ### Parameters
 * `fc`:\\[in\\] A face corner number in 0..1.
 * `f`:\\[in\\] A face that the face corner number *fc* is relative to.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The face corner number relative to the neighbor's face.
 ### Prototype
@@ -9256,8 +9798,8 @@ Transform a corner across one of the adjacent faces into a neighbor tree. This v
 ### Parameters
 * `c`:\\[in\\] A corner number in 0..3.
 * `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The number of the corner seen from the neighbor tree.
 ### Prototype
@@ -9464,12 +10006,12 @@ end
 """
     p4est_connectivity_inflate(buffer)
 
-Create new connectivity from a memory buffer.
+Create new connectivity from a memory buffer. This function aborts on malloc errors.
 
 ### Parameters
 * `buffer`:\\[in\\] The connectivity is created from this memory buffer.
 ### Returns
-The newly created connectivity, or NULL on error.
+The newly created connectivity, or NULL on format error of the buffered connectivity data.
 ### Prototype
 ```c
 p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
@@ -9673,7 +10215,6 @@ function p4est_connectivity_new_disk(periodic_a, periodic_b)
     @ccall libt8.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
 end
 
-# no prototype is found for this function at p4est_connectivity.h:475:23, please use with caution
 """
     p4est_connectivity_new_icosahedron()
 
@@ -9695,7 +10236,7 @@ Tree numbering:
 
 ### Prototype
 ```c
-p4est_connectivity_t *p4est_connectivity_new_icosahedron ();
+p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 ```
 """
 function p4est_connectivity_new_icosahedron()
@@ -10059,6 +10600,7 @@ Characterize a type of adjacency.
 Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner, or 3) entities are adjacent if they share a face, corner or edge. [`p8est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
 """
 @cenum p8est_connect_type_t::UInt32 begin
+    P8EST_CONNECT_SELF = 30
     P8EST_CONNECT_FACE = 31
     P8EST_CONNECT_EDGE = 32
     P8EST_CONNECT_CORNER = 33
@@ -10241,6 +10783,80 @@ struct p8est_corner_info_t
 end
 
 """
+    p8est_neighbor_transform_t
+
+Generic interface for transformations between a tree and any of its neighbors
+
+| Field             | Note                                                                        |
+| :---------------- | :-------------------------------------------------------------------------- |
+| neighbor\\_type   | type of connection to neighbor                                              |
+| neighbor          | neighbor tree index                                                         |
+| index\\_self      | index of interface from self's perspective                                  |
+| index\\_neighbor  | index of interface from neighbor's perspective                              |
+| perm              | permutation of dimensions when transforming self coords to neighbor coords  |
+| sign              | sign changes when transforming self coords to neighbor coords               |
+| origin\\_neighbor | point on the interface from self's perspective                              |
+"""
+struct p8est_neighbor_transform_t
+    neighbor_type::p8est_connect_type_t
+    neighbor::p4est_topidx_t
+    index_self::Int8
+    index_neighbor::Int8
+    perm::NTuple{3, Int8}
+    sign::NTuple{3, Int8}
+    origin_self::NTuple{3, p4est_qcoord_t}
+    origin_neighbor::NTuple{3, p4est_qcoord_t}
+end
+
+"""
+    p8est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
+
+Transform from self's coordinate system to neighbor's coordinate system.
+
+### Parameters
+* `nt`:\\[in\\] A neighbor transform.
+* `self_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
+* `neigh_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
+### Prototype
+```c
+void p8est_neighbor_transform_coordinates (const p8est_neighbor_transform_t * nt, const p4est_qcoord_t self_coords[P8EST_DIM], p4est_qcoord_t neigh_coords[P8EST_DIM]);
+```
+"""
+function p8est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
+    @ccall libt8.p8est_neighbor_transform_coordinates(nt::Ptr{p8est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+end
+
+"""
+    p8est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
+
+Transform from neighbor's coordinate system to self's coordinate system.
+
+### Parameters
+* `nt`:\\[in\\] A neighbor transform.
+* `neigh_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
+* `self_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
+### Prototype
+```c
+void p8est_neighbor_transform_coordinates_reverse (const p8est_neighbor_transform_t * nt, const p4est_qcoord_t neigh_coords[P8EST_DIM], p4est_qcoord_t self_coords[P8EST_DIM]);
+```
+"""
+function p8est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
+    @ccall libt8.p8est_neighbor_transform_coordinates_reverse(nt::Ptr{p8est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
+
+### Prototype
+```c
+void p8est_connectivity_get_neighbor_transforms (p8est_connectivity_t *conn, p4est_topidx_t tree_id, p8est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
+```
+"""
+function p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
+    @ccall libt8.p8est_connectivity_get_neighbor_transforms(conn::Ptr{p8est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p8est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+end
+
+"""
     p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
 
 Transform a corner across one of the adjacent faces into a neighbor tree. It expects a face permutation index that has been precomputed.
@@ -10248,7 +10864,7 @@ Transform a corner across one of the adjacent faces into a neighbor tree. It exp
 ### Parameters
 * `c`:\\[in\\] A corner number in 0..7.
 * `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `set`:\\[in\\] A value from *p8est_face_permutation_sets* that is obtained using *f*, *nf*, and a valid orientation: ref = p8est\\_face\\_permutation\\_refs[f][nf]; set = p8est\\_face\\_permutation\\_sets[ref][orientation];
 ### Returns
 The corner number in 0..7 seen from the other face.
@@ -10269,8 +10885,8 @@ Transform a face corner across one of the adjacent faces into a neighbor tree. T
 ### Parameters
 * `fc`:\\[in\\] A face corner number in 0..3.
 * `f`:\\[in\\] A face that the face corner *fc* is relative to.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The face corner number relative to the neighbor's face.
 ### Prototype
@@ -10290,8 +10906,8 @@ Transform a corner across one of the adjacent faces into a neighbor tree. This v
 ### Parameters
 * `c`:\\[in\\] A corner number in 0..7.
 * `f`:\\[in\\] A face number that touches the corner *c*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The number of the corner seen from the neighbor tree.
 ### Prototype
@@ -10311,8 +10927,8 @@ Transform a face-edge across one of the adjacent faces into a neighbor tree. Thi
 ### Parameters
 * `fe`:\\[in\\] A face edge number in 0..3.
 * `f`:\\[in\\] A face number that touches the edge *e*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The face edge number seen from the neighbor tree.
 ### Prototype
@@ -10332,8 +10948,8 @@ Transform an edge across one of the adjacent faces into a neighbor tree. This ve
 ### Parameters
 * `e`:\\[in\\] A edge number in 0..11.
 * `f`:\\[in\\] A face 0..5 that touches the edge *e*.
-* `nf`:\\[in\\] A neighbor face that is on the other side of .
-* `o`:\\[in\\] The orientation between tree boundary faces *f* and .
+* `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
+* `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
 ### Returns
 The edge's number seen from the neighbor.
 ### Prototype
@@ -10373,7 +10989,7 @@ Transform a corner across one of the adjacent edges into a neighbor tree. This v
 * `c`:\\[in\\] A corner number in 0..7.
 * `e`:\\[in\\] An edge 0..11 that touches the corner *c*.
 * `ne`:\\[in\\] A neighbor edge that is on the other side of *.*
-* `o`:\\[in\\] The orientation between tree boundary edges *e* and *.*
+* `o`:\\[in\\] The orientation between tree boundary edges *e* and *ne*.
 ### Returns
 Corner number seen from the neighbor.
 ### Prototype
@@ -10584,12 +11200,12 @@ end
 """
     p8est_connectivity_inflate(buffer)
 
-Create new connectivity from a memory buffer.
+Create new connectivity from a memory buffer. This function aborts on malloc errors.
 
 ### Parameters
 * `buffer`:\\[in\\] The connectivity is created from this memory buffer.
 ### Returns
-The newly created connectivity, or NULL on error.
+The newly created connectivity, or NULL on format error of the buffered connectivity data.
 ### Prototype
 ```c
 p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
@@ -10769,7 +11385,7 @@ Create a connectivity structure that builds a revolution torus.
 
 This connectivity reuses vertices and relies on a geometry transformation. It is thus not suitable for [`p8est_connectivity_complete`](@ref).
 
-This connectivity reuses ideas from disk2d connectivity. More precisely the torus is divided into segments arround the revolution axis, each segments is made of 5 trees (à la disk2d). The total number of trees if 5 times the number of segments.
+This connectivity reuses ideas from disk2d connectivity. More precisely the torus is divided into segments around the revolution axis, each segments is made of 5 trees (à la disk2d). The total number of trees if 5 times the number of segments.
 
 This connectivity is meant to be used with p8est_geometry_new_torus
 
@@ -13905,7 +14521,7 @@ end
 
 const SC_CC = "mpicc"
 
-const SC_CFLAGS = "-g -O2"
+const SC_CFLAGS = "-O3"
 
 const SC_CPP = "mpicc -E"
 
@@ -13935,13 +14551,21 @@ const SC_HAVE_BACKTRACE = 1
 
 const SC_HAVE_BACKTRACE_SYMBOLS = 1
 
+const SC_HAVE_BASENAME = 1
+
+const SC_HAVE_DIRNAME = 1
+
 const SC_HAVE_FSYNC = 1
 
 const SC_HAVE_GNU_QSORT_R = 1
 
+const SC_HAVE_MATH = 1
+
 const SC_HAVE_POSIX_MEMALIGN = 1
 
 const SC_HAVE_QSORT_R = 1
+
+const SC_HAVE_STRTOK_R = 1
 
 const SC_HAVE_STRTOL = 1
 
@@ -13971,19 +14595,21 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 2.8.3"
+const SC_PACKAGE_STRING = "libsc 2.8.5.53-d4e5"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "2.8.3"
+const SC_PACKAGE_VERSION = "2.8.5.53-d4e5"
 
 const SC_SIZEOF_INT = 4
 
 const SC_SIZEOF_LONG = 8
 
 const SC_SIZEOF_LONG_LONG = 8
+
+const SC_SIZEOF_UNSIGNED_INT = 4
 
 const SC_SIZEOF_UNSIGNED_LONG = 8
 
@@ -13995,52 +14621,96 @@ const SC_USE_COUNTERS = 1
 
 const SC_USE_REALLOC = 1
 
-const SC_VERSION = "2.8.3"
+const SC_USING_AUTOCONF = 1
+
+const SC_VERSION = "2.8.5.53-d4e5"
 
 const SC_VERSION_MAJOR = 2
 
 const SC_VERSION_MINOR = 8
 
-const SC_VERSION_POINT = 3
 
 
-const sc_MPI_COMM_WORLD = MPI_COMM_WORLD
 
-const sc_MPI_COMM_SELF = MPI_COMM_SELF
 
-const sc_MPI_CHAR = MPI_CHAR
 
-const sc_MPI_SIGNED_CHAR = MPI_SIGNED_CHAR
 
-const sc_MPI_UNSIGNED_CHAR = MPI_UNSIGNED_CHAR
 
-const sc_MPI_BYTE = MPI_BYTE
 
-const sc_MPI_SHORT = MPI_SHORT
 
-const sc_MPI_UNSIGNED_SHORT = MPI_UNSIGNED_SHORT
 
-const sc_MPI_INT = MPI_INT
 
-const sc_MPI_UNSIGNED = MPI_UNSIGNED
 
-const sc_MPI_LONG = MPI_LONG
 
-const sc_MPI_UNSIGNED_LONG = MPI_UNSIGNED_LONG
 
-const sc_MPI_LONG_LONG_INT = MPI_LONG_LONG_INT
 
-const sc_MPI_UNSIGNED_LONG_LONG = MPI_UNSIGNED_LONG_LONG
 
-const sc_MPI_FLOAT = MPI_FLOAT
 
-const sc_MPI_DOUBLE = MPI_DOUBLE
 
-const sc_MPI_Comm = MPI_Comm
 
-const sc_MPI_Group = MPI_Group
 
-const sc_MPI_Datatype = MPI_Datatype
+
+
+
+const sc_MPI_COMM_WORLD = MPI.COMM_WORLD
+
+const sc_MPI_COMM_SELF = MPI.COMM_SELF
+
+const sc_MPI_CHAR = MPI.CHAR
+
+const sc_MPI_SIGNED_CHAR = MPI.SIGNED_CHAR
+
+const sc_MPI_UNSIGNED_CHAR = MPI.UNSIGNED_CHAR
+
+const sc_MPI_BYTE = MPI.BYTE
+
+const sc_MPI_SHORT = MPI.SHORT
+
+const sc_MPI_UNSIGNED_SHORT = MPI.UNSIGNED_SHORT
+
+const sc_MPI_INT = MPI.INT
+
+const sc_MPI_UNSIGNED = MPI.UNSIGNED
+
+const sc_MPI_LONG = MPI.LONG
+
+const sc_MPI_UNSIGNED_LONG = MPI.UNSIGNED_LONG
+
+const sc_MPI_LONG_LONG_INT = MPI.LONG_LONG_INT
+
+const sc_MPI_UNSIGNED_LONG_LONG = MPI.UNSIGNED_LONG_LONG
+
+const sc_MPI_FLOAT = MPI.FLOAT
+
+const sc_MPI_DOUBLE = MPI.DOUBLE
+
+const sc_MPI_Comm = MPI.Comm
+
+const sc_MPI_Group = MPI.Group
+
+const sc_MPI_Datatype = MPI.Datatype
+
+const sc_MPI_Info = MPI.Info
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const sc_MPI_File = MPI.File
+
+const sc_MPI_FILE_NULL = MPI.FILE_NULL
+
+
 
 const SC_EPS = 2.220446049250313e-16
 
@@ -14142,8 +14812,6 @@ const T8_MPI = 1
 
 const T8_MPIIO = 1
 
-const T8_P4EST = 1
-
 const T8_PACKAGE = "t8"
 
 const T8_PACKAGE_BUGREPORT = "johannes.holke@dlr.de, burstedde@ins.uni-bonn.de"
@@ -14158,8 +14826,6 @@ const T8_PACKAGE_URL = ""
 
 const T8_PACKAGE_VERSION = "1.2.0.37-a5c5-dirty"
 
-const T8_SC = 1
-
 const T8_STDC_HEADERS = 1
 
 const T8_USING_AUTOCONF = 1
@@ -14172,10 +14838,6 @@ const T8_VERSION_MINOR = 2
 
 
 const T8_WITH_NETCDF_PAR = 0
-
-const T8_WITH_P4EST = 1
-
-const T8_WITH_SC = 1
 
 # Skipping MacroDefinition: T8_MPI_ECLASS_TYPE ( T8_ASSERT ( sizeof ( int ) == sizeof ( t8_eclass_t ) ) , sc_MPI_INT )
 
@@ -14209,6 +14871,10 @@ const T8_VTK_ASCII = 1
 
 const T8_VTK_FORMAT_STRING = "ascii"
 
+const sc_mpi_read = sc_io_read
+
+const sc_mpi_write = sc_io_write
+
 const P4EST_BUILD_2D = 1
 
 const P4EST_BUILD_3D = 1
@@ -14217,7 +14883,7 @@ const P4EST_BUILD_P6EST = 1
 
 const P4EST_CC = "mpicc"
 
-const P4EST_CFLAGS = "-g -O2"
+const P4EST_CFLAGS = "-O3"
 
 const P4EST_CPP = "mpicc -E"
 
@@ -14249,6 +14915,8 @@ const P4EST_ENABLE_VTK_COMPRESSION = 1
 
 const P4EST_HAVE_GNU_QSORT_R = 1
 
+const P4EST_HAVE_MATH = 1
+
 const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
@@ -14275,17 +14943,19 @@ const P4EST_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const P4EST_PACKAGE_NAME = "p4est"
 
-const P4EST_PACKAGE_STRING = "p4est 2.8"
+const P4EST_PACKAGE_STRING = "p4est 2.8.5.58-35fd"
 
 const P4EST_PACKAGE_TARNAME = "p4est"
 
 const P4EST_PACKAGE_URL = ""
 
-const P4EST_PACKAGE_VERSION = "2.8"
+const P4EST_PACKAGE_VERSION = "2.8.5.58-35fd"
 
 const P4EST_STDC_HEADERS = 1
 
-const P4EST_VERSION = "2.8"
+const P4EST_USING_AUTOCONF = 1
+
+const P4EST_VERSION = "2.8.5.58-35fd"
 
 const P4EST_VERSION_MAJOR = 2
 

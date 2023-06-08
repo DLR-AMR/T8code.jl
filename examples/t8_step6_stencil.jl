@@ -36,13 +36,19 @@
 #   - Extend this step to 3D.
 
 using MPI
-using P4est
 using T8code
+using T8code.Libt8: sc_init
+using T8code.Libt8: sc_free
+using T8code.Libt8: sc_finalize
+using T8code.Libt8: sc_array_new_data
+using T8code.Libt8: sc_array_destroy
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
 
 include("t8_step3_common.jl")
 
 # The data that we want to store for each element.
-mutable struct t8_step6_data_per_element_t
+struct t8_step6_data_per_element_t
   # The first three data fields are not necessary for our
   # computations in this step, but are left here for reference.
 
@@ -62,19 +68,6 @@ mutable struct t8_step6_data_per_element_t
   # Storage for our finite difference computations.
   schlieren :: Cdouble
   curvature :: Cdouble
-end
-
-function t8_step6_init_element_data()
-  return t8_step6_data_per_element_t(
-    0,                # level
-    0.0,              # volume
-    (0.0, 0.0, 0.0),  # midpoint
-    0.0,              # dx
-    0.0,              # dy
-    0.0,              # height
-    0.0,              # schlieren
-    0.0,              # curvature
-  )
 end
 
 # In this function we first allocate a new uniformly refined forest at given
@@ -126,7 +119,7 @@ function t8_step6_create_element_data(forest)
 
   # Build an array of our data that is as long as the number of elements plus
   # the number of ghosts.
-  element_data = [t8_step6_init_element_data() for i = 1:num_local_elements + num_ghost_elements]
+  element_data = Array{t8_step6_data_per_element_t}(undef, num_local_elements + num_ghost_elements)
 
   # Get the number of trees that have elements of this process.
   num_local_trees = t8_forest_get_num_local_trees(forest)
@@ -152,26 +145,29 @@ function t8_step6_create_element_data(forest)
 
       element = t8_forest_get_element_in_tree(forest, itree, ielement)
 
-      element_data[current_index].level = t8_element_level(eclass_scheme, element)
-      element_data[current_index].volume = t8_forest_element_volume(forest, itree, element)
+      level = t8_element_level(eclass_scheme, element)
+      volume = t8_forest_element_volume(forest, itree, element)
 
       t8_forest_element_centroid(forest, itree, element, pointer(midpoint))
-      element_data[current_index].midpoint = Tuple(midpoint)
 
       t8_element_vertex_reference_coords(eclass_scheme, element, 0, @view(verts[:,1]))
       t8_element_vertex_reference_coords(eclass_scheme, element, 1, @view(verts[:,2]))
       t8_element_vertex_reference_coords(eclass_scheme, element, 2, @view(verts[:,3]))
 
-      element_data[current_index].dx = verts[1,2] - verts[1,1]
-      element_data[current_index].dy = verts[2,3] - verts[2,1]
+      dx = verts[1,2] - verts[1,1]
+      dy = verts[2,3] - verts[2,1]
 
       # Shift x and y to the center since the domain is [0,1] x [0,1].
-      x = element_data[current_index].midpoint[1] - 0.5
-      y = element_data[current_index].midpoint[2] - 0.5
+      x = midpoint[1] - 0.5
+      y = midpoint[2] - 0.5
       r = sqrt(x * x + y * y) * 20.0      # arbitrarly scaled radius
 
       # Some 'interesting' height function.
-      element_data[current_index].height = sin(2.0 * r) / r
+      height = sin(2.0 * r) / r
+
+      element_data[current_index] = t8_step6_data_per_element_t(
+        level, volume, Tuple(midpoint), dx, dy, height, 0.0, 0.0
+      )
     end
   end
 
@@ -280,8 +276,19 @@ function t8_step6_compute_stencil(forest, element_data)
       ycurve = (yslope_p - yslope_m) * 4 / (dy[1] + 2.0 * dy[2] + dy[3])
 
       # Compute schlieren and curvature norm.
-      element_data[current_index].schlieren = sqrt(xslope * xslope + yslope * yslope)
-      element_data[current_index].curvature = sqrt(xcurve * xcurve + ycurve * ycurve)
+      schlieren = sqrt(xslope * xslope + yslope * yslope)
+      curvature = sqrt(xcurve * xcurve + ycurve * ycurve)
+
+      element_data[current_index] = t8_step6_data_per_element_t(
+        element_data[current_index].level, 
+        element_data[current_index].volume,
+        element_data[current_index].midpoint,
+        element_data[current_index].dx,
+        element_data[current_index].dy,
+        element_data[current_index].height,
+        schlieren, 
+        curvature
+      )
     end
   end
 end
@@ -292,12 +299,9 @@ end
 # entries of our element data array with the value on the process that owns the
 # corresponding element. */
 function t8_step6_exchange_ghost_data(forest, element_data)
-  num_elements = t8_forest_get_local_num_elements(forest)
-  num_ghosts = t8_forest_get_num_ghosts(forest)
-
   # t8_forest_ghost_exchange_data expects an sc_array (of length num_local_elements + num_ghosts).
   # We wrap our data array to an sc_array.
-  sc_array_wrapper = sc_array_new_data(pointer(element_data), sizeof(t8_step6_data_per_element_t), num_elements + num_ghosts)
+  sc_array_wrapper = sc_array_new_data(pointer(element_data), sizeof(t8_step6_data_per_element_t), length(element_data))
 
   # Carry out the data exchange. The entries with indices > num_local_elements will get overwritten.
   t8_forest_ghost_exchange_data(forest, sc_array_wrapper)
@@ -411,4 +415,4 @@ t8_global_productionf(" Wrote forest and data to %s*.\n", prefix_forest_with_dat
 t8_forest_unref(Ref(forest))
 t8_global_productionf(" Destroyed forest.\n")
 
-# sc_finalize()
+sc_finalize()

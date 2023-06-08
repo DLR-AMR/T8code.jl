@@ -1,7 +1,6 @@
 using Test
 
 using MPI: MPI, mpiexec
-using T8code
 
 import MPIPreferences
 @info "Testing T8code.jl with" MPIPreferences.binary MPIPreferences.abi

@@ -3,8 +3,9 @@ Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
 using Artifacts
-cp(joinpath(artifact"P4est", "include"), "p4est_include"; force = true)
 cp(joinpath(artifact"t8code", "include"), "t8code_include"; force = true)
+
+# cp("/usr/include/math.h", joinpath(@__DIR__, "t8code_include/math.h"))
 
 # This loads the artifact described in `P4est/dev/Artifacts.toml`.
 # When a new release of P4est_jll.jl is created and you would like to update
@@ -21,18 +22,24 @@ using Clang.Generators
 
 cd(@__DIR__)
 
-p4_include_dir = joinpath(@__DIR__, "p4est_include")
-t8_include_dir = joinpath(@__DIR__, "t8code_include")
+include_dir = joinpath(@__DIR__, "t8code_include")
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
 # add compiler flags, e.g. "-DXXXXXXXXX"
-args = get_default_args()  # Note you must call this function firstly and then append your own flags
-push!(args, "-I$p4_include_dir")
-push!(args, "-I$t8_include_dir")
-# push!(args, "-I$include_dir", "-I/usr/lib/x86_64-linux-gnu/openmpi/include")
+# args = get_default_args()  # Note you must call this function firstly and then append your own flags
 
-t8_headers_rel = [
+args = get_default_args("x86_64-linux-gnu")
+
+# push!(args, "-I/usr/include")
+push!(args, "-I$include_dir")
+# push!(args, "-include math.h")
+# push!(args, "-D__GLIBC_USE\\(...\\)=0")
+
+push!(args, "-D__MATHDECL_VEC(type, function,suffix, args) __SIMD_DECL (__MATH_PRECNAME (function, suffix)) __MATHDECL(type, function,suffix, args)")
+
+headers_rel = [
+  # "/usr/include/math.h"
   "t8.h"
   "t8_cmesh.h"
   "t8_cmesh_netcdf.h"
@@ -55,9 +62,9 @@ t8_headers_rel = [
   joinpath("t8_cmesh", "t8_cmesh_geometry.h")
   joinpath("t8_cmesh", "t8_cmesh_save.h")
   joinpath("t8_cmesh", "t8_cmesh_testcases.h")
-  joinpath("t8_cmesh", "t8_cmesh_trees.h")
+  # joinpath("t8_cmesh", "t8_cmesh_trees.h")
   joinpath("t8_forest", "t8_forest_adapt.h")
-  joinpath("t8_forest", "t8_forest_balance.h")
+  # joinpath("t8_forest", "t8_forest_balance.h")
   # joinpath("t8_forest", "t8_forest_cxx.h")
   joinpath("t8_forest", "t8_forest_general.h")
   joinpath("t8_forest", "t8_forest_geometrical.h")
@@ -73,28 +80,10 @@ t8_headers_rel = [
   joinpath("t8_geometry", "t8_geometry_helpers.h")
   joinpath("t8_schemes", "t8_default", "t8_default_c_interface.h")
 ]
-t8_headers = [joinpath(t8_include_dir, header) for header in t8_headers_rel]
-
-
-# headers = [joinpath(clang_dir, header) for header in readdir(clang_dir) if endswith(header, ".h")]
-# there is also an experimental `detect_headers` function for auto-detecting top-level headers in the directory
-# headers = detect_headers(clang_dir, args)
-
-# pattern_beg  = r"^t8_"
-# pattern_end  = r".h$"
-# 
-# for (root, dirs, files) in walkdir(include_dir)
-#     for file in files
-#         # if occursin(pattern, file) println(joinpath(vcat(dirs,[file]))) end
-#         if occursin(pattern_beg, file) && occursin(pattern_end, file)
-#           # println(joinpath(root,file)) end
-#           append!(headers,joinpath(root,file))
-#         end
-#     end
-# end
+headers = [joinpath(include_dir, header) for header in headers_rel]
 
 # create context
-ctx = create_context(t8_headers, args, options)
+ctx = create_context(headers, args, options)
 
 # run generator
 build!(ctx)

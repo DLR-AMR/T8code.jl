@@ -10,12 +10,24 @@ end
 using t8code_jll: t8code_jll
 export t8code_jll
 
-using ..T8code: _PREFERENCE_LIBT8
+using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
 
 @static if _PREFERENCE_LIBT8 == "t8code_jll"
     const libt8 = t8code_jll.libt8
 else
     const libt8 = _PREFERENCE_LIBT8
+end
+
+@static if _PREFERENCE_LIBP4EST == "t8code_jll"
+    const libp4est = t8code_jll.libp4est
+else
+    const libp4est = _PREFERENCE_LIBP4EST
+end
+
+@static if _PREFERENCE_LIBSC == "t8code_jll"
+    const libsc = t8code_jll.libsc
+else
+    const libsc = _PREFERENCE_LIBSC
 end
 
 # Define missing types
@@ -59,12 +71,12 @@ void sc_abort_verbose (const char *filename, int lineno, const char *msg) __attr
 ```
 """
 function sc_abort_verbose(filename, lineno, msg)
-    @ccall libt8.sc_abort_verbose(filename::Cstring, lineno::Cint, msg::Cstring)::Cvoid
+    @ccall libsc.sc_abort_verbose(filename::Cstring, lineno::Cint, msg::Cstring)::Cvoid
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_abort_verbosef(filename, lineno, fmt, va_list...)
-        :(@ccall(libt8.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+        :(@ccall(libsc.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
     end
 
 """
@@ -76,7 +88,7 @@ void *sc_malloc (int package, size_t size);
 ```
 """
 function sc_malloc(package, size)
-    @ccall libt8.sc_malloc(package::Cint, size::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_malloc(package::Cint, size::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -88,7 +100,7 @@ void *sc_calloc (int package, size_t nmemb, size_t size);
 ```
 """
 function sc_calloc(package, nmemb, size)
-    @ccall libt8.sc_calloc(package::Cint, nmemb::Csize_t, size::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_calloc(package::Cint, nmemb::Csize_t, size::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -100,7 +112,7 @@ void *sc_realloc (int package, void *ptr, size_t size);
 ```
 """
 function sc_realloc(package, ptr, size)
-    @ccall libt8.sc_realloc(package::Cint, ptr::Ptr{Cvoid}, size::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_realloc(package::Cint, ptr::Ptr{Cvoid}, size::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -112,7 +124,7 @@ char *sc_strdup (int package, const char *s);
 ```
 """
 function sc_strdup(package, s)
-    @ccall libt8.sc_strdup(package::Cint, s::Cstring)::Cstring
+    @ccall libsc.sc_strdup(package::Cint, s::Cstring)::Cstring
 end
 
 """
@@ -124,7 +136,7 @@ void sc_free (int package, void *ptr);
 ```
 """
 function sc_free(package, ptr)
-    @ccall libt8.sc_free(package::Cint, ptr::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_free(package::Cint, ptr::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -142,12 +154,12 @@ void sc_log (const char *filename, int lineno, int package, int category, int pr
 ```
 """
 function sc_log(filename, lineno, package, category, priority, msg)
-    @ccall libt8.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, msg::Cstring)::Cvoid
+    @ccall libsc.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, msg::Cstring)::Cvoid
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_logf(filename, lineno, package, category, priority, fmt, va_list...)
-        :(@ccall(libt8.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+        :(@ccall(libsc.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
     end
 
 """
@@ -188,7 +200,7 @@ sc_array_t *sc_array_new_count (size_t elem_size, size_t elem_count);
 ```
 """
 function sc_array_new_count(elem_size, elem_count)
-    @ccall libt8.sc_array_new_count(elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_count(elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -219,7 +231,7 @@ int sc_int32_compare (const void *v1, const void *v2);
 ```
 """
 function sc_int32_compare(v1, v2)
-    @ccall libt8.sc_int32_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_int32_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """A type for global indexing that holds really big numbers."""
@@ -234,7 +246,7 @@ int sc_int64_compare (const void *v1, const void *v2);
 ```
 """
 function sc_int64_compare(v1, v2)
-    @ccall libt8.sc_int64_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_int64_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """
@@ -299,7 +311,7 @@ int sc_MPI_Testall (int, sc_MPI_Request *, int *, sc_MPI_Status *);
 ```
 """
 function sc_MPI_Testall(arg1, arg2, arg3, arg4)
-    @ccall libt8.sc_MPI_Testall(arg1::Cint, arg2::Ptr{Cint}, arg3::Ptr{Cint}, arg4::Ptr{Cint})::Cint
+    @ccall libsc.sc_MPI_Testall(arg1::Cint, arg2::Ptr{Cint}, arg3::Ptr{Cint}, arg4::Ptr{Cint})::Cint
 end
 
 """
@@ -318,7 +330,7 @@ int sc_MPI_Error_class (int errorcode, int *errorclass);
 ```
 """
 function sc_MPI_Error_class(errorcode, errorclass)
-    @ccall libt8.sc_MPI_Error_class(errorcode::Cint, errorclass::Ptr{Cint})::Cint
+    @ccall libsc.sc_MPI_Error_class(errorcode::Cint, errorclass::Ptr{Cint})::Cint
 end
 
 """
@@ -338,7 +350,7 @@ int sc_MPI_Error_string (int errorcode, char *string, int *resultlen);
 ```
 """
 function sc_MPI_Error_string(errorcode, string, resultlen)
-    @ccall libt8.sc_MPI_Error_string(errorcode::Cint, string::Cstring, resultlen::Ptr{Cint})::Cint
+    @ccall libsc.sc_MPI_Error_string(errorcode::Cint, string::Cstring, resultlen::Ptr{Cint})::Cint
 end
 
 """
@@ -350,7 +362,7 @@ size_t sc_mpi_sizeof (sc_MPI_Datatype t);
 ```
 """
 function sc_mpi_sizeof(t)
-    @ccall libt8.sc_mpi_sizeof(t::MPI_Datatype)::Csize_t
+    @ccall libsc.sc_mpi_sizeof(t::MPI_Datatype)::Csize_t
 end
 
 """
@@ -362,7 +374,7 @@ void sc_mpi_comm_attach_node_comms (sc_MPI_Comm comm, int processes_per_node);
 ```
 """
 function sc_mpi_comm_attach_node_comms(comm, processes_per_node)
-    @ccall libt8.sc_mpi_comm_attach_node_comms(comm::MPI_Comm, processes_per_node::Cint)::Cvoid
+    @ccall libsc.sc_mpi_comm_attach_node_comms(comm::MPI_Comm, processes_per_node::Cint)::Cvoid
 end
 
 """
@@ -374,7 +386,7 @@ void sc_mpi_comm_detach_node_comms (sc_MPI_Comm comm);
 ```
 """
 function sc_mpi_comm_detach_node_comms(comm)
-    @ccall libt8.sc_mpi_comm_detach_node_comms(comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_mpi_comm_detach_node_comms(comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -386,7 +398,7 @@ void sc_mpi_comm_get_node_comms (sc_MPI_Comm comm, sc_MPI_Comm * intranode, sc_M
 ```
 """
 function sc_mpi_comm_get_node_comms(comm, intranode, internode)
-    @ccall libt8.sc_mpi_comm_get_node_comms(comm::MPI_Comm, intranode::Ptr{MPI_Comm}, internode::Ptr{MPI_Comm})::Cvoid
+    @ccall libsc.sc_mpi_comm_get_node_comms(comm::MPI_Comm, intranode::Ptr{MPI_Comm}, internode::Ptr{MPI_Comm})::Cvoid
 end
 
 """
@@ -398,7 +410,7 @@ int sc_mpi_comm_get_and_attach (sc_MPI_Comm comm);
 ```
 """
 function sc_mpi_comm_get_and_attach(comm)
-    @ccall libt8.sc_mpi_comm_get_and_attach(comm::MPI_Comm)::Cint
+    @ccall libsc.sc_mpi_comm_get_and_attach(comm::MPI_Comm)::Cint
 end
 
 # typedef void ( * sc_handler_t ) ( void * data )
@@ -420,7 +432,7 @@ int sc_memory_status (int package);
 ```
 """
 function sc_memory_status(package)
-    @ccall libt8.sc_memory_status(package::Cint)::Cint
+    @ccall libsc.sc_memory_status(package::Cint)::Cint
 end
 
 """
@@ -432,7 +444,7 @@ void sc_memory_check (int package);
 ```
 """
 function sc_memory_check(package)
-    @ccall libt8.sc_memory_check(package::Cint)::Cvoid
+    @ccall libsc.sc_memory_check(package::Cint)::Cvoid
 end
 
 """
@@ -446,7 +458,7 @@ int sc_memory_check_noerr (int package);
 ```
 """
 function sc_memory_check_noerr(package)
-    @ccall libt8.sc_memory_check_noerr(package::Cint)::Cint
+    @ccall libsc.sc_memory_check_noerr(package::Cint)::Cint
 end
 
 """
@@ -458,7 +470,7 @@ int sc_int_compare (const void *v1, const void *v2);
 ```
 """
 function sc_int_compare(v1, v2)
-    @ccall libt8.sc_int_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_int_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """
@@ -470,7 +482,7 @@ int sc_int8_compare (const void *v1, const void *v2);
 ```
 """
 function sc_int8_compare(v1, v2)
-    @ccall libt8.sc_int8_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_int8_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """
@@ -482,7 +494,7 @@ int sc_int16_compare (const void *v1, const void *v2);
 ```
 """
 function sc_int16_compare(v1, v2)
-    @ccall libt8.sc_int16_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_int16_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """
@@ -494,7 +506,7 @@ int sc_double_compare (const void *v1, const void *v2);
 ```
 """
 function sc_double_compare(v1, v2)
-    @ccall libt8.sc_double_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_double_compare(v1::Ptr{Cvoid}, v2::Ptr{Cvoid})::Cint
 end
 
 """
@@ -512,7 +524,7 @@ int sc_atoi (const char *nptr);
 ```
 """
 function sc_atoi(nptr)
-    @ccall libt8.sc_atoi(nptr::Cstring)::Cint
+    @ccall libsc.sc_atoi(nptr::Cstring)::Cint
 end
 
 """
@@ -530,7 +542,7 @@ long sc_atol (const char *nptr);
 ```
 """
 function sc_atol(nptr)
-    @ccall libt8.sc_atol(nptr::Cstring)::Clong
+    @ccall libsc.sc_atol(nptr::Cstring)::Clong
 end
 
 """
@@ -548,7 +560,7 @@ void sc_set_log_defaults (FILE * log_stream, sc_log_handler_t log_handler, int l
 ```
 """
 function sc_set_log_defaults(log_stream, log_handler, log_threshold)
-    @ccall libt8.sc_set_log_defaults(log_stream::Ptr{Libc.FILE}, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libsc.sc_set_log_defaults(log_stream::Ptr{Libc.FILE}, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
@@ -564,7 +576,7 @@ void sc_set_abort_handler (sc_abort_handler_t abort_handler);
 ```
 """
 function sc_set_abort_handler(abort_handler)
-    @ccall libt8.sc_set_abort_handler(abort_handler::sc_abort_handler_t)::Cvoid
+    @ccall libsc.sc_set_abort_handler(abort_handler::sc_abort_handler_t)::Cvoid
 end
 
 """
@@ -578,7 +590,7 @@ void sc_log_indent_push_count (int package, int count);
 ```
 """
 function sc_log_indent_push_count(package, count)
-    @ccall libt8.sc_log_indent_push_count(package::Cint, count::Cint)::Cvoid
+    @ccall libsc.sc_log_indent_push_count(package::Cint, count::Cint)::Cvoid
 end
 
 """
@@ -592,7 +604,7 @@ void sc_log_indent_pop_count (int package, int count);
 ```
 """
 function sc_log_indent_pop_count(package, count)
-    @ccall libt8.sc_log_indent_pop_count(package::Cint, count::Cint)::Cvoid
+    @ccall libsc.sc_log_indent_pop_count(package::Cint, count::Cint)::Cvoid
 end
 
 """
@@ -606,7 +618,7 @@ void sc_log_indent_push (void);
 ```
 """
 function sc_log_indent_push()
-    @ccall libt8.sc_log_indent_push()::Cvoid
+    @ccall libsc.sc_log_indent_push()::Cvoid
 end
 
 """
@@ -620,7 +632,7 @@ void sc_log_indent_pop (void);
 ```
 """
 function sc_log_indent_pop()
-    @ccall libt8.sc_log_indent_pop()::Cvoid
+    @ccall libsc.sc_log_indent_pop()::Cvoid
 end
 
 """
@@ -634,7 +646,7 @@ void sc_abort (void) __attribute__ ((noreturn));
 ```
 """
 function sc_abort()
-    @ccall libt8.sc_abort()::Cvoid
+    @ccall libsc.sc_abort()::Cvoid
 end
 
 """
@@ -648,7 +660,7 @@ void sc_abort_collective (const char *msg) __attribute__ ((noreturn));
 ```
 """
 function sc_abort_collective(msg)
-    @ccall libt8.sc_abort_collective(msg::Cstring)::Cvoid
+    @ccall libsc.sc_abort_collective(msg::Cstring)::Cvoid
 end
 
 """
@@ -664,7 +676,7 @@ int sc_package_register (sc_log_handler_t log_handler, int log_threshold, const 
 ```
 """
 function sc_package_register(log_handler, log_threshold, name, full)
-    @ccall libt8.sc_package_register(log_handler::sc_log_handler_t, log_threshold::Cint, name::Cstring, full::Cstring)::Cint
+    @ccall libsc.sc_package_register(log_handler::sc_log_handler_t, log_threshold::Cint, name::Cstring, full::Cstring)::Cint
 end
 
 """
@@ -682,7 +694,7 @@ int sc_package_is_registered (int package_id);
 ```
 """
 function sc_package_is_registered(package_id)
-    @ccall libt8.sc_package_is_registered(package_id::Cint)::Cint
+    @ccall libsc.sc_package_is_registered(package_id::Cint)::Cint
 end
 
 """
@@ -698,7 +710,7 @@ void sc_package_lock (int package_id);
 ```
 """
 function sc_package_lock(package_id)
-    @ccall libt8.sc_package_lock(package_id::Cint)::Cvoid
+    @ccall libsc.sc_package_lock(package_id::Cint)::Cvoid
 end
 
 """
@@ -714,7 +726,7 @@ void sc_package_unlock (int package_id);
 ```
 """
 function sc_package_unlock(package_id)
-    @ccall libt8.sc_package_unlock(package_id::Cint)::Cvoid
+    @ccall libsc.sc_package_unlock(package_id::Cint)::Cvoid
 end
 
 """
@@ -730,7 +742,7 @@ void sc_package_set_verbosity (int package_id, int log_priority);
 ```
 """
 function sc_package_set_verbosity(package_id, log_priority)
-    @ccall libt8.sc_package_set_verbosity(package_id::Cint, log_priority::Cint)::Cvoid
+    @ccall libsc.sc_package_set_verbosity(package_id::Cint, log_priority::Cint)::Cvoid
 end
 
 """
@@ -747,7 +759,7 @@ void sc_package_set_abort_alloc_mismatch (int package_id, int set_abort);
 ```
 """
 function sc_package_set_abort_alloc_mismatch(package_id, set_abort)
-    @ccall libt8.sc_package_set_abort_alloc_mismatch(package_id::Cint, set_abort::Cint)::Cvoid
+    @ccall libsc.sc_package_set_abort_alloc_mismatch(package_id::Cint, set_abort::Cint)::Cvoid
 end
 
 """
@@ -761,7 +773,7 @@ void sc_package_unregister (int package_id);
 ```
 """
 function sc_package_unregister(package_id)
-    @ccall libt8.sc_package_unregister(package_id::Cint)::Cvoid
+    @ccall libsc.sc_package_unregister(package_id::Cint)::Cvoid
 end
 
 """
@@ -777,7 +789,7 @@ void sc_package_print_summary (int log_priority);
 ```
 """
 function sc_package_print_summary(log_priority)
-    @ccall libt8.sc_package_print_summary(log_priority::Cint)::Cvoid
+    @ccall libsc.sc_package_print_summary(log_priority::Cint)::Cvoid
 end
 
 """
@@ -789,7 +801,7 @@ void sc_init (sc_MPI_Comm mpicomm, int catch_signals, int print_backtrace, sc_lo
 ```
 """
 function sc_init(mpicomm, catch_signals, print_backtrace, log_handler, log_threshold)
-    @ccall libt8.sc_init(mpicomm::MPI_Comm, catch_signals::Cint, print_backtrace::Cint, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libsc.sc_init(mpicomm::MPI_Comm, catch_signals::Cint, print_backtrace::Cint, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
@@ -803,7 +815,7 @@ void sc_finalize (void);
 ```
 """
 function sc_finalize()
-    @ccall libt8.sc_finalize()::Cvoid
+    @ccall libsc.sc_finalize()::Cvoid
 end
 
 """
@@ -819,7 +831,7 @@ int sc_finalize_noabort (void);
 ```
 """
 function sc_finalize_noabort()
-    @ccall libt8.sc_finalize_noabort()::Cint
+    @ccall libsc.sc_finalize_noabort()::Cint
 end
 
 """
@@ -835,7 +847,7 @@ int sc_is_root (void);
 ```
 """
 function sc_is_root()
-    @ccall libt8.sc_is_root()::Cint
+    @ccall libsc.sc_is_root()::Cint
 end
 
 """
@@ -855,12 +867,12 @@ void sc_strcopy (char *dest, size_t size, const char *src);
 ```
 """
 function sc_strcopy(dest, size, src)
-    @ccall libt8.sc_strcopy(dest::Cstring, size::Csize_t, src::Cstring)::Cvoid
+    @ccall libsc.sc_strcopy(dest::Cstring, size::Csize_t, src::Cstring)::Cvoid
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_snprintf(str, size, format, va_list...)
-        :(@ccall(libt8.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+        :(@ccall(libsc.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
     end
 
 """
@@ -876,7 +888,7 @@ const char *sc_version (void);
 ```
 """
 function sc_version()
-    @ccall libt8.sc_version()::Cstring
+    @ccall libsc.sc_version()::Cstring
 end
 
 """
@@ -892,7 +904,7 @@ int sc_version_major (void);
 ```
 """
 function sc_version_major()
-    @ccall libt8.sc_version_major()::Cint
+    @ccall libsc.sc_version_major()::Cint
 end
 
 """
@@ -908,7 +920,7 @@ int sc_version_minor (void);
 ```
 """
 function sc_version_minor()
-    @ccall libt8.sc_version_minor()::Cint
+    @ccall libsc.sc_version_minor()::Cint
 end
 
 """
@@ -924,7 +936,7 @@ int sc_have_json (void);
 ```
 """
 function sc_have_json()
-    @ccall libt8.sc_have_json()::Cint
+    @ccall libsc.sc_have_json()::Cint
 end
 
 # typedef unsigned int ( * sc_hash_function_t ) ( const void * v , const void * u )
@@ -978,7 +990,7 @@ size_t sc_array_memory_used (sc_array_t * array, int is_dynamic);
 ```
 """
 function sc_array_memory_used(array, is_dynamic)
-    @ccall libt8.sc_array_memory_used(array::Ptr{sc_array_t}, is_dynamic::Cint)::Csize_t
+    @ccall libsc.sc_array_memory_used(array::Ptr{sc_array_t}, is_dynamic::Cint)::Csize_t
 end
 
 """
@@ -996,7 +1008,7 @@ sc_array_t *sc_array_new (size_t elem_size);
 ```
 """
 function sc_array_new(elem_size)
-    @ccall libt8.sc_array_new(elem_size::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new(elem_size::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -1014,7 +1026,7 @@ sc_array_t *sc_array_new_view (sc_array_t * array, size_t offset, size_t length)
 ```
 """
 function sc_array_new_view(array, offset, length)
-    @ccall libt8.sc_array_new_view(array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_view(array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -1032,7 +1044,7 @@ sc_array_t *sc_array_new_data (void *base, size_t elem_size, size_t elem_count);
 ```
 """
 function sc_array_new_data(base, elem_size, elem_count)
-    @ccall libt8.sc_array_new_data(base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_data(base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -1048,7 +1060,7 @@ void sc_array_destroy (sc_array_t * array);
 ```
 """
 function sc_array_destroy(array)
-    @ccall libt8.sc_array_destroy(array::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_destroy(array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1064,7 +1076,7 @@ void sc_array_destroy_null (sc_array_t ** parray);
 ```
 """
 function sc_array_destroy_null(parray)
-    @ccall libt8.sc_array_destroy_null(parray::Ptr{Ptr{sc_array_t}})::Cvoid
+    @ccall libsc.sc_array_destroy_null(parray::Ptr{Ptr{sc_array_t}})::Cvoid
 end
 
 """
@@ -1081,7 +1093,7 @@ void sc_array_init (sc_array_t * array, size_t elem_size);
 ```
 """
 function sc_array_init(array, elem_size)
-    @ccall libt8.sc_array_init(array::Ptr{sc_array_t}, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init(array::Ptr{sc_array_t}, elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -1099,7 +1111,7 @@ void sc_array_init_size (sc_array_t * array, size_t elem_size, size_t elem_count
 ```
 """
 function sc_array_init_size(array, elem_size, elem_count)
-    @ccall libt8.sc_array_init_size(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_size(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1117,7 +1129,7 @@ void sc_array_init_count (sc_array_t * array, size_t elem_size, size_t elem_coun
 ```
 """
 function sc_array_init_count(array, elem_size, elem_count)
-    @ccall libt8.sc_array_init_count(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_count(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1136,7 +1148,7 @@ void sc_array_init_view (sc_array_t * view, sc_array_t * array, size_t offset, s
 ```
 """
 function sc_array_init_view(view, array, offset, length)
-    @ccall libt8.sc_array_init_view(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_view(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
 end
 
 """
@@ -1155,7 +1167,7 @@ void sc_array_init_reshape (sc_array_t * view, sc_array_t * array, size_t elem_s
 ```
 """
 function sc_array_init_reshape(view, array, elem_size, elem_count)
-    @ccall libt8.sc_array_init_reshape(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_reshape(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1174,7 +1186,7 @@ void sc_array_init_data (sc_array_t * view, void *base, size_t elem_size, size_t
 ```
 """
 function sc_array_init_data(view, base, elem_size, elem_count)
-    @ccall libt8.sc_array_init_data(view::Ptr{sc_array_t}, base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_data(view::Ptr{sc_array_t}, base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1191,7 +1203,7 @@ void sc_array_memset (sc_array_t * array, int c);
 ```
 """
 function sc_array_memset(array, c)
-    @ccall libt8.sc_array_memset(array::Ptr{sc_array_t}, c::Cint)::Cvoid
+    @ccall libsc.sc_array_memset(array::Ptr{sc_array_t}, c::Cint)::Cvoid
 end
 
 """
@@ -1211,7 +1223,7 @@ void sc_array_reset (sc_array_t * array);
 ```
 """
 function sc_array_reset(array)
-    @ccall libt8.sc_array_reset(array::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_reset(array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1231,7 +1243,7 @@ void sc_array_truncate (sc_array_t * array);
 ```
 """
 function sc_array_truncate(array)
-    @ccall libt8.sc_array_truncate(array::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_truncate(array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1248,7 +1260,7 @@ void sc_array_rewind (sc_array_t * array, size_t new_count);
 ```
 """
 function sc_array_rewind(array, new_count)
-    @ccall libt8.sc_array_rewind(array::Ptr{sc_array_t}, new_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_rewind(array::Ptr{sc_array_t}, new_count::Csize_t)::Cvoid
 end
 
 """
@@ -1265,7 +1277,7 @@ void sc_array_resize (sc_array_t * array, size_t new_count);
 ```
 """
 function sc_array_resize(array, new_count)
-    @ccall libt8.sc_array_resize(array::Ptr{sc_array_t}, new_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_resize(array::Ptr{sc_array_t}, new_count::Csize_t)::Cvoid
 end
 
 """
@@ -1282,7 +1294,7 @@ void sc_array_copy (sc_array_t * dest, sc_array_t * src);
 ```
 """
 function sc_array_copy(dest, src)
-    @ccall libt8.sc_array_copy(dest::Ptr{sc_array_t}, src::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_copy(dest::Ptr{sc_array_t}, src::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1300,7 +1312,7 @@ void sc_array_copy_into (sc_array_t * dest, size_t dest_offset, sc_array_t * src
 ```
 """
 function sc_array_copy_into(dest, dest_offset, src)
-    @ccall libt8.sc_array_copy_into(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_copy_into(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1320,7 +1332,7 @@ void sc_array_move_part (sc_array_t * dest, size_t dest_offset, sc_array_t * src
 ```
 """
 function sc_array_move_part(dest, dest_offset, src, src_offset, count)
-    @ccall libt8.sc_array_move_part(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t}, src_offset::Csize_t, count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_move_part(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t}, src_offset::Csize_t, count::Csize_t)::Cvoid
 end
 
 """
@@ -1337,7 +1349,7 @@ void sc_array_sort (sc_array_t * array, int (*compar) (const void *, const void 
 ```
 """
 function sc_array_sort(array, compar)
-    @ccall libt8.sc_array_sort(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_array_sort(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -1356,7 +1368,7 @@ int sc_array_is_sorted (sc_array_t * array, int (*compar) (const void *, const v
 ```
 """
 function sc_array_is_sorted(array, compar)
-    @ccall libt8.sc_array_is_sorted(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_array_is_sorted(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cint
 end
 
 """
@@ -1375,7 +1387,7 @@ int sc_array_is_equal (sc_array_t * array, sc_array_t * other);
 ```
 """
 function sc_array_is_equal(array, other)
-    @ccall libt8.sc_array_is_equal(array::Ptr{sc_array_t}, other::Ptr{sc_array_t})::Cint
+    @ccall libsc.sc_array_is_equal(array::Ptr{sc_array_t}, other::Ptr{sc_array_t})::Cint
 end
 
 """
@@ -1392,7 +1404,7 @@ void sc_array_uniq (sc_array_t * array, int (*compar) (const void *, const void 
 ```
 """
 function sc_array_uniq(array, compar)
-    @ccall libt8.sc_array_uniq(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_array_uniq(array::Ptr{sc_array_t}, compar::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -1412,7 +1424,7 @@ ssize_t sc_array_bsearch (sc_array_t * array, const void *key, int (*compar) (co
 ```
 """
 function sc_array_bsearch(array, key, compar)
-    @ccall libt8.sc_array_bsearch(array::Ptr{sc_array_t}, key::Ptr{Cvoid}, compar::Ptr{Cvoid})::Cssize_t
+    @ccall libsc.sc_array_bsearch(array::Ptr{sc_array_t}, key::Ptr{Cvoid}, compar::Ptr{Cvoid})::Cssize_t
 end
 
 # typedef size_t ( * sc_array_type_t ) ( sc_array_t * array , size_t index , void * data )
@@ -1443,7 +1455,7 @@ void sc_array_split (sc_array_t * array, sc_array_t * offsets, size_t num_types,
 ```
 """
 function sc_array_split(array, offsets, num_types, type_fn, data)
-    @ccall libt8.sc_array_split(array::Ptr{sc_array_t}, offsets::Ptr{sc_array_t}, num_types::Csize_t, type_fn::sc_array_type_t, data::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_array_split(array::Ptr{sc_array_t}, offsets::Ptr{sc_array_t}, num_types::Csize_t, type_fn::sc_array_type_t, data::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -1461,7 +1473,7 @@ int sc_array_is_permutation (sc_array_t * array);
 ```
 """
 function sc_array_is_permutation(array)
-    @ccall libt8.sc_array_is_permutation(array::Ptr{sc_array_t})::Cint
+    @ccall libsc.sc_array_is_permutation(array::Ptr{sc_array_t})::Cint
 end
 
 """
@@ -1479,7 +1491,7 @@ void sc_array_permute (sc_array_t * array, sc_array_t * newindices, int keepperm
 ```
 """
 function sc_array_permute(array, newindices, keepperm)
-    @ccall libt8.sc_array_permute(array::Ptr{sc_array_t}, newindices::Ptr{sc_array_t}, keepperm::Cint)::Cvoid
+    @ccall libsc.sc_array_permute(array::Ptr{sc_array_t}, newindices::Ptr{sc_array_t}, keepperm::Cint)::Cvoid
 end
 
 """
@@ -1493,7 +1505,7 @@ unsigned int sc_array_checksum (sc_array_t * array);
 ```
 """
 function sc_array_checksum(array)
-    @ccall libt8.sc_array_checksum(array::Ptr{sc_array_t})::Cuint
+    @ccall libsc.sc_array_checksum(array::Ptr{sc_array_t})::Cuint
 end
 
 """
@@ -1516,7 +1528,7 @@ size_t sc_array_pqueue_add (sc_array_t * array, void *temp, int (*compar) (const
 ```
 """
 function sc_array_pqueue_add(array, temp, compar)
-    @ccall libt8.sc_array_pqueue_add(array::Ptr{sc_array_t}, temp::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_add(array::Ptr{sc_array_t}, temp::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1539,7 +1551,7 @@ size_t sc_array_pqueue_pop (sc_array_t * array, void *result, int (*compar) (con
 ```
 """
 function sc_array_pqueue_pop(array, result, compar)
-    @ccall libt8.sc_array_pqueue_pop(array::Ptr{sc_array_t}, result::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_pop(array::Ptr{sc_array_t}, result::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1551,7 +1563,7 @@ static inline void * sc_array_index (sc_array_t * array, size_t iz);
 ```
 """
 function sc_array_index(array, iz)
-    @ccall libt8.sc_array_index(array::Ptr{sc_array_t}, iz::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index(array::Ptr{sc_array_t}, iz::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -1563,7 +1575,7 @@ static inline void * sc_array_index_null (sc_array_t * array, size_t iz);
 ```
 """
 function sc_array_index_null(array, iz)
-    @ccall libt8.sc_array_index_null(array::Ptr{sc_array_t}, iz::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index_null(array::Ptr{sc_array_t}, iz::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -1575,7 +1587,7 @@ static inline void * sc_array_index_int (sc_array_t * array, int i);
 ```
 """
 function sc_array_index_int(array, i)
-    @ccall libt8.sc_array_index_int(array::Ptr{sc_array_t}, i::Cint)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index_int(array::Ptr{sc_array_t}, i::Cint)::Ptr{Cvoid}
 end
 
 """
@@ -1587,7 +1599,7 @@ static inline void * sc_array_index_long (sc_array_t * array, long l);
 ```
 """
 function sc_array_index_long(array, l)
-    @ccall libt8.sc_array_index_long(array::Ptr{sc_array_t}, l::Clong)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index_long(array::Ptr{sc_array_t}, l::Clong)::Ptr{Cvoid}
 end
 
 """
@@ -1599,7 +1611,7 @@ static inline void * sc_array_index_ssize_t (sc_array_t * array, ssize_t is);
 ```
 """
 function sc_array_index_ssize_t(array, is)
-    @ccall libt8.sc_array_index_ssize_t(array::Ptr{sc_array_t}, is::Cssize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index_ssize_t(array::Ptr{sc_array_t}, is::Cssize_t)::Ptr{Cvoid}
 end
 
 """
@@ -1611,7 +1623,7 @@ static inline void * sc_array_index_int16 (sc_array_t * array, int16_t i16);
 ```
 """
 function sc_array_index_int16(array, i16)
-    @ccall libt8.sc_array_index_int16(array::Ptr{sc_array_t}, i16::Int16)::Ptr{Cvoid}
+    @ccall libsc.sc_array_index_int16(array::Ptr{sc_array_t}, i16::Int16)::Ptr{Cvoid}
 end
 
 """
@@ -1623,7 +1635,7 @@ static inline size_t sc_array_position (sc_array_t * array, void *element);
 ```
 """
 function sc_array_position(array, element)
-    @ccall libt8.sc_array_position(array::Ptr{sc_array_t}, element::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_position(array::Ptr{sc_array_t}, element::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1635,7 +1647,7 @@ static inline void * sc_array_pop (sc_array_t * array);
 ```
 """
 function sc_array_pop(array)
-    @ccall libt8.sc_array_pop(array::Ptr{sc_array_t})::Ptr{Cvoid}
+    @ccall libsc.sc_array_pop(array::Ptr{sc_array_t})::Ptr{Cvoid}
 end
 
 """
@@ -1647,7 +1659,7 @@ static inline void * sc_array_push_count (sc_array_t * array, size_t add_count);
 ```
 """
 function sc_array_push_count(array, add_count)
-    @ccall libt8.sc_array_push_count(array::Ptr{sc_array_t}, add_count::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_array_push_count(array::Ptr{sc_array_t}, add_count::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -1659,7 +1671,7 @@ static inline void * sc_array_push (sc_array_t * array);
 ```
 """
 function sc_array_push(array)
-    @ccall libt8.sc_array_push(array::Ptr{sc_array_t})::Ptr{Cvoid}
+    @ccall libsc.sc_array_push(array::Ptr{sc_array_t})::Ptr{Cvoid}
 end
 
 """
@@ -1703,7 +1715,7 @@ void sc_mstamp_init (sc_mstamp_t * mst, size_t stamp_unit, size_t elem_size);
 ```
 """
 function sc_mstamp_init(mst, stamp_unit, elem_size)
-    @ccall libt8.sc_mstamp_init(mst::Ptr{sc_mstamp_t}, stamp_unit::Csize_t, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_mstamp_init(mst::Ptr{sc_mstamp_t}, stamp_unit::Csize_t, elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -1719,7 +1731,7 @@ void sc_mstamp_reset (sc_mstamp_t * mst);
 ```
 """
 function sc_mstamp_reset(mst)
-    @ccall libt8.sc_mstamp_reset(mst::Ptr{sc_mstamp_t})::Cvoid
+    @ccall libsc.sc_mstamp_reset(mst::Ptr{sc_mstamp_t})::Cvoid
 end
 
 """
@@ -1735,7 +1747,7 @@ void sc_mstamp_truncate (sc_mstamp_t * mst);
 ```
 """
 function sc_mstamp_truncate(mst)
-    @ccall libt8.sc_mstamp_truncate(mst::Ptr{sc_mstamp_t})::Cvoid
+    @ccall libsc.sc_mstamp_truncate(mst::Ptr{sc_mstamp_t})::Cvoid
 end
 
 """
@@ -1753,7 +1765,7 @@ void *sc_mstamp_alloc (sc_mstamp_t * mst);
 ```
 """
 function sc_mstamp_alloc(mst)
-    @ccall libt8.sc_mstamp_alloc(mst::Ptr{sc_mstamp_t})::Ptr{Cvoid}
+    @ccall libsc.sc_mstamp_alloc(mst::Ptr{sc_mstamp_t})::Ptr{Cvoid}
 end
 
 """
@@ -1771,7 +1783,7 @@ size_t sc_mstamp_memory_used (sc_mstamp_t * mst);
 ```
 """
 function sc_mstamp_memory_used(mst)
-    @ccall libt8.sc_mstamp_memory_used(mst::Ptr{sc_mstamp_t})::Csize_t
+    @ccall libsc.sc_mstamp_memory_used(mst::Ptr{sc_mstamp_t})::Csize_t
 end
 
 """
@@ -1813,7 +1825,7 @@ size_t sc_mempool_memory_used (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_memory_used(mempool)
-    @ccall libt8.sc_mempool_memory_used(mempool::Ptr{sc_mempool_t})::Csize_t
+    @ccall libsc.sc_mempool_memory_used(mempool::Ptr{sc_mempool_t})::Csize_t
 end
 
 """
@@ -1831,7 +1843,7 @@ sc_mempool_t *sc_mempool_new (size_t elem_size);
 ```
 """
 function sc_mempool_new(elem_size)
-    @ccall libt8.sc_mempool_new(elem_size::Csize_t)::Ptr{sc_mempool_t}
+    @ccall libsc.sc_mempool_new(elem_size::Csize_t)::Ptr{sc_mempool_t}
 end
 
 """
@@ -1849,7 +1861,7 @@ sc_mempool_t *sc_mempool_new_zero_and_persist (size_t elem_size);
 ```
 """
 function sc_mempool_new_zero_and_persist(elem_size)
-    @ccall libt8.sc_mempool_new_zero_and_persist(elem_size::Csize_t)::Ptr{sc_mempool_t}
+    @ccall libsc.sc_mempool_new_zero_and_persist(elem_size::Csize_t)::Ptr{sc_mempool_t}
 end
 
 """
@@ -1863,7 +1875,7 @@ void sc_mempool_init (sc_mempool_t * mempool, size_t elem_size);
 ```
 """
 function sc_mempool_init(mempool, elem_size)
-    @ccall libt8.sc_mempool_init(mempool::Ptr{sc_mempool_t}, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_mempool_init(mempool::Ptr{sc_mempool_t}, elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -1879,7 +1891,7 @@ void sc_mempool_destroy (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_destroy(mempool)
-    @ccall libt8.sc_mempool_destroy(mempool::Ptr{sc_mempool_t})::Cvoid
+    @ccall libsc.sc_mempool_destroy(mempool::Ptr{sc_mempool_t})::Cvoid
 end
 
 """
@@ -1895,7 +1907,7 @@ void sc_mempool_destroy_null (sc_mempool_t ** pmempool);
 ```
 """
 function sc_mempool_destroy_null(pmempool)
-    @ccall libt8.sc_mempool_destroy_null(pmempool::Ptr{Ptr{sc_mempool_t}})::Cvoid
+    @ccall libsc.sc_mempool_destroy_null(pmempool::Ptr{Ptr{sc_mempool_t}})::Cvoid
 end
 
 """
@@ -1909,7 +1921,7 @@ void sc_mempool_reset (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_reset(mempool)
-    @ccall libt8.sc_mempool_reset(mempool::Ptr{sc_mempool_t})::Cvoid
+    @ccall libsc.sc_mempool_reset(mempool::Ptr{sc_mempool_t})::Cvoid
 end
 
 """
@@ -1923,7 +1935,7 @@ void sc_mempool_truncate (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_truncate(mempool)
-    @ccall libt8.sc_mempool_truncate(mempool::Ptr{sc_mempool_t})::Cvoid
+    @ccall libsc.sc_mempool_truncate(mempool::Ptr{sc_mempool_t})::Cvoid
 end
 
 """
@@ -1935,7 +1947,7 @@ static inline void * sc_mempool_alloc (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_alloc(mempool)
-    @ccall libt8.sc_mempool_alloc(mempool::Ptr{sc_mempool_t})::Ptr{Cvoid}
+    @ccall libsc.sc_mempool_alloc(mempool::Ptr{sc_mempool_t})::Ptr{Cvoid}
 end
 
 """
@@ -1947,7 +1959,7 @@ static inline void sc_mempool_free (sc_mempool_t * mempool, void *elem);
 ```
 """
 function sc_mempool_free(mempool, elem)
-    @ccall libt8.sc_mempool_free(mempool::Ptr{sc_mempool_t}, elem::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_mempool_free(mempool::Ptr{sc_mempool_t}, elem::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -1995,7 +2007,7 @@ size_t sc_list_memory_used (sc_list_t * list, int is_dynamic);
 ```
 """
 function sc_list_memory_used(list, is_dynamic)
-    @ccall libt8.sc_list_memory_used(list::Ptr{sc_list_t}, is_dynamic::Cint)::Csize_t
+    @ccall libsc.sc_list_memory_used(list::Ptr{sc_list_t}, is_dynamic::Cint)::Csize_t
 end
 
 """
@@ -2013,7 +2025,7 @@ sc_list_t *sc_list_new (sc_mempool_t * allocator);
 ```
 """
 function sc_list_new(allocator)
-    @ccall libt8.sc_list_new(allocator::Ptr{sc_mempool_t})::Ptr{sc_list_t}
+    @ccall libsc.sc_list_new(allocator::Ptr{sc_mempool_t})::Ptr{sc_list_t}
 end
 
 """
@@ -2033,7 +2045,7 @@ void sc_list_destroy (sc_list_t * list);
 ```
 """
 function sc_list_destroy(list)
-    @ccall libt8.sc_list_destroy(list::Ptr{sc_list_t})::Cvoid
+    @ccall libsc.sc_list_destroy(list::Ptr{sc_list_t})::Cvoid
 end
 
 """
@@ -2050,7 +2062,7 @@ void sc_list_init (sc_list_t * list, sc_mempool_t * allocator);
 ```
 """
 function sc_list_init(list, allocator)
-    @ccall libt8.sc_list_init(list::Ptr{sc_list_t}, allocator::Ptr{sc_mempool_t})::Cvoid
+    @ccall libsc.sc_list_init(list::Ptr{sc_list_t}, allocator::Ptr{sc_mempool_t})::Cvoid
 end
 
 """
@@ -2070,7 +2082,7 @@ void sc_list_reset (sc_list_t * list);
 ```
 """
 function sc_list_reset(list)
-    @ccall libt8.sc_list_reset(list::Ptr{sc_list_t})::Cvoid
+    @ccall libsc.sc_list_reset(list::Ptr{sc_list_t})::Cvoid
 end
 
 """
@@ -2086,7 +2098,7 @@ void sc_list_unlink (sc_list_t * list);
 ```
 """
 function sc_list_unlink(list)
-    @ccall libt8.sc_list_unlink(list::Ptr{sc_list_t})::Cvoid
+    @ccall libsc.sc_list_unlink(list::Ptr{sc_list_t})::Cvoid
 end
 
 """
@@ -2105,7 +2117,7 @@ sc_link_t *sc_list_prepend (sc_list_t * list, void *data);
 ```
 """
 function sc_list_prepend(list, data)
-    @ccall libt8.sc_list_prepend(list::Ptr{sc_list_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
+    @ccall libsc.sc_list_prepend(list::Ptr{sc_list_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
 end
 
 """
@@ -2124,7 +2136,7 @@ sc_link_t *sc_list_append (sc_list_t * list, void *data);
 ```
 """
 function sc_list_append(list, data)
-    @ccall libt8.sc_list_append(list::Ptr{sc_list_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
+    @ccall libsc.sc_list_append(list::Ptr{sc_list_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
 end
 
 """
@@ -2144,7 +2156,7 @@ sc_link_t *sc_list_insert (sc_list_t * list, sc_link_t * pred, void *data);
 ```
 """
 function sc_list_insert(list, pred, data)
-    @ccall libt8.sc_list_insert(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
+    @ccall libsc.sc_list_insert(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
 end
 
 """
@@ -2163,7 +2175,7 @@ void *sc_list_remove (sc_list_t * list, sc_link_t * pred);
 ```
 """
 function sc_list_remove(list, pred)
-    @ccall libt8.sc_list_remove(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t})::Ptr{Cvoid}
+    @ccall libsc.sc_list_remove(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t})::Ptr{Cvoid}
 end
 
 """
@@ -2181,7 +2193,7 @@ void *sc_list_pop (sc_list_t * list);
 ```
 """
 function sc_list_pop(list)
-    @ccall libt8.sc_list_pop(list::Ptr{sc_list_t})::Ptr{Cvoid}
+    @ccall libsc.sc_list_pop(list::Ptr{sc_list_t})::Ptr{Cvoid}
 end
 
 """
@@ -2227,7 +2239,7 @@ unsigned int sc_hash_function_string (const void *s, const void *u);
 ```
 """
 function sc_hash_function_string(s, u)
-    @ccall libt8.sc_hash_function_string(s::Ptr{Cvoid}, u::Ptr{Cvoid})::Cuint
+    @ccall libsc.sc_hash_function_string(s::Ptr{Cvoid}, u::Ptr{Cvoid})::Cuint
 end
 
 """
@@ -2245,7 +2257,7 @@ size_t sc_hash_memory_used (sc_hash_t * hash);
 ```
 """
 function sc_hash_memory_used(hash)
-    @ccall libt8.sc_hash_memory_used(hash::Ptr{sc_hash_t})::Csize_t
+    @ccall libsc.sc_hash_memory_used(hash::Ptr{sc_hash_t})::Csize_t
 end
 
 """
@@ -2264,7 +2276,7 @@ sc_hash_t *sc_hash_new (sc_hash_function_t hash_fn, sc_equal_function_t equal_fn
 ```
 """
 function sc_hash_new(hash_fn, equal_fn, user_data, allocator)
-    @ccall libt8.sc_hash_new(hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid}, allocator::Ptr{sc_mempool_t})::Ptr{sc_hash_t}
+    @ccall libsc.sc_hash_new(hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid}, allocator::Ptr{sc_mempool_t})::Ptr{sc_hash_t}
 end
 
 """
@@ -2284,7 +2296,7 @@ void sc_hash_destroy (sc_hash_t * hash);
 ```
 """
 function sc_hash_destroy(hash)
-    @ccall libt8.sc_hash_destroy(hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_destroy(hash::Ptr{sc_hash_t})::Cvoid
 end
 
 """
@@ -2300,7 +2312,7 @@ void sc_hash_destroy_null (sc_hash_t ** phash);
 ```
 """
 function sc_hash_destroy_null(phash)
-    @ccall libt8.sc_hash_destroy_null(phash::Ptr{Ptr{sc_hash_t}})::Cvoid
+    @ccall libsc.sc_hash_destroy_null(phash::Ptr{Ptr{sc_hash_t}})::Cvoid
 end
 
 """
@@ -2316,7 +2328,7 @@ void sc_hash_truncate (sc_hash_t * hash);
 ```
 """
 function sc_hash_truncate(hash)
-    @ccall libt8.sc_hash_truncate(hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_truncate(hash::Ptr{sc_hash_t})::Cvoid
 end
 
 """
@@ -2334,7 +2346,7 @@ void sc_hash_unlink (sc_hash_t * hash);
 ```
 """
 function sc_hash_unlink(hash)
-    @ccall libt8.sc_hash_unlink(hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_unlink(hash::Ptr{sc_hash_t})::Cvoid
 end
 
 """
@@ -2350,7 +2362,7 @@ void sc_hash_unlink_destroy (sc_hash_t * hash);
 ```
 """
 function sc_hash_unlink_destroy(hash)
-    @ccall libt8.sc_hash_unlink_destroy(hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_unlink_destroy(hash::Ptr{sc_hash_t})::Cvoid
 end
 
 """
@@ -2369,7 +2381,7 @@ int sc_hash_lookup (sc_hash_t * hash, void *v, void ***found);
 ```
 """
 function sc_hash_lookup(hash, v, found)
-    @ccall libt8.sc_hash_lookup(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
+    @ccall libsc.sc_hash_lookup(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
 end
 
 """
@@ -2388,7 +2400,7 @@ int sc_hash_insert_unique (sc_hash_t * hash, void *v, void ***found);
 ```
 """
 function sc_hash_insert_unique(hash, v, found)
-    @ccall libt8.sc_hash_insert_unique(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
+    @ccall libsc.sc_hash_insert_unique(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
 end
 
 """
@@ -2407,7 +2419,7 @@ int sc_hash_remove (sc_hash_t * hash, void *v, void **found);
 ```
 """
 function sc_hash_remove(hash, v, found)
-    @ccall libt8.sc_hash_remove(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Cvoid}})::Cint
+    @ccall libsc.sc_hash_remove(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Cvoid}})::Cint
 end
 
 """
@@ -2421,7 +2433,7 @@ void sc_hash_foreach (sc_hash_t * hash, sc_hash_foreach_t fn);
 ```
 """
 function sc_hash_foreach(hash, fn)
-    @ccall libt8.sc_hash_foreach(hash::Ptr{sc_hash_t}, fn::sc_hash_foreach_t)::Cvoid
+    @ccall libsc.sc_hash_foreach(hash::Ptr{sc_hash_t}, fn::sc_hash_foreach_t)::Cvoid
 end
 
 """
@@ -2435,7 +2447,7 @@ void sc_hash_print_statistics (int package_id, int log_priority, sc_hash_t * has
 ```
 """
 function sc_hash_print_statistics(package_id, log_priority, hash)
-    @ccall libt8.sc_hash_print_statistics(package_id::Cint, log_priority::Cint, hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_print_statistics(package_id::Cint, log_priority::Cint, hash::Ptr{sc_hash_t})::Cvoid
 end
 
 struct sc_hash_array_data
@@ -2477,7 +2489,7 @@ size_t sc_hash_array_memory_used (sc_hash_array_t * ha);
 ```
 """
 function sc_hash_array_memory_used(ha)
-    @ccall libt8.sc_hash_array_memory_used(ha::Ptr{sc_hash_array_t})::Csize_t
+    @ccall libsc.sc_hash_array_memory_used(ha::Ptr{sc_hash_array_t})::Csize_t
 end
 
 """
@@ -2495,7 +2507,7 @@ sc_hash_array_t *sc_hash_array_new (size_t elem_size, sc_hash_function_t hash_fn
 ```
 """
 function sc_hash_array_new(elem_size, hash_fn, equal_fn, user_data)
-    @ccall libt8.sc_hash_array_new(elem_size::Csize_t, hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid})::Ptr{sc_hash_array_t}
+    @ccall libsc.sc_hash_array_new(elem_size::Csize_t, hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid})::Ptr{sc_hash_array_t}
 end
 
 """
@@ -2509,7 +2521,7 @@ void sc_hash_array_destroy (sc_hash_array_t * hash_array);
 ```
 """
 function sc_hash_array_destroy(hash_array)
-    @ccall libt8.sc_hash_array_destroy(hash_array::Ptr{sc_hash_array_t})::Cvoid
+    @ccall libsc.sc_hash_array_destroy(hash_array::Ptr{sc_hash_array_t})::Cvoid
 end
 
 """
@@ -2523,7 +2535,7 @@ int sc_hash_array_is_valid (sc_hash_array_t * hash_array);
 ```
 """
 function sc_hash_array_is_valid(hash_array)
-    @ccall libt8.sc_hash_array_is_valid(hash_array::Ptr{sc_hash_array_t})::Cint
+    @ccall libsc.sc_hash_array_is_valid(hash_array::Ptr{sc_hash_array_t})::Cint
 end
 
 """
@@ -2539,7 +2551,7 @@ void sc_hash_array_truncate (sc_hash_array_t * hash_array);
 ```
 """
 function sc_hash_array_truncate(hash_array)
-    @ccall libt8.sc_hash_array_truncate(hash_array::Ptr{sc_hash_array_t})::Cvoid
+    @ccall libsc.sc_hash_array_truncate(hash_array::Ptr{sc_hash_array_t})::Cvoid
 end
 
 """
@@ -2558,7 +2570,7 @@ int sc_hash_array_lookup (sc_hash_array_t * hash_array, void *v, size_t *positio
 ```
 """
 function sc_hash_array_lookup(hash_array, v, position)
-    @ccall libt8.sc_hash_array_lookup(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_hash_array_lookup(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Cint
 end
 
 """
@@ -2577,7 +2589,7 @@ void *sc_hash_array_insert_unique (sc_hash_array_t * hash_array, void *v, size_t
 ```
 """
 function sc_hash_array_insert_unique(hash_array, v, position)
-    @ccall libt8.sc_hash_array_insert_unique(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Ptr{Cvoid}
+    @ccall libsc.sc_hash_array_insert_unique(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Ptr{Cvoid}
 end
 
 """
@@ -2594,7 +2606,7 @@ void sc_hash_array_rip (sc_hash_array_t * hash_array, sc_array_t * rip);
 ```
 """
 function sc_hash_array_rip(hash_array, rip)
-    @ccall libt8.sc_hash_array_rip(hash_array::Ptr{sc_hash_array_t}, rip::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_hash_array_rip(hash_array::Ptr{sc_hash_array_t}, rip::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -2630,7 +2642,7 @@ void sc_recycle_array_init (sc_recycle_array_t * rec_array, size_t elem_size);
 ```
 """
 function sc_recycle_array_init(rec_array, elem_size)
-    @ccall libt8.sc_recycle_array_init(rec_array::Ptr{sc_recycle_array_t}, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_recycle_array_init(rec_array::Ptr{sc_recycle_array_t}, elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -2646,7 +2658,7 @@ void sc_recycle_array_reset (sc_recycle_array_t * rec_array);
 ```
 """
 function sc_recycle_array_reset(rec_array)
-    @ccall libt8.sc_recycle_array_reset(rec_array::Ptr{sc_recycle_array_t})::Cvoid
+    @ccall libsc.sc_recycle_array_reset(rec_array::Ptr{sc_recycle_array_t})::Cvoid
 end
 
 """
@@ -2664,7 +2676,7 @@ void *sc_recycle_array_insert (sc_recycle_array_t * rec_array, size_t *position)
 ```
 """
 function sc_recycle_array_insert(rec_array, position)
-    @ccall libt8.sc_recycle_array_insert(rec_array::Ptr{sc_recycle_array_t}, position::Ptr{Csize_t})::Ptr{Cvoid}
+    @ccall libsc.sc_recycle_array_insert(rec_array::Ptr{sc_recycle_array_t}, position::Ptr{Csize_t})::Ptr{Cvoid}
 end
 
 """
@@ -2682,7 +2694,7 @@ void *sc_recycle_array_remove (sc_recycle_array_t * rec_array, size_t position);
 ```
 """
 function sc_recycle_array_remove(rec_array, position)
-    @ccall libt8.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t}, position::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t}, position::Csize_t)::Ptr{Cvoid}
 end
 
 """A type for storing SFC indices"""
@@ -2825,7 +2837,7 @@ void *sc_shmem_malloc (int package, size_t elem_size, size_t elem_count, sc_MPI_
 ```
 """
 function sc_shmem_malloc(package, elem_size, elem_count, comm)
-    @ccall libt8.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
+    @ccall libsc.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
 end
 
 """
@@ -2837,7 +2849,7 @@ void sc_shmem_free (int package, void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_free(package, array, comm)
-    @ccall libt8.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -2871,7 +2883,7 @@ void sc_refcount_ref (sc_refcount_t * rc);
 ```
 """
 function sc_refcount_ref(rc)
-    @ccall libt8.sc_refcount_ref(rc::Ptr{sc_refcount_t})::Cvoid
+    @ccall libsc.sc_refcount_ref(rc::Ptr{sc_refcount_t})::Cvoid
 end
 
 """
@@ -2892,7 +2904,7 @@ int sc_refcount_unref (sc_refcount_t * rc);
 ```
 """
 function sc_refcount_unref(rc)
-    @ccall libt8.sc_refcount_unref(rc::Ptr{sc_refcount_t})::Cint
+    @ccall libsc.sc_refcount_unref(rc::Ptr{sc_refcount_t})::Cint
 end
 
 """
@@ -2910,7 +2922,7 @@ int sc_refcount_is_active (const sc_refcount_t * rc);
 ```
 """
 function sc_refcount_is_active(rc)
-    @ccall libt8.sc_refcount_is_active(rc::Ptr{sc_refcount_t})::Cint
+    @ccall libsc.sc_refcount_is_active(rc::Ptr{sc_refcount_t})::Cint
 end
 
 """
@@ -2928,7 +2940,7 @@ int sc_refcount_is_last (const sc_refcount_t * rc);
 ```
 """
 function sc_refcount_is_last(rc)
-    @ccall libt8.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
+    @ccall libsc.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
 end
 
 """
@@ -2961,7 +2973,7 @@ void sc_shmem_set_type (sc_MPI_Comm comm, sc_shmem_type_t type);
 ```
 """
 function sc_shmem_set_type(comm, type)
-    @ccall libt8.sc_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
+    @ccall libsc.sc_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
 end
 
 """
@@ -2973,7 +2985,7 @@ sc_shmem_type_t sc_shmem_get_type (sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_get_type(comm)
-    @ccall libt8.sc_shmem_get_type(comm::MPI_Comm)::sc_shmem_type_t
+    @ccall libsc.sc_shmem_get_type(comm::MPI_Comm)::sc_shmem_type_t
 end
 
 """
@@ -2985,7 +2997,7 @@ int sc_shmem_write_start (void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_write_start(array, comm)
-    @ccall libt8.sc_shmem_write_start(array::Ptr{Cvoid}, comm::MPI_Comm)::Cint
+    @ccall libsc.sc_shmem_write_start(array::Ptr{Cvoid}, comm::MPI_Comm)::Cint
 end
 
 """
@@ -2997,7 +3009,7 @@ void sc_shmem_write_end (void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_write_end(array, comm)
-    @ccall libt8.sc_shmem_write_end(array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_write_end(array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3009,7 +3021,7 @@ void sc_shmem_memcpy (void *destarray, void *srcarray, size_t bytes, sc_MPI_Comm
 ```
 """
 function sc_shmem_memcpy(destarray, srcarray, bytes, comm)
-    @ccall libt8.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid}, bytes::Csize_t, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid}, bytes::Csize_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3021,7 +3033,7 @@ void sc_shmem_allgather (void *sendbuf, int sendcount, sc_MPI_Datatype sendtype,
 ```
 """
 function sc_shmem_allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm)
-    @ccall libt8.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3033,7 +3045,7 @@ void sc_shmem_prefix (void *sendbuf, void *recvbuf, int count, sc_MPI_Datatype t
 ```
 """
 function sc_shmem_prefix(sendbuf, recvbuf, count, type, op, comm)
-    @ccall libt8.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
 mutable struct t8_shmem_array end
@@ -3416,7 +3428,7 @@ void sc_refcount_init_invalid (sc_refcount_t * rc);
 ```
 """
 function sc_refcount_init_invalid(rc)
-    @ccall libt8.sc_refcount_init_invalid(rc::Ptr{sc_refcount_t})::Cvoid
+    @ccall libsc.sc_refcount_init_invalid(rc::Ptr{sc_refcount_t})::Cvoid
 end
 
 """
@@ -3433,7 +3445,7 @@ void sc_refcount_init (sc_refcount_t * rc, int package_id);
 ```
 """
 function sc_refcount_init(rc, package_id)
-    @ccall libt8.sc_refcount_init(rc::Ptr{sc_refcount_t}, package_id::Cint)::Cvoid
+    @ccall libsc.sc_refcount_init(rc::Ptr{sc_refcount_t}, package_id::Cint)::Cvoid
 end
 
 """
@@ -3451,7 +3463,7 @@ sc_refcount_t *sc_refcount_new (int package_id);
 ```
 """
 function sc_refcount_new(package_id)
-    @ccall libt8.sc_refcount_new(package_id::Cint)::Ptr{sc_refcount_t}
+    @ccall libsc.sc_refcount_new(package_id::Cint)::Ptr{sc_refcount_t}
 end
 
 """
@@ -3467,7 +3479,7 @@ void sc_refcount_destroy (sc_refcount_t * rc);
 ```
 """
 function sc_refcount_destroy(rc)
-    @ccall libt8.sc_refcount_destroy(rc::Ptr{sc_refcount_t})::Cvoid
+    @ccall libsc.sc_refcount_destroy(rc::Ptr{sc_refcount_t})::Cvoid
 end
 
 mutable struct t8_cmesh end
@@ -4731,7 +4743,7 @@ int sc_statistics_has (sc_statistics_t * stats, const char *name);
 ```
 """
 function sc_statistics_has(stats, name)
-    @ccall libt8.sc_statistics_has(stats::Ptr{sc_statistics_t}, name::Cstring)::Cint
+    @ccall libsc.sc_statistics_has(stats::Ptr{sc_statistics_t}, name::Cstring)::Cint
 end
 
 """
@@ -4745,7 +4757,7 @@ void sc_statistics_add_empty (sc_statistics_t * stats, const char *name);
 ```
 """
 function sc_statistics_add_empty(stats, name)
-    @ccall libt8.sc_statistics_add_empty(stats::Ptr{sc_statistics_t}, name::Cstring)::Cvoid
+    @ccall libsc.sc_statistics_add_empty(stats::Ptr{sc_statistics_t}, name::Cstring)::Cvoid
 end
 
 struct sc_flopinfo
@@ -4778,7 +4790,7 @@ void sc_flops_snap (sc_flopinfo_t * fi, sc_flopinfo_t * snapshot);
 ```
 """
 function sc_flops_snap(fi, snapshot)
-    @ccall libt8.sc_flops_snap(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
+    @ccall libsc.sc_flops_snap(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
 end
 
 """
@@ -4795,7 +4807,7 @@ void sc_flops_shot (sc_flopinfo_t * fi, sc_flopinfo_t * snapshot);
 ```
 """
 function sc_flops_shot(fi, snapshot)
-    @ccall libt8.sc_flops_shot(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
+    @ccall libsc.sc_flops_shot(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
 end
 
 """
@@ -4809,7 +4821,7 @@ void sc_statistics_accumulate (sc_statistics_t * stats, const char *name, double
 ```
 """
 function sc_statistics_accumulate(stats, name, value)
-    @ccall libt8.sc_statistics_accumulate(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
+    @ccall libsc.sc_statistics_accumulate(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
 end
 
 """
@@ -4823,7 +4835,7 @@ void sc_flops_papi (float *rtime, float *ptime, long long *flpops, float *mflops
 ```
 """
 function sc_flops_papi(rtime, ptime, flpops, mflops)
-    @ccall libt8.sc_flops_papi(rtime::Ptr{Cfloat}, ptime::Ptr{Cfloat}, flpops::Ptr{Clonglong}, mflops::Ptr{Cfloat})::Cvoid
+    @ccall libsc.sc_flops_papi(rtime::Ptr{Cfloat}, ptime::Ptr{Cfloat}, flpops::Ptr{Clonglong}, mflops::Ptr{Cfloat})::Cvoid
 end
 
 """
@@ -4839,7 +4851,7 @@ void sc_flops_start (sc_flopinfo_t * fi);
 ```
 """
 function sc_flops_start(fi)
-    @ccall libt8.sc_flops_start(fi::Ptr{sc_flopinfo_t})::Cvoid
+    @ccall libsc.sc_flops_start(fi::Ptr{sc_flopinfo_t})::Cvoid
 end
 
 """
@@ -4855,7 +4867,7 @@ void sc_flops_start_nopapi (sc_flopinfo_t * fi);
 ```
 """
 function sc_flops_start_nopapi(fi)
-    @ccall libt8.sc_flops_start_nopapi(fi::Ptr{sc_flopinfo_t})::Cvoid
+    @ccall libsc.sc_flops_start_nopapi(fi::Ptr{sc_flopinfo_t})::Cvoid
 end
 
 """
@@ -4871,12 +4883,12 @@ void sc_flops_count (sc_flopinfo_t * fi);
 ```
 """
 function sc_flops_count(fi)
-    @ccall libt8.sc_flops_count(fi::Ptr{sc_flopinfo_t})::Cvoid
+    @ccall libsc.sc_flops_count(fi::Ptr{sc_flopinfo_t})::Cvoid
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_flops_shotv(fi, va_list...)
-        :(@ccall(libt8.sc_flops_shotv(fi::Ptr{sc_flopinfo_t}; $(to_c_type_pairs(va_list)...))::Cvoid))
+        :(@ccall(libsc.sc_flops_shotv(fi::Ptr{sc_flopinfo_t}; $(to_c_type_pairs(va_list)...))::Cvoid))
     end
 
 """
@@ -5211,7 +5223,7 @@ void sc_stats_set1 (sc_statinfo_t * stats, double value, const char *variable);
 ```
 """
 function sc_stats_set1(stats, value, variable)
-    @ccall libt8.sc_stats_set1(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring)::Cvoid
+    @ccall libsc.sc_stats_set1(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring)::Cvoid
 end
 
 """
@@ -5232,7 +5244,7 @@ void sc_stats_set1_ext (sc_statinfo_t * stats, double value, const char *variabl
 ```
 """
 function sc_stats_set1_ext(stats, value, variable, copy_variable, stats_group, stats_prio)
-    @ccall libt8.sc_stats_set1_ext(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_set1_ext(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
 end
 
 """
@@ -5249,7 +5261,7 @@ void sc_stats_init (sc_statinfo_t * stats, const char *variable);
 ```
 """
 function sc_stats_init(stats, variable)
-    @ccall libt8.sc_stats_init(stats::Ptr{sc_statinfo_t}, variable::Cstring)::Cvoid
+    @ccall libsc.sc_stats_init(stats::Ptr{sc_statinfo_t}, variable::Cstring)::Cvoid
 end
 
 """
@@ -5269,7 +5281,7 @@ void sc_stats_init_ext (sc_statinfo_t * stats, const char *variable, int copy_va
 ```
 """
 function sc_stats_init_ext(stats, variable, copy_variable, stats_group, stats_prio)
-    @ccall libt8.sc_stats_init_ext(stats::Ptr{sc_statinfo_t}, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_init_ext(stats::Ptr{sc_statinfo_t}, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
 end
 
 """
@@ -5286,7 +5298,7 @@ void sc_stats_reset (sc_statinfo_t * stats, int reset_vgp);
 ```
 """
 function sc_stats_reset(stats, reset_vgp)
-    @ccall libt8.sc_stats_reset(stats::Ptr{sc_statinfo_t}, reset_vgp::Cint)::Cvoid
+    @ccall libsc.sc_stats_reset(stats::Ptr{sc_statinfo_t}, reset_vgp::Cint)::Cvoid
 end
 
 """
@@ -5304,7 +5316,7 @@ void sc_stats_set_group_prio (sc_statinfo_t * stats, int stats_group, int stats_
 ```
 """
 function sc_stats_set_group_prio(stats, stats_group, stats_prio)
-    @ccall libt8.sc_stats_set_group_prio(stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_set_group_prio(stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint)::Cvoid
 end
 
 """
@@ -5321,7 +5333,7 @@ void sc_stats_accumulate (sc_statinfo_t * stats, double value);
 ```
 """
 function sc_stats_accumulate(stats, value)
-    @ccall libt8.sc_stats_accumulate(stats::Ptr{sc_statinfo_t}, value::Cdouble)::Cvoid
+    @ccall libsc.sc_stats_accumulate(stats::Ptr{sc_statinfo_t}, value::Cdouble)::Cvoid
 end
 
 """
@@ -5333,7 +5345,7 @@ void sc_stats_compute (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute(mpicomm, nvars, stats)
-    @ccall libt8.sc_stats_compute(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libsc.sc_stats_compute(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -5345,7 +5357,7 @@ void sc_stats_compute1 (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute1(mpicomm, nvars, stats)
-    @ccall libt8.sc_stats_compute1(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libsc.sc_stats_compute1(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -5366,7 +5378,7 @@ void sc_stats_print (int package_id, int log_priority, int nvars, sc_statinfo_t 
 ```
 """
 function sc_stats_print(package_id, log_priority, nvars, stats, full, summary)
-    @ccall libt8.sc_stats_print(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, full::Cint, summary::Cint)::Cvoid
+    @ccall libsc.sc_stats_print(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, full::Cint, summary::Cint)::Cvoid
 end
 
 """
@@ -5389,7 +5401,7 @@ void sc_stats_print_ext (int package_id, int log_priority, int nvars, sc_statinf
 ```
 """
 function sc_stats_print_ext(package_id, log_priority, nvars, stats, stats_group, stats_prio, full, summary)
-    @ccall libt8.sc_stats_print_ext(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint, full::Cint, summary::Cint)::Cvoid
+    @ccall libsc.sc_stats_print_ext(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint, full::Cint, summary::Cint)::Cvoid
 end
 
 """
@@ -5401,7 +5413,7 @@ sc_statistics_t *sc_statistics_new (sc_MPI_Comm mpicomm);
 ```
 """
 function sc_statistics_new(mpicomm)
-    @ccall libt8.sc_statistics_new(mpicomm::MPI_Comm)::Ptr{sc_statistics_t}
+    @ccall libsc.sc_statistics_new(mpicomm::MPI_Comm)::Ptr{sc_statistics_t}
 end
 
 """
@@ -5417,7 +5429,7 @@ void sc_statistics_destroy (sc_statistics_t * stats);
 ```
 """
 function sc_statistics_destroy(stats)
-    @ccall libt8.sc_statistics_destroy(stats::Ptr{sc_statistics_t})::Cvoid
+    @ccall libsc.sc_statistics_destroy(stats::Ptr{sc_statistics_t})::Cvoid
 end
 
 """
@@ -5431,7 +5443,7 @@ void sc_statistics_add (sc_statistics_t * stats, const char *name);
 ```
 """
 function sc_statistics_add(stats, name)
-    @ccall libt8.sc_statistics_add(stats::Ptr{sc_statistics_t}, name::Cstring)::Cvoid
+    @ccall libsc.sc_statistics_add(stats::Ptr{sc_statistics_t}, name::Cstring)::Cvoid
 end
 
 """
@@ -5445,7 +5457,7 @@ void sc_statistics_set (sc_statistics_t * stats, const char *name, double value)
 ```
 """
 function sc_statistics_set(stats, name, value)
-    @ccall libt8.sc_statistics_set(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
+    @ccall libsc.sc_statistics_set(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
 end
 
 """
@@ -5459,7 +5471,7 @@ void sc_statistics_compute (sc_statistics_t * stats);
 ```
 """
 function sc_statistics_compute(stats)
-    @ccall libt8.sc_statistics_compute(stats::Ptr{sc_statistics_t})::Cvoid
+    @ccall libsc.sc_statistics_compute(stats::Ptr{sc_statistics_t})::Cvoid
 end
 
 """
@@ -5473,7 +5485,7 @@ void sc_statistics_print (sc_statistics_t * stats, int package_id, int log_prior
 ```
 """
 function sc_statistics_print(stats, package_id, log_priority, full, summary)
-    @ccall libt8.sc_statistics_print(stats::Ptr{sc_statistics_t}, package_id::Cint, log_priority::Cint, full::Cint, summary::Cint)::Cvoid
+    @ccall libsc.sc_statistics_print(stats::Ptr{sc_statistics_t}, package_id::Cint, log_priority::Cint, full::Cint, summary::Cint)::Cvoid
 end
 
 mutable struct sc_options end
@@ -5509,7 +5521,7 @@ sc_options_t *sc_options_new (const char *program_path);
 ```
 """
 function sc_options_new(program_path)
-    @ccall libt8.sc_options_new(program_path::Cstring)::Ptr{sc_options_t}
+    @ccall libsc.sc_options_new(program_path::Cstring)::Ptr{sc_options_t}
 end
 
 """
@@ -5527,7 +5539,7 @@ void sc_options_destroy_deep (sc_options_t * opt);
 ```
 """
 function sc_options_destroy_deep(opt)
-    @ccall libt8.sc_options_destroy_deep(opt::Ptr{sc_options_t})::Cvoid
+    @ccall libsc.sc_options_destroy_deep(opt::Ptr{sc_options_t})::Cvoid
 end
 
 """
@@ -5543,7 +5555,7 @@ void sc_options_destroy (sc_options_t * opt);
 ```
 """
 function sc_options_destroy(opt)
-    @ccall libt8.sc_options_destroy(opt::Ptr{sc_options_t})::Cvoid
+    @ccall libsc.sc_options_destroy(opt::Ptr{sc_options_t})::Cvoid
 end
 
 """
@@ -5561,7 +5573,7 @@ void sc_options_set_spacing (sc_options_t * opt, int space_type, int space_help)
 ```
 """
 function sc_options_set_spacing(opt, space_type, space_help)
-    @ccall libt8.sc_options_set_spacing(opt::Ptr{sc_options_t}, space_type::Cint, space_help::Cint)::Cvoid
+    @ccall libsc.sc_options_set_spacing(opt::Ptr{sc_options_t}, space_type::Cint, space_help::Cint)::Cvoid
 end
 
 """
@@ -5581,7 +5593,7 @@ void sc_options_add_switch (sc_options_t * opt, int opt_char, const char *opt_na
 ```
 """
 function sc_options_add_switch(opt, opt_char, opt_name, variable, help_string)
-    @ccall libt8.sc_options_add_switch(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_switch(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5602,7 +5614,7 @@ void sc_options_add_bool (sc_options_t * opt, int opt_char, const char *opt_name
 ```
 """
 function sc_options_add_bool(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libt8.sc_options_add_bool(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_bool(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5623,7 +5635,7 @@ void sc_options_add_int (sc_options_t * opt, int opt_char, const char *opt_name,
 ```
 """
 function sc_options_add_int(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libt8.sc_options_add_int(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_int(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5644,7 +5656,7 @@ void sc_options_add_size_t (sc_options_t * opt, int opt_char, const char *opt_na
 ```
 """
 function sc_options_add_size_t(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libt8.sc_options_add_size_t(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Csize_t}, init_value::Csize_t, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_size_t(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Csize_t}, init_value::Csize_t, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5665,7 +5677,7 @@ void sc_options_add_double (sc_options_t * opt, int opt_char, const char *opt_na
 ```
 """
 function sc_options_add_double(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libt8.sc_options_add_double(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cdouble}, init_value::Cdouble, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_double(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cdouble}, init_value::Cdouble, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5686,7 +5698,7 @@ void sc_options_add_string (sc_options_t * opt, int opt_char, const char *opt_na
 ```
 """
 function sc_options_add_string(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libt8.sc_options_add_string(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cstring}, init_value::Cstring, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_string(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cstring}, init_value::Cstring, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5705,7 +5717,7 @@ void sc_options_add_inifile (sc_options_t * opt, int opt_char, const char *opt_n
 ```
 """
 function sc_options_add_inifile(opt, opt_char, opt_name, help_string)
-    @ccall libt8.sc_options_add_inifile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_inifile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5726,7 +5738,7 @@ void sc_options_add_jsonfile (sc_options_t * opt, int opt_char, const char *opt_
 ```
 """
 function sc_options_add_jsonfile(opt, opt_char, opt_name, help_string)
-    @ccall libt8.sc_options_add_jsonfile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_jsonfile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5748,7 +5760,7 @@ void sc_options_add_callback (sc_options_t * opt, int opt_char, const char *opt_
 ```
 """
 function sc_options_add_callback(opt, opt_char, opt_name, has_arg, fn, data, help_string)
-    @ccall libt8.sc_options_add_callback(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, has_arg::Cint, fn::sc_options_callback_t, data::Ptr{Cvoid}, help_string::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_callback(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, has_arg::Cint, fn::sc_options_callback_t, data::Ptr{Cvoid}, help_string::Cstring)::Cvoid
 end
 
 """
@@ -5786,7 +5798,7 @@ void sc_options_add_suboptions (sc_options_t * opt, sc_options_t * subopt, const
 ```
 """
 function sc_options_add_suboptions(opt, subopt, prefix)
-    @ccall libt8.sc_options_add_suboptions(opt::Ptr{sc_options_t}, subopt::Ptr{sc_options_t}, prefix::Cstring)::Cvoid
+    @ccall libsc.sc_options_add_suboptions(opt::Ptr{sc_options_t}, subopt::Ptr{sc_options_t}, prefix::Cstring)::Cvoid
 end
 
 """
@@ -5805,7 +5817,7 @@ void sc_options_print_usage (int package_id, int log_priority, sc_options_t * op
 ```
 """
 function sc_options_print_usage(package_id, log_priority, opt, arg_usage)
-    @ccall libt8.sc_options_print_usage(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t}, arg_usage::Cstring)::Cvoid
+    @ccall libsc.sc_options_print_usage(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t}, arg_usage::Cstring)::Cvoid
 end
 
 """
@@ -5823,7 +5835,7 @@ void sc_options_print_summary (int package_id, int log_priority, sc_options_t * 
 ```
 """
 function sc_options_print_summary(package_id, log_priority, opt)
-    @ccall libt8.sc_options_print_summary(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t})::Cvoid
+    @ccall libsc.sc_options_print_summary(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t})::Cvoid
 end
 
 """
@@ -5844,7 +5856,7 @@ int sc_options_load (int package_id, int err_priority, sc_options_t * opt, const
 ```
 """
 function sc_options_load(package_id, err_priority, opt, file)
-    @ccall libt8.sc_options_load(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, file::Cstring)::Cint
+    @ccall libsc.sc_options_load(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, file::Cstring)::Cint
 end
 
 """
@@ -5866,7 +5878,7 @@ int sc_options_load_ini (int package_id, int err_priority, sc_options_t * opt, c
 ```
 """
 function sc_options_load_ini(package_id, err_priority, opt, inifile, re)
-    @ccall libt8.sc_options_load_ini(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_options_load_ini(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -5888,7 +5900,7 @@ int sc_options_load_json (int package_id, int err_priority, sc_options_t * opt, 
 ```
 """
 function sc_options_load_json(package_id, err_priority, opt, jsonfile, re)
-    @ccall libt8.sc_options_load_json(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, jsonfile::Cstring, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_options_load_json(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, jsonfile::Cstring, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -5909,7 +5921,7 @@ int sc_options_save (int package_id, int err_priority, sc_options_t * opt, const
 ```
 """
 function sc_options_save(package_id, err_priority, opt, inifile)
-    @ccall libt8.sc_options_save(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
+    @ccall libsc.sc_options_save(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
 end
 
 """
@@ -5930,7 +5942,7 @@ int sc_options_load_args (int package_id, int err_priority, sc_options_t * opt, 
 ```
 """
 function sc_options_load_args(package_id, err_priority, opt, inifile)
-    @ccall libt8.sc_options_load_args(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
+    @ccall libsc.sc_options_load_args(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
 end
 
 """
@@ -5952,7 +5964,7 @@ int sc_options_parse (int package_id, int err_priority, sc_options_t * opt, int 
 ```
 """
 function sc_options_parse(package_id, err_priority, opt, argc, argv)
-    @ccall libt8.sc_options_parse(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, argc::Cint, argv::Ptr{Cstring})::Cint
+    @ccall libsc.sc_options_parse(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, argc::Cint, argv::Ptr{Cstring})::Cint
 end
 
 """
@@ -8635,7 +8647,7 @@ void sc_io_read (sc_MPI_File mpifile, void *ptr, size_t zcount, sc_MPI_Datatype 
 ```
 """
 function sc_io_read(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -8647,7 +8659,7 @@ void sc_io_write (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Da
 ```
 """
 function sc_io_write(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, errmsg::Cstring)::Cvoid
 end
 
 """Typedef for quadrant coordinates."""
@@ -8780,7 +8792,7 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_io_sink_new(iotype, iomode, ioencode, va_list...)
-        :(@ccall(libt8.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
+        :(@ccall(libsc.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
     end
 
 """
@@ -8798,7 +8810,7 @@ int sc_io_sink_destroy (sc_io_sink_t * sink);
 ```
 """
 function sc_io_sink_destroy(sink)
-    @ccall libt8.sc_io_sink_destroy(sink::Ptr{sc_io_sink_t})::Cint
+    @ccall libsc.sc_io_sink_destroy(sink::Ptr{sc_io_sink_t})::Cint
 end
 
 """
@@ -8818,7 +8830,7 @@ int sc_io_sink_write (sc_io_sink_t * sink, const void *data, size_t bytes_avail)
 ```
 """
 function sc_io_sink_write(sink, data, bytes_avail)
-    @ccall libt8.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t)::Cint
+    @ccall libsc.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t)::Cint
 end
 
 """
@@ -8838,7 +8850,7 @@ int sc_io_sink_complete (sc_io_sink_t * sink, size_t *bytes_in, size_t *bytes_ou
 ```
 """
 function sc_io_sink_complete(sink, bytes_in, bytes_out)
-    @ccall libt8.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -8857,12 +8869,12 @@ int sc_io_sink_align (sc_io_sink_t * sink, size_t bytes_align);
 ```
 """
 function sc_io_sink_align(sink, bytes_align)
-    @ccall libt8.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
+    @ccall libsc.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_io_source_new(iotype, ioencode, va_list...)
-        :(@ccall(libt8.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
+        :(@ccall(libsc.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
     end
 
 """
@@ -8880,7 +8892,7 @@ int sc_io_source_destroy (sc_io_source_t * source);
 ```
 """
 function sc_io_source_destroy(source)
-    @ccall libt8.sc_io_source_destroy(source::Ptr{sc_io_source_t})::Cint
+    @ccall libsc.sc_io_source_destroy(source::Ptr{sc_io_source_t})::Cint
 end
 
 """
@@ -8901,7 +8913,7 @@ int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, 
 ```
 """
 function sc_io_source_read(source, data, bytes_avail, bytes_out)
-    @ccall libt8.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -8921,7 +8933,7 @@ int sc_io_source_complete (sc_io_source_t * source, size_t *bytes_in, size_t *by
 ```
 """
 function sc_io_source_complete(source, bytes_in, bytes_out)
-    @ccall libt8.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -8940,7 +8952,7 @@ int sc_io_source_align (sc_io_source_t * source, size_t bytes_align);
 ```
 """
 function sc_io_source_align(source, bytes_align)
-    @ccall libt8.sc_io_source_align(source::Ptr{sc_io_source_t}, bytes_align::Csize_t)::Cint
+    @ccall libsc.sc_io_source_align(source::Ptr{sc_io_source_t}, bytes_align::Csize_t)::Cint
 end
 
 """
@@ -8958,7 +8970,7 @@ int sc_io_source_activate_mirror (sc_io_source_t * source);
 ```
 """
 function sc_io_source_activate_mirror(source)
-    @ccall libt8.sc_io_source_activate_mirror(source::Ptr{sc_io_source_t})::Cint
+    @ccall libsc.sc_io_source_activate_mirror(source::Ptr{sc_io_source_t})::Cint
 end
 
 """
@@ -8976,7 +8988,7 @@ int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_
 ```
 """
 function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
-    @ccall libt8.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -8992,7 +9004,7 @@ int sc_io_have_zlib (void);
 ```
 """
 function sc_io_have_zlib()
-    @ccall libt8.sc_io_have_zlib()::Cint
+    @ccall libsc.sc_io_have_zlib()::Cint
 end
 
 """
@@ -9013,7 +9025,7 @@ void sc_io_encode (sc_array_t *data, sc_array_t *out);
 ```
 """
 function sc_io_encode(data, out)
-    @ccall libt8.sc_io_encode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_io_encode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -9037,7 +9049,7 @@ void sc_io_encode_zlib (sc_array_t *data, sc_array_t *out, int zlib_compression_
 ```
 """
 function sc_io_encode_zlib(data, out, zlib_compression_level)
-    @ccall libt8.sc_io_encode_zlib(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, zlib_compression_level::Cint)::Cvoid
+    @ccall libsc.sc_io_encode_zlib(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, zlib_compression_level::Cint)::Cvoid
 end
 
 """
@@ -9062,7 +9074,7 @@ int sc_io_decode_info (sc_array_t *data, size_t *original_size, char *format_cha
 ```
 """
 function sc_io_decode_info(data, original_size, format_char, re)
-    @ccall libt8.sc_io_decode_info(data::Ptr{sc_array_t}, original_size::Ptr{Csize_t}, format_char::Cstring, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_io_decode_info(data::Ptr{sc_array_t}, original_size::Ptr{Csize_t}, format_char::Cstring, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -9095,7 +9107,7 @@ int sc_io_decode (sc_array_t *data, sc_array_t *out, size_t max_original_size, v
 ```
 """
 function sc_io_decode(data, out, max_original_size, re)
-    @ccall libt8.sc_io_decode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, max_original_size::Csize_t, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_io_decode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, max_original_size::Csize_t, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -9115,7 +9127,7 @@ int sc_vtk_write_binary (FILE * vtkfile, char *numeric_data, size_t byte_length)
 ```
 """
 function sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
-    @ccall libt8.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+    @ccall libsc.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
 end
 
 """
@@ -9135,7 +9147,7 @@ int sc_vtk_write_compressed (FILE * vtkfile, char *numeric_data, size_t byte_len
 ```
 """
 function sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
-    @ccall libt8.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+    @ccall libsc.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
 end
 
 """
@@ -9149,7 +9161,7 @@ FILE *sc_fopen (const char *filename, const char *mode, const char *errmsg);
 ```
 """
 function sc_fopen(filename, mode, errmsg)
-    @ccall libt8.sc_fopen(filename::Cstring, mode::Cstring, errmsg::Cstring)::Ptr{Libc.FILE}
+    @ccall libsc.sc_fopen(filename::Cstring, mode::Cstring, errmsg::Cstring)::Ptr{Libc.FILE}
 end
 
 """
@@ -9173,7 +9185,7 @@ void sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file, const c
 ```
 """
 function sc_fwrite(ptr, size, nmemb, file, errmsg)
-    @ccall libt8.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -9197,7 +9209,7 @@ void sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file, const char *er
 ```
 """
 function sc_fread(ptr, size, nmemb, file, errmsg)
-    @ccall libt8.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -9213,7 +9225,7 @@ void sc_fflush_fsync_fclose (FILE * file);
 ```
 """
 function sc_fflush_fsync_fclose(file)
-    @ccall libt8.sc_fflush_fsync_fclose(file::Ptr{Libc.FILE})::Cvoid
+    @ccall libsc.sc_fflush_fsync_fclose(file::Ptr{Libc.FILE})::Cvoid
 end
 
 """
@@ -9225,7 +9237,7 @@ int sc_io_open (sc_MPI_Comm mpicomm, const char *filename, sc_io_open_mode_t amo
 ```
 """
 function sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
-    @ccall libt8.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
 end
 
 """
@@ -9237,7 +9249,7 @@ int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int zco
 ```
 """
 function sc_io_read_at(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9249,7 +9261,7 @@ int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int
 ```
 """
 function sc_io_read_at_all(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9261,7 +9273,7 @@ int sc_io_read_all (sc_MPI_File mpifile, void *ptr, int zcount, sc_MPI_Datatype 
 ```
 """
 function sc_io_read_all(mpifile, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_read_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_read_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9273,7 +9285,7 @@ int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, 
 ```
 """
 function sc_io_write_at(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9285,7 +9297,7 @@ int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *p
 ```
 """
 function sc_io_write_at_all(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9297,7 +9309,7 @@ int sc_io_write_all (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI
 ```
 """
 function sc_io_write_all(mpifile, ptr, zcount, t, ocount)
-    @ccall libt8.sc_io_write_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_write_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -9309,7 +9321,7 @@ int sc_io_close (sc_MPI_File * file);
 ```
 """
 function sc_io_close(file)
-    @ccall libt8.sc_io_close(file::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_close(file::Ptr{Cint})::Cint
 end
 
 """
@@ -9358,7 +9370,7 @@ static inline void p4est_log_indent_push (void);
 ```
 """
 function p4est_log_indent_push()
-    @ccall libt8.p4est_log_indent_push()::Cvoid
+    @ccall libp4est.p4est_log_indent_push()::Cvoid
 end
 
 """
@@ -9370,7 +9382,7 @@ static inline void p4est_log_indent_pop (void);
 ```
 """
 function p4est_log_indent_pop()
-    @ccall libt8.p4est_log_indent_pop()::Cvoid
+    @ccall libp4est.p4est_log_indent_pop()::Cvoid
 end
 
 """
@@ -9384,7 +9396,7 @@ void p4est_init (sc_log_handler_t log_handler, int log_threshold);
 ```
 """
 function p4est_init(log_handler, log_threshold)
-    @ccall libt8.p4est_init(log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libp4est.p4est_init(log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
@@ -9402,7 +9414,7 @@ int p4est_is_initialized (void);
 ```
 """
 function p4est_is_initialized()
-    @ccall libt8.p4est_is_initialized()::Cint
+    @ccall libp4est.p4est_is_initialized()::Cint
 end
 
 """
@@ -9414,7 +9426,7 @@ static inline unsigned p4est_topidx_hash2 (const p4est_topidx_t * tt);
 ```
 """
 function p4est_topidx_hash2(tt)
-    @ccall libt8.p4est_topidx_hash2(tt::Ptr{p4est_topidx_t})::Cuint
+    @ccall libp4est.p4est_topidx_hash2(tt::Ptr{p4est_topidx_t})::Cuint
 end
 
 """
@@ -9426,7 +9438,7 @@ static inline unsigned p4est_topidx_hash3 (const p4est_topidx_t * tt);
 ```
 """
 function p4est_topidx_hash3(tt)
-    @ccall libt8.p4est_topidx_hash3(tt::Ptr{p4est_topidx_t})::Cuint
+    @ccall libp4est.p4est_topidx_hash3(tt::Ptr{p4est_topidx_t})::Cuint
 end
 
 """
@@ -9438,7 +9450,7 @@ static inline unsigned p4est_topidx_hash4 (const p4est_topidx_t * tt);
 ```
 """
 function p4est_topidx_hash4(tt)
-    @ccall libt8.p4est_topidx_hash4(tt::Ptr{p4est_topidx_t})::Cuint
+    @ccall libp4est.p4est_topidx_hash4(tt::Ptr{p4est_topidx_t})::Cuint
 end
 
 """
@@ -9450,7 +9462,7 @@ static inline int p4est_topidx_is_sorted (p4est_topidx_t * t, int length);
 ```
 """
 function p4est_topidx_is_sorted(t, length)
-    @ccall libt8.p4est_topidx_is_sorted(t::Ptr{p4est_topidx_t}, length::Cint)::Cint
+    @ccall libp4est.p4est_topidx_is_sorted(t::Ptr{p4est_topidx_t}, length::Cint)::Cint
 end
 
 """
@@ -9462,7 +9474,7 @@ static inline void p4est_topidx_bsort (p4est_topidx_t * t, int length);
 ```
 """
 function p4est_topidx_bsort(t, length)
-    @ccall libt8.p4est_topidx_bsort(t::Ptr{p4est_topidx_t}, length::Cint)::Cvoid
+    @ccall libp4est.p4est_topidx_bsort(t::Ptr{p4est_topidx_t}, length::Cint)::Cvoid
 end
 
 """
@@ -9474,7 +9486,7 @@ static inline uint64_t p4est_partition_cut_uint64 (uint64_t global_num, int p, i
 ```
 """
 function p4est_partition_cut_uint64(global_num, p, num_procs)
-    @ccall libt8.p4est_partition_cut_uint64(global_num::UInt64, p::Cint, num_procs::Cint)::UInt64
+    @ccall libp4est.p4est_partition_cut_uint64(global_num::UInt64, p::Cint, num_procs::Cint)::UInt64
 end
 
 """
@@ -9486,7 +9498,7 @@ static inline p4est_gloidx_t p4est_partition_cut_gloidx (p4est_gloidx_t global_n
 ```
 """
 function p4est_partition_cut_gloidx(global_num, p, num_procs)
-    @ccall libt8.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint, num_procs::Cint)::p4est_gloidx_t
+    @ccall libp4est.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint, num_procs::Cint)::p4est_gloidx_t
 end
 
 """
@@ -9502,7 +9514,7 @@ const char *p4est_version (void);
 ```
 """
 function p4est_version()
-    @ccall libt8.p4est_version()::Cstring
+    @ccall libp4est.p4est_version()::Cstring
 end
 
 """
@@ -9518,7 +9530,7 @@ int p4est_version_major (void);
 ```
 """
 function p4est_version_major()
-    @ccall libt8.p4est_version_major()::Cint
+    @ccall libp4est.p4est_version_major()::Cint
 end
 
 """
@@ -9534,7 +9546,7 @@ int p4est_version_minor (void);
 ```
 """
 function p4est_version_minor()
-    @ccall libt8.p4est_version_minor()::Cint
+    @ccall libp4est.p4est_version_minor()::Cint
 end
 
 """
@@ -9580,7 +9592,7 @@ int p4est_connect_type_int (p4est_connect_type_t btype);
 ```
 """
 function p4est_connect_type_int(btype)
-    @ccall libt8.p4est_connect_type_int(btype::p4est_connect_type_t)::Cint
+    @ccall libp4est.p4est_connect_type_int(btype::p4est_connect_type_t)::Cint
 end
 
 """
@@ -9598,7 +9610,7 @@ const char *p4est_connect_type_string (p4est_connect_type_t btype);
 ```
 """
 function p4est_connect_type_string(btype)
-    @ccall libt8.p4est_connect_type_string(btype::p4est_connect_type_t)::Cstring
+    @ccall libp4est.p4est_connect_type_string(btype::p4est_connect_type_t)::Cstring
 end
 
 """
@@ -9682,7 +9694,7 @@ size_t p4est_connectivity_memory_used (p4est_connectivity_t * conn);
 ```
 """
 function p4est_connectivity_memory_used(conn)
-    @ccall libt8.p4est_connectivity_memory_used(conn::Ptr{p4est_connectivity_t})::Csize_t
+    @ccall libp4est.p4est_connectivity_memory_used(conn::Ptr{p4est_connectivity_t})::Csize_t
 end
 
 struct p4est_corner_transform_t
@@ -9736,7 +9748,7 @@ void p4est_neighbor_transform_coordinates (const p4est_neighbor_transform_t * nt
 ```
 """
 function p4est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
-    @ccall libt8.p4est_neighbor_transform_coordinates(nt::Ptr{p4est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p4est_neighbor_transform_coordinates(nt::Ptr{p4est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -9754,7 +9766,7 @@ void p4est_neighbor_transform_coordinates_reverse (const p4est_neighbor_transfor
 ```
 """
 function p4est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
-    @ccall libt8.p4est_neighbor_transform_coordinates_reverse(nt::Ptr{p4est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p4est_neighbor_transform_coordinates_reverse(nt::Ptr{p4est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -9766,7 +9778,7 @@ void p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t *conn, p4e
 ```
 """
 function p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
-    @ccall libt8.p4est_connectivity_get_neighbor_transforms(conn::Ptr{p4est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p4est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+    @ccall libp4est.p4est_connectivity_get_neighbor_transforms(conn::Ptr{p4est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p4est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -9787,7 +9799,7 @@ int p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
 ```
 """
 function p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libt8.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -9808,7 +9820,7 @@ int p4est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
 ```
 """
 function p4est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libt8.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -9829,7 +9841,7 @@ p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices, p4est
 ```
 """
 function p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
-    @ccall libt8.p4est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -9850,7 +9862,7 @@ p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t num_vertices, 
 ```
 """
 function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
-    @ccall libt8.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -9862,7 +9874,7 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t * conn_in, 
 ```
 """
 function p4est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -9876,7 +9888,7 @@ void p4est_connectivity_destroy (p4est_connectivity_t * connectivity);
 ```
 """
 function p4est_connectivity_destroy(connectivity)
-    @ccall libt8.p4est_connectivity_destroy(connectivity::Ptr{p4est_connectivity_t})::Cvoid
+    @ccall libp4est.p4est_connectivity_destroy(connectivity::Ptr{p4est_connectivity_t})::Cvoid
 end
 
 """
@@ -9893,7 +9905,7 @@ void p4est_connectivity_set_attr (p4est_connectivity_t * conn, size_t bytes_per_
 ```
 """
 function p4est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libt8.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+    @ccall libp4est.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
 end
 
 """
@@ -9909,7 +9921,7 @@ int p4est_connectivity_is_valid (p4est_connectivity_t * connectivity);
 ```
 """
 function p4est_connectivity_is_valid(connectivity)
-    @ccall libt8.p4est_connectivity_is_valid(connectivity::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_is_valid(connectivity::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -9925,7 +9937,7 @@ int p4est_connectivity_is_equal (p4est_connectivity_t * conn1, p4est_connectivit
 ```
 """
 function p4est_connectivity_is_equal(conn1, conn2)
-    @ccall libt8.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -9944,7 +9956,7 @@ int p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink);
 ```
 """
 function p4est_connectivity_sink(conn, sink)
-    @ccall libt8.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+    @ccall libp4est.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
 end
 
 """
@@ -9963,7 +9975,7 @@ sc_array_t *p4est_connectivity_deflate (p4est_connectivity_t * conn, p4est_conne
 ```
 """
 function p4est_connectivity_deflate(conn, code)
-    @ccall libt8.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t}, code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
+    @ccall libp4est.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t}, code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
 end
 
 """
@@ -9982,7 +9994,7 @@ int p4est_connectivity_save (const char *filename, p4est_connectivity_t * connec
 ```
 """
 function p4est_connectivity_save(filename, connectivity)
-    @ccall libt8.p4est_connectivity_save(filename::Cstring, connectivity::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_save(filename::Cstring, connectivity::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -10000,7 +10012,7 @@ p4est_connectivity_t *p4est_connectivity_source (sc_io_source_t * source);
 ```
 """
 function p4est_connectivity_source(source)
-    @ccall libt8.p4est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10018,7 +10030,7 @@ p4est_connectivity_t *p4est_connectivity_inflate (sc_array_t * buffer);
 ```
 """
 function p4est_connectivity_inflate(buffer)
-    @ccall libt8.p4est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10037,7 +10049,7 @@ p4est_connectivity_t *p4est_connectivity_load (const char *filename, size_t *byt
 ```
 """
 function p4est_connectivity_load(filename, bytes)
-    @ccall libt8.p4est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10051,7 +10063,7 @@ p4est_connectivity_t *p4est_connectivity_new_unitsquare (void);
 ```
 """
 function p4est_connectivity_new_unitsquare()
-    @ccall libt8.p4est_connectivity_new_unitsquare()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_unitsquare()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10065,7 +10077,7 @@ p4est_connectivity_t *p4est_connectivity_new_periodic (void);
 ```
 """
 function p4est_connectivity_new_periodic()
-    @ccall libt8.p4est_connectivity_new_periodic()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_periodic()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10079,7 +10091,7 @@ p4est_connectivity_t *p4est_connectivity_new_rotwrap (void);
 ```
 """
 function p4est_connectivity_new_rotwrap()
-    @ccall libt8.p4est_connectivity_new_rotwrap()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_rotwrap()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10097,7 +10109,7 @@ p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face, int r_face, i
 ```
 """
 function p4est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libt8.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10111,7 +10123,7 @@ p4est_connectivity_t *p4est_connectivity_new_corner (void);
 ```
 """
 function p4est_connectivity_new_corner()
-    @ccall libt8.p4est_connectivity_new_corner()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_corner()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10125,7 +10137,7 @@ p4est_connectivity_t *p4est_connectivity_new_pillow (void);
 ```
 """
 function p4est_connectivity_new_pillow()
-    @ccall libt8.p4est_connectivity_new_pillow()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_pillow()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10139,7 +10151,7 @@ p4est_connectivity_t *p4est_connectivity_new_moebius (void);
 ```
 """
 function p4est_connectivity_new_moebius()
-    @ccall libt8.p4est_connectivity_new_moebius()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_moebius()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10153,7 +10165,7 @@ p4est_connectivity_t *p4est_connectivity_new_star (void);
 ```
 """
 function p4est_connectivity_new_star()
-    @ccall libt8.p4est_connectivity_new_star()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_star()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10167,7 +10179,7 @@ p4est_connectivity_t *p4est_connectivity_new_cubed (void);
 ```
 """
 function p4est_connectivity_new_cubed()
-    @ccall libt8.p4est_connectivity_new_cubed()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_cubed()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10183,7 +10195,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk_nonperiodic (void);
 ```
 """
 function p4est_connectivity_new_disk_nonperiodic()
-    @ccall libt8.p4est_connectivity_new_disk_nonperiodic()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_disk_nonperiodic()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10212,7 +10224,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a, int periodic_
 ```
 """
 function p4est_connectivity_new_disk(periodic_a, periodic_b)
-    @ccall libt8.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10240,7 +10252,7 @@ p4est_connectivity_t *p4est_connectivity_new_icosahedron (void);
 ```
 """
 function p4est_connectivity_new_icosahedron()
-    @ccall libt8.p4est_connectivity_new_icosahedron()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_icosahedron()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10254,7 +10266,7 @@ p4est_connectivity_t *p4est_connectivity_new_shell2d (void);
 ```
 """
 function p4est_connectivity_new_shell2d()
-    @ccall libt8.p4est_connectivity_new_shell2d()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_shell2d()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10270,7 +10282,7 @@ p4est_connectivity_t *p4est_connectivity_new_disk2d (void);
 ```
 """
 function p4est_connectivity_new_disk2d()
-    @ccall libt8.p4est_connectivity_new_disk2d()::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_disk2d()::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10284,7 +10296,7 @@ p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni, int periodic
 ```
 """
 function p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
-    @ccall libt8.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10302,7 +10314,7 @@ p4est_connectivity_t *p4est_connectivity_new_byname (const char *name);
 ```
 """
 function p4est_connectivity_new_byname(name)
-    @ccall libt8.p4est_connectivity_new_byname(name::Cstring)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_byname(name::Cstring)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10321,7 +10333,7 @@ p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, in
 ```
 """
 function p4est_connectivity_refine(conn, num_per_edge)
-    @ccall libt8.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_edge::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_edge::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10339,7 +10351,7 @@ void p4est_expand_face_transform (int iface, int nface, int ftransform[]);
 ```
 """
 function p4est_expand_face_transform(iface, nface, ftransform)
-    @ccall libt8.p4est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+    @ccall libp4est.p4est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
 end
 
 """
@@ -10359,7 +10371,7 @@ p4est_topidx_t p4est_find_face_transform (p4est_connectivity_t * connectivity, p
 ```
 """
 function p4est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libt8.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+    @ccall libp4est.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
 end
 
 """
@@ -10377,7 +10389,7 @@ void p4est_find_corner_transform (p4est_connectivity_t * connectivity, p4est_top
 ```
 """
 function p4est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libt8.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p4est_corner_info_t})::Cvoid
+    @ccall libp4est.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p4est_corner_info_t})::Cvoid
 end
 
 """
@@ -10393,7 +10405,7 @@ void p4est_connectivity_complete (p4est_connectivity_t * conn);
 ```
 """
 function p4est_connectivity_complete(conn)
-    @ccall libt8.p4est_connectivity_complete(conn::Ptr{p4est_connectivity_t})::Cvoid
+    @ccall libp4est.p4est_connectivity_complete(conn::Ptr{p4est_connectivity_t})::Cvoid
 end
 
 """
@@ -10409,7 +10421,7 @@ void p4est_connectivity_reduce (p4est_connectivity_t * conn);
 ```
 """
 function p4est_connectivity_reduce(conn)
-    @ccall libt8.p4est_connectivity_reduce(conn::Ptr{p4est_connectivity_t})::Cvoid
+    @ccall libp4est.p4est_connectivity_reduce(conn::Ptr{p4est_connectivity_t})::Cvoid
 end
 
 """
@@ -10427,7 +10439,7 @@ void p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * perm,
 ```
 """
 function p4est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libt8.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+    @ccall libp4est.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
 end
 
 """
@@ -10448,7 +10460,7 @@ void p4est_connectivity_join_faces (p4est_connectivity_t * conn, p4est_topidx_t 
 ```
 """
 function p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libt8.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+    @ccall libp4est.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
 end
 
 """
@@ -10465,7 +10477,7 @@ int p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1, p4est_connec
 ```
 """
 function p4est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libt8.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -10477,7 +10489,7 @@ static inline p4est_corner_transform_t * p4est_corner_array_index (sc_array_t * 
 ```
 """
 function p4est_corner_array_index(array, it)
-    @ccall libt8.p4est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_corner_transform_t}
+    @ccall libp4est.p4est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_corner_transform_t}
 end
 
 """
@@ -10535,7 +10547,7 @@ int p4est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vert
 ```
 """
 function p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libt8.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+    @ccall libp4est.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
 end
 
 """
@@ -10589,7 +10601,7 @@ p4est_connectivity_t *p4est_connectivity_read_inp (const char *filename);
 ```
 """
 function p4est_connectivity_read_inp(filename)
-    @ccall libt8.p4est_connectivity_read_inp(filename::Cstring)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_read_inp(filename::Cstring)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -10636,7 +10648,7 @@ int p8est_connect_type_int (p8est_connect_type_t btype);
 ```
 """
 function p8est_connect_type_int(btype)
-    @ccall libt8.p8est_connect_type_int(btype::p8est_connect_type_t)::Cint
+    @ccall libp4est.p8est_connect_type_int(btype::p8est_connect_type_t)::Cint
 end
 
 """
@@ -10654,7 +10666,7 @@ const char *p8est_connect_type_string (p8est_connect_type_t btype);
 ```
 """
 function p8est_connect_type_string(btype)
-    @ccall libt8.p8est_connect_type_string(btype::p8est_connect_type_t)::Cstring
+    @ccall libp4est.p8est_connect_type_string(btype::p8est_connect_type_t)::Cstring
 end
 
 """
@@ -10756,7 +10768,7 @@ size_t p8est_connectivity_memory_used (p8est_connectivity_t * conn);
 ```
 """
 function p8est_connectivity_memory_used(conn)
-    @ccall libt8.p8est_connectivity_memory_used(conn::Ptr{p8est_connectivity_t})::Csize_t
+    @ccall libp4est.p8est_connectivity_memory_used(conn::Ptr{p8est_connectivity_t})::Csize_t
 end
 
 struct p8est_edge_transform_t
@@ -10823,7 +10835,7 @@ void p8est_neighbor_transform_coordinates (const p8est_neighbor_transform_t * nt
 ```
 """
 function p8est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
-    @ccall libt8.p8est_neighbor_transform_coordinates(nt::Ptr{p8est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p8est_neighbor_transform_coordinates(nt::Ptr{p8est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -10841,7 +10853,7 @@ void p8est_neighbor_transform_coordinates_reverse (const p8est_neighbor_transfor
 ```
 """
 function p8est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
-    @ccall libt8.p8est_neighbor_transform_coordinates_reverse(nt::Ptr{p8est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p8est_neighbor_transform_coordinates_reverse(nt::Ptr{p8est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -10853,7 +10865,7 @@ void p8est_connectivity_get_neighbor_transforms (p8est_connectivity_t *conn, p4e
 ```
 """
 function p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
-    @ccall libt8.p8est_connectivity_get_neighbor_transforms(conn::Ptr{p8est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p8est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+    @ccall libp4est.p8est_connectivity_get_neighbor_transforms(conn::Ptr{p8est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p8est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -10874,7 +10886,7 @@ int p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set);
 ```
 """
 function p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
-    @ccall libt8.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint, set::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint, set::Cint)::Cint
 end
 
 """
@@ -10895,7 +10907,7 @@ int p8est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -10916,7 +10928,7 @@ int p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -10937,7 +10949,7 @@ int p8est_connectivity_face_neighbor_face_edge (int fe, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -10958,7 +10970,7 @@ int p8est_connectivity_face_neighbor_edge (int e, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_edge(e, f, nf, o)
-    @ccall libt8.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -10977,7 +10989,7 @@ int p8est_connectivity_edge_neighbor_edge_corner (int ec, int o);
 ```
 """
 function p8est_connectivity_edge_neighbor_edge_corner(ec, o)
-    @ccall libt8.p8est_connectivity_edge_neighbor_edge_corner(ec::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_edge_neighbor_edge_corner(ec::Cint, o::Cint)::Cint
 end
 
 """
@@ -10998,7 +11010,7 @@ int p8est_connectivity_edge_neighbor_corner (int c, int e, int ne, int o);
 ```
 """
 function p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
-    @ccall libt8.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint, o::Cint)::Cint
 end
 
 """
@@ -11021,7 +11033,7 @@ p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices, p4est
 ```
 """
 function p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
-    @ccall libt8.p8est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_ett::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_ett::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11044,7 +11056,7 @@ p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t num_vertices, 
 ```
 """
 function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
-    @ccall libt8.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, tte::Ptr{p4est_topidx_t}, eoff::Ptr{p4est_topidx_t}, ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, tte::Ptr{p4est_topidx_t}, eoff::Ptr{p4est_topidx_t}, ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11056,7 +11068,7 @@ p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t * conn_in, 
 ```
 """
 function p8est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11070,7 +11082,7 @@ void p8est_connectivity_destroy (p8est_connectivity_t * connectivity);
 ```
 """
 function p8est_connectivity_destroy(connectivity)
-    @ccall libt8.p8est_connectivity_destroy(connectivity::Ptr{p8est_connectivity_t})::Cvoid
+    @ccall libp4est.p8est_connectivity_destroy(connectivity::Ptr{p8est_connectivity_t})::Cvoid
 end
 
 """
@@ -11087,7 +11099,7 @@ void p8est_connectivity_set_attr (p8est_connectivity_t * conn, size_t bytes_per_
 ```
 """
 function p8est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libt8.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+    @ccall libp4est.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
 end
 
 """
@@ -11103,7 +11115,7 @@ int p8est_connectivity_is_valid (p8est_connectivity_t * connectivity);
 ```
 """
 function p8est_connectivity_is_valid(connectivity)
-    @ccall libt8.p8est_connectivity_is_valid(connectivity::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_is_valid(connectivity::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -11119,7 +11131,7 @@ int p8est_connectivity_is_equal (p8est_connectivity_t * conn1, p8est_connectivit
 ```
 """
 function p8est_connectivity_is_equal(conn1, conn2)
-    @ccall libt8.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -11138,7 +11150,7 @@ int p8est_connectivity_sink (p8est_connectivity_t * conn, sc_io_sink_t * sink);
 ```
 """
 function p8est_connectivity_sink(conn, sink)
-    @ccall libt8.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+    @ccall libp4est.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
 end
 
 """
@@ -11157,7 +11169,7 @@ sc_array_t *p8est_connectivity_deflate (p8est_connectivity_t * conn, p8est_conne
 ```
 """
 function p8est_connectivity_deflate(conn, code)
-    @ccall libt8.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t}, code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
+    @ccall libp4est.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t}, code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
 end
 
 """
@@ -11176,7 +11188,7 @@ int p8est_connectivity_save (const char *filename, p8est_connectivity_t * connec
 ```
 """
 function p8est_connectivity_save(filename, connectivity)
-    @ccall libt8.p8est_connectivity_save(filename::Cstring, connectivity::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_save(filename::Cstring, connectivity::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -11194,7 +11206,7 @@ p8est_connectivity_t *p8est_connectivity_source (sc_io_source_t * source);
 ```
 """
 function p8est_connectivity_source(source)
-    @ccall libt8.p8est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_source(source::Ptr{sc_io_source_t})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11212,7 +11224,7 @@ p8est_connectivity_t *p8est_connectivity_inflate (sc_array_t * buffer);
 ```
 """
 function p8est_connectivity_inflate(buffer)
-    @ccall libt8.p8est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_inflate(buffer::Ptr{sc_array_t})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11231,7 +11243,7 @@ p8est_connectivity_t *p8est_connectivity_load (const char *filename, size_t *byt
 ```
 """
 function p8est_connectivity_load(filename, bytes)
-    @ccall libt8.p8est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11245,7 +11257,7 @@ p8est_connectivity_t *p8est_connectivity_new_unitcube (void);
 ```
 """
 function p8est_connectivity_new_unitcube()
-    @ccall libt8.p8est_connectivity_new_unitcube()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_unitcube()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11259,7 +11271,7 @@ p8est_connectivity_t *p8est_connectivity_new_periodic (void);
 ```
 """
 function p8est_connectivity_new_periodic()
-    @ccall libt8.p8est_connectivity_new_periodic()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_periodic()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11273,7 +11285,7 @@ p8est_connectivity_t *p8est_connectivity_new_rotwrap (void);
 ```
 """
 function p8est_connectivity_new_rotwrap()
-    @ccall libt8.p8est_connectivity_new_rotwrap()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_rotwrap()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11287,7 +11299,7 @@ p8est_connectivity_t *p8est_connectivity_new_twocubes (void);
 ```
 """
 function p8est_connectivity_new_twocubes()
-    @ccall libt8.p8est_connectivity_new_twocubes()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_twocubes()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11305,7 +11317,7 @@ p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face, int r_face, i
 ```
 """
 function p8est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libt8.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11319,7 +11331,7 @@ p8est_connectivity_t *p8est_connectivity_new_twowrap (void);
 ```
 """
 function p8est_connectivity_new_twowrap()
-    @ccall libt8.p8est_connectivity_new_twowrap()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_twowrap()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11333,7 +11345,7 @@ p8est_connectivity_t *p8est_connectivity_new_rotcubes (void);
 ```
 """
 function p8est_connectivity_new_rotcubes()
-    @ccall libt8.p8est_connectivity_new_rotcubes()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_rotcubes()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11347,7 +11359,7 @@ p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p, int per
 ```
 """
 function p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
-    @ccall libt8.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint, periodic_a::Cint, periodic_b::Cint, periodic_c::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint, periodic_a::Cint, periodic_b::Cint, periodic_c::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11361,7 +11373,7 @@ p8est_connectivity_t *p8est_connectivity_new_shell (void);
 ```
 """
 function p8est_connectivity_new_shell()
-    @ccall libt8.p8est_connectivity_new_shell()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_shell()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11375,7 +11387,7 @@ p8est_connectivity_t *p8est_connectivity_new_sphere (void);
 ```
 """
 function p8est_connectivity_new_sphere()
-    @ccall libt8.p8est_connectivity_new_sphere()::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_sphere()::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11397,7 +11409,7 @@ p8est_connectivity_t *p8est_connectivity_new_torus (int nSegments);
 ```
 """
 function p8est_connectivity_new_torus(nSegments)
-    @ccall libt8.p8est_connectivity_new_torus(nSegments::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_torus(nSegments::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11415,7 +11427,7 @@ p8est_connectivity_t *p8est_connectivity_new_byname (const char *name);
 ```
 """
 function p8est_connectivity_new_byname(name)
-    @ccall libt8.p8est_connectivity_new_byname(name::Cstring)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_byname(name::Cstring)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11434,7 +11446,7 @@ p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, in
 ```
 """
 function p8est_connectivity_refine(conn, num_per_edge)
-    @ccall libt8.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_edge::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_edge::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11452,7 +11464,7 @@ void p8est_expand_face_transform (int iface, int nface, int ftransform[]);
 ```
 """
 function p8est_expand_face_transform(iface, nface, ftransform)
-    @ccall libt8.p8est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+    @ccall libp4est.p8est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
 end
 
 """
@@ -11472,7 +11484,7 @@ p4est_topidx_t p8est_find_face_transform (p8est_connectivity_t * connectivity, p
 ```
 """
 function p8est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libt8.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+    @ccall libp4est.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
 end
 
 """
@@ -11490,7 +11502,7 @@ void p8est_find_edge_transform (p8est_connectivity_t * connectivity, p4est_topid
 ```
 """
 function p8est_find_edge_transform(connectivity, itree, iedge, ei)
-    @ccall libt8.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iedge::Cint, ei::Ptr{p8est_edge_info_t})::Cvoid
+    @ccall libp4est.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iedge::Cint, ei::Ptr{p8est_edge_info_t})::Cvoid
 end
 
 """
@@ -11508,7 +11520,7 @@ void p8est_find_corner_transform (p8est_connectivity_t * connectivity, p4est_top
 ```
 """
 function p8est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libt8.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p8est_corner_info_t})::Cvoid
+    @ccall libp4est.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p8est_corner_info_t})::Cvoid
 end
 
 """
@@ -11524,7 +11536,7 @@ void p8est_connectivity_complete (p8est_connectivity_t * conn);
 ```
 """
 function p8est_connectivity_complete(conn)
-    @ccall libt8.p8est_connectivity_complete(conn::Ptr{p8est_connectivity_t})::Cvoid
+    @ccall libp4est.p8est_connectivity_complete(conn::Ptr{p8est_connectivity_t})::Cvoid
 end
 
 """
@@ -11540,7 +11552,7 @@ void p8est_connectivity_reduce (p8est_connectivity_t * conn);
 ```
 """
 function p8est_connectivity_reduce(conn)
-    @ccall libt8.p8est_connectivity_reduce(conn::Ptr{p8est_connectivity_t})::Cvoid
+    @ccall libp4est.p8est_connectivity_reduce(conn::Ptr{p8est_connectivity_t})::Cvoid
 end
 
 """
@@ -11558,7 +11570,7 @@ void p8est_connectivity_permute (p8est_connectivity_t * conn, sc_array_t * perm,
 ```
 """
 function p8est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libt8.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+    @ccall libp4est.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
 end
 
 """
@@ -11579,7 +11591,7 @@ void p8est_connectivity_join_faces (p8est_connectivity_t * conn, p4est_topidx_t 
 ```
 """
 function p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libt8.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+    @ccall libp4est.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
 end
 
 """
@@ -11596,7 +11608,7 @@ int p8est_connectivity_is_equivalent (p8est_connectivity_t * conn1, p8est_connec
 ```
 """
 function p8est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libt8.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -11608,7 +11620,7 @@ static inline p8est_edge_transform_t * p8est_edge_array_index (sc_array_t * arra
 ```
 """
 function p8est_edge_array_index(array, it)
-    @ccall libt8.p8est_edge_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_edge_transform_t}
+    @ccall libp4est.p8est_edge_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_edge_transform_t}
 end
 
 """
@@ -11620,7 +11632,7 @@ static inline p8est_corner_transform_t * p8est_corner_array_index (sc_array_t * 
 ```
 """
 function p8est_corner_array_index(array, it)
-    @ccall libt8.p8est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_corner_transform_t}
+    @ccall libp4est.p8est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_corner_transform_t}
 end
 
 """
@@ -11696,7 +11708,7 @@ int p8est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vert
 ```
 """
 function p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libt8.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+    @ccall libp4est.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
 end
 
 """
@@ -11768,7 +11780,7 @@ p8est_connectivity_t *p8est_connectivity_read_inp (const char *filename);
 ```
 """
 function p8est_connectivity_read_inp(filename)
-    @ccall libt8.p8est_connectivity_read_inp(filename::Cstring)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_read_inp(filename::Cstring)::Ptr{p8est_connectivity_t}
 end
 
 """

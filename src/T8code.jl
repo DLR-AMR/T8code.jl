@@ -2,11 +2,13 @@ module T8code
 
 using Reexport: @reexport
 
-# We need to load the preference setting from here and not from `LibP4est.jl`
+# We need to load the preference setting from here and not from `Libt8.jl`
 # since `@load_preference` looks into the module it is running from. Thus, we
-# load all preferences here and access them from the `module LibP4est`.
+# load all preferences here and access them from the `module Libt8`.
 using Preferences: @load_preference
 const _PREFERENCE_LIBT8 = @load_preference("libt8", "t8code_jll")
+const _PREFERENCE_LIBP4EST = @load_preference("libp4est", "t8code_jll")
+const _PREFERENCE_LIBSC = @load_preference("libsc", "t8code_jll")
 
 # Include t8code bindings
 include("Libt8.jl")

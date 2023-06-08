@@ -27,6 +27,20 @@ sed -i "s/\bt::Cint/t::MPI_Datatype/g" "${LIB_JL}"
 
 sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
 
+
+# Use libsc for `sc_*` functions
+sed -i "s/libt8\.sc_/libsc.sc_/g" "${LIB_JL}"
+
+# Use libp4est for `p4est_*` functions
+sed -i "s/libt8\.p4est_/libp4est.p4est_/g" "${LIB_JL}"
+
+# Use libp4est for `p6est_*` functions
+sed -i "s/libt8\.p6est_/libp4est.p6est_/g" "${LIB_JL}"
+
+# Use libp4est for `p8est_*` functions
+sed -i "s/libt8\.p8est_/libp4est.p8est_/g" "${LIB_JL}"
+
+
 # Fix type of `sc_array` field `array`
 sed -i "s/array::Cstring/array::Ptr{Int8}/g" "${LIB_JL}"
 

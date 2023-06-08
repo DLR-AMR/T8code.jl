@@ -1,12 +1,24 @@
 using t8code_jll: t8code_jll
 export t8code_jll
 
-using ..T8code: _PREFERENCE_LIBT8
+using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
 
 @static if _PREFERENCE_LIBT8 == "t8code_jll"
     const libt8 = t8code_jll.libt8
 else
     const libt8 = _PREFERENCE_LIBT8
+end
+
+@static if _PREFERENCE_LIBP4EST == "t8code_jll"
+    const libp4est = t8code_jll.libp4est
+else
+    const libp4est = _PREFERENCE_LIBP4EST
+end
+
+@static if _PREFERENCE_LIBSC == "t8code_jll"
+    const libsc = t8code_jll.libsc
+else
+    const libsc = _PREFERENCE_LIBSC
 end
 
 # Define missing types

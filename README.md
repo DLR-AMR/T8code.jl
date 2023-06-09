@@ -89,10 +89,15 @@ julia> using Preferences, UUIDs
 julia> set_preferences!(
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
            "libt8" => "/path/to/your/libt8.so", force = true)
-```
 
-One has to repeat the same procedure for [P4est.jl](https://github.com/trixi-framework/P4est.jl)
-as described in [Using a custom version of MPI and/or p4est](https://github.com/trixi-framework/P4est.jl#using-a-custom-version-of-mpi-andor-p4est).
+julia> set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libp4est" => "/path/to/your/libp4est.so", force = true)
+
+julia> set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libsc" => "/path/to/your/libsc.so", force = true)
+```
 
 Note that you should restart your Julia session after changing the preferences.
 

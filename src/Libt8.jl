@@ -250,6 +250,30 @@ function sc_int64_compare(v1, v2)
 end
 
 """
+    sc_shmem_malloc(package, elem_size, elem_count, comm)
+
+### Prototype
+```c
+void *sc_shmem_malloc (int package, size_t elem_size, size_t elem_count, sc_MPI_Comm comm);
+```
+"""
+function sc_shmem_malloc(package, elem_size, elem_count, comm)
+    @ccall libsc.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
+end
+
+"""
+    sc_shmem_free(package, array, comm)
+
+### Prototype
+```c
+void sc_shmem_free (int package, void *array, sc_MPI_Comm comm);
+```
+"""
+function sc_shmem_free(package, array, comm)
+    @ccall libsc.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
+end
+
+"""
     sc_tag_t
 
 Enumerate all MPI tags used internally to the sc library.
@@ -2829,121 +2853,6 @@ function t8_sc_array_index_locidx(array, it)
 end
 
 """
-    sc_shmem_malloc(package, elem_size, elem_count, comm)
-
-### Prototype
-```c
-void *sc_shmem_malloc (int package, size_t elem_size, size_t elem_count, sc_MPI_Comm comm);
-```
-"""
-function sc_shmem_malloc(package, elem_size, elem_count, comm)
-    @ccall libsc.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
-end
-
-"""
-    sc_shmem_free(package, array, comm)
-
-### Prototype
-```c
-void sc_shmem_free (int package, void *array, sc_MPI_Comm comm);
-```
-"""
-function sc_shmem_free(package, array, comm)
-    @ccall libsc.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    sc_refcount
-
-The refcount structure is declared in public so its size is known. Its members should really never be accessed directly.
-
-| Field        | Note                                                         |
-| :----------- | :----------------------------------------------------------- |
-| package\\_id | The sc package that uses this reference counter.             |
-| refcount     | The reference count is always positive for a valid counter.  |
-"""
-struct sc_refcount
-    package_id::Cint
-    refcount::Cint
-end
-
-"""The refcount structure is declared in public so its size is known. Its members should really never be accessed directly."""
-const sc_refcount_t = sc_refcount
-
-"""
-    sc_refcount_ref(rc)
-
-Increase a reference counter. The counter must be active, that is, have a value greater than zero.
-
-### Parameters
-* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is increased by one.
-### Prototype
-```c
-void sc_refcount_ref (sc_refcount_t * rc);
-```
-"""
-function sc_refcount_ref(rc)
-    @ccall libsc.sc_refcount_ref(rc::Ptr{sc_refcount_t})::Cvoid
-end
-
-"""
-    sc_refcount_unref(rc)
-
-Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used further with sc_refcount_ref or
-
-### Parameters
-* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is decreased by one.
-### Returns
-True if the count has reached zero, false otherwise.
-### See also
-[`sc_refcount_unref`](@ref). It is legal, however, to reactivate it later by calling, [`sc_refcount_init`](@ref).
-
-### Prototype
-```c
-int sc_refcount_unref (sc_refcount_t * rc);
-```
-"""
-function sc_refcount_unref(rc)
-    @ccall libsc.sc_refcount_unref(rc::Ptr{sc_refcount_t})::Cint
-end
-
-"""
-    sc_refcount_is_active(rc)
-
-Check whether a reference counter has a positive value. This means that the reference counter is in use and corresponds to a live object.
-
-### Parameters
-* `rc`:\\[in\\] A reference counter.
-### Returns
-True if the count is greater zero, false otherwise.
-### Prototype
-```c
-int sc_refcount_is_active (const sc_refcount_t * rc);
-```
-"""
-function sc_refcount_is_active(rc)
-    @ccall libsc.sc_refcount_is_active(rc::Ptr{sc_refcount_t})::Cint
-end
-
-"""
-    sc_refcount_is_last(rc)
-
-Check whether a reference counter has value one. This means that this counter is the last of its kind, which we may optimize for.
-
-### Parameters
-* `rc`:\\[in\\] A reference counter.
-### Returns
-True if the count is exactly one.
-### Prototype
-```c
-int sc_refcount_is_last (const sc_refcount_t * rc);
-```
-"""
-function sc_refcount_is_last(rc)
-    @ccall libsc.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
-end
-
-"""
     sc_shmem_type_t
 
 ` sc_shmem.h `
@@ -3048,372 +2957,23 @@ function sc_shmem_prefix(sendbuf, recvbuf, count, type, op, comm)
     @ccall libsc.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
-mutable struct t8_shmem_array end
-
-const t8_shmem_array_t = Ptr{t8_shmem_array}
-
 """
-    t8_shmem_init(comm)
+    sc_refcount
 
-### Prototype
-```c
-void t8_shmem_init (sc_MPI_Comm comm);
-```
+The refcount structure is declared in public so its size is known. Its members should really never be accessed directly.
+
+| Field        | Note                                                         |
+| :----------- | :----------------------------------------------------------- |
+| package\\_id | The sc package that uses this reference counter.             |
+| refcount     | The reference count is always positive for a valid counter.  |
 """
-function t8_shmem_init(comm)
-    @ccall libt8.t8_shmem_init(comm::MPI_Comm)::Cvoid
+struct sc_refcount
+    package_id::Cint
+    refcount::Cint
 end
 
-"""
-    t8_shmem_finalize(comm)
-
-### Prototype
-```c
-void t8_shmem_finalize (sc_MPI_Comm comm);
-```
-"""
-function t8_shmem_finalize(comm)
-    @ccall libt8.t8_shmem_finalize(comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_shmem_set_type(comm, type)
-
-### Prototype
-```c
-void t8_shmem_set_type (sc_MPI_Comm comm, sc_shmem_type_t type);
-```
-"""
-function t8_shmem_set_type(comm, type)
-    @ccall libt8.t8_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
-end
-
-"""
-    t8_shmem_array_init(parray, elem_size, elem_count, comm)
-
-### Prototype
-```c
-void t8_shmem_array_init (t8_shmem_array_t *parray, size_t elem_size, size_t elem_count, sc_MPI_Comm comm);
-```
-"""
-function t8_shmem_array_init(parray, elem_size, elem_count, comm)
-    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_shmem_array_start_writing(array)
-
-Enable writing mode for a shmem array. Only some processes may be allowed to write into the array, which is indicated by the return value being non-zero.
-
-!!! note
-
-    This function is MPI collective.
-
-### Parameters
-* `array`:\\[in,out\\] Initialized array. Writing will be enabled on certain processes.
-### Returns
-True if the calling process can write into the array.
-### Prototype
-```c
-int t8_shmem_array_start_writing (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_start_writing(array)
-    @ccall libt8.t8_shmem_array_start_writing(array::t8_shmem_array_t)::Cint
-end
-
-"""
-    t8_shmem_array_end_writing(array)
-
-Disable writing mode for a shmem array.
-
-!!! note
-
-    This function is MPI collective.
-
-### Parameters
-* `array`:\\[in,out\\] Initialized with writing mode enabled.
-### See also
-[`t8_shmem_array_start_writing`](@ref).
-
-### Prototype
-```c
-void t8_shmem_array_end_writing (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_end_writing(array)
-    @ccall libt8.t8_shmem_array_end_writing(array::t8_shmem_array_t)::Cvoid
-end
-
-"""
-    t8_shmem_array_set_gloidx(array, index, value)
-
-Set an entry of a t8\\_shmem array that is used to store [`t8_gloidx_t`](@ref). The array must have writing mode enabled t8_shmem_array_start_writing.
-
-### Parameters
-* `array`:\\[in,out\\] The array to be mofified.
-* `index`:\\[in\\] The array entry to be modified.
-* `value`:\\[in\\] The new value to be set.
-### Prototype
-```c
-void t8_shmem_array_set_gloidx (t8_shmem_array_t array, int index, t8_gloidx_t value);
-```
-"""
-function t8_shmem_array_set_gloidx(array, index, value)
-    @ccall libt8.t8_shmem_array_set_gloidx(array::t8_shmem_array_t, index::Cint, value::t8_gloidx_t)::Cvoid
-end
-
-"""
-    t8_shmem_array_copy(dest, source)
-
-Copy the contents of one t8\\_shmem array into another.
-
-!!! note
-
-    *dest* must be initialized and match in element size and element count to *source*.
-
-!!! note
-
-    *dest* must have writing mode disabled.
-
-### Parameters
-* `dest`:\\[in,out\\] The array in which *source* should be copied.
-* `source`:\\[in\\] The array to copy.
-### Prototype
-```c
-void t8_shmem_array_copy (t8_shmem_array_t dest, t8_shmem_array_t source);
-```
-"""
-function t8_shmem_array_copy(dest, source)
-    @ccall libt8.t8_shmem_array_copy(dest::t8_shmem_array_t, source::t8_shmem_array_t)::Cvoid
-end
-
-"""
-    t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount, recvtype)
-
-### Prototype
-```c
-void t8_shmem_array_allgather (const void *sendbuf, int sendcount, sc_MPI_Datatype sendtype, t8_shmem_array_t recvarray, int recvcount, sc_MPI_Datatype recvtype);
-```
-"""
-function t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount, recvtype)
-    @ccall libt8.t8_shmem_array_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvcount::Cint, recvtype::Cint)::Cvoid
-end
-
-"""
-    t8_shmem_array_get_comm(array)
-
-### Prototype
-```c
-sc_MPI_Comm t8_shmem_array_get_comm (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_comm(array)
-    @ccall libt8.t8_shmem_array_get_comm(array::t8_shmem_array_t)::Cint
-end
-
-"""
-    t8_shmem_array_get_elem_size(array)
-
-Get the element size of a [`t8_shmem_array`](@ref)
-
-### Parameters
-* `array`:\\[in\\] The array.
-### Returns
-The element size of *array*'s elements.
-### Prototype
-```c
-size_t t8_shmem_array_get_elem_size (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_elem_size(array)
-    @ccall libt8.t8_shmem_array_get_elem_size(array::t8_shmem_array_t)::Csize_t
-end
-
-"""
-    t8_shmem_array_get_elem_count(array)
-
-Get the number of elements of a [`t8_shmem_array`](@ref)
-
-### Parameters
-* `array`:\\[in\\] The array.
-### Returns
-The number of elements in *array*.
-### Prototype
-```c
-size_t t8_shmem_array_get_elem_count (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_elem_count(array)
-    @ccall libt8.t8_shmem_array_get_elem_count(array::t8_shmem_array_t)::Csize_t
-end
-
-"""
-    t8_shmem_array_get_gloidx_array(array)
-
-Return a read-only pointer to the data of a shared memory array interpreted as an [`t8_gloidx_t`](@ref) array.
-
-!!! note
-
-    Writing mode must be disabled for *array*.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
-### Returns
-The data of *array* as [`t8_gloidx_t`](@ref) pointer.
-### Prototype
-```c
-const t8_gloidx_t *t8_shmem_array_get_gloidx_array (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_gloidx_array(array)
-    @ccall libt8.t8_shmem_array_get_gloidx_array(array::t8_shmem_array_t)::Ptr{t8_gloidx_t}
-end
-
-"""
-    t8_shmem_array_get_gloidx_array_for_writing(array)
-
-Return a pointer to the data of a shared memory array interpreted as an [`t8_gloidx_t`](@ref) array. The array must have writing enabled t8_shmem_array_start_writing and you should not write into the memory after t8_shmem_array_end_writing was called.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
-### Returns
-The data of *array* as [`t8_gloidx_t`](@ref) pointer.
-### Prototype
-```c
-t8_gloidx_t *t8_shmem_array_get_gloidx_array_for_writing (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_gloidx_array_for_writing(array)
-    @ccall libt8.t8_shmem_array_get_gloidx_array_for_writing(array::t8_shmem_array_t)::Ptr{t8_gloidx_t}
-end
-
-"""
-    t8_shmem_array_get_gloidx(array, index)
-
-Return an entry of a shared memory array that stores [`t8_gloidx_t`](@ref).
-
-!!! note
-
-    Writing mode must be disabled for *array*.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
-* `index`:\\[in\\] The index of the entry to be queried.
-### Returns
-The *index*-th entry of *array* as [`t8_gloidx_t`](@ref).
-### Prototype
-```c
-t8_gloidx_t t8_shmem_array_get_gloidx (t8_shmem_array_t array, int index);
-```
-"""
-function t8_shmem_array_get_gloidx(array, index)
-    @ccall libt8.t8_shmem_array_get_gloidx(array::t8_shmem_array_t, index::Cint)::t8_gloidx_t
-end
-
-"""
-    t8_shmem_array_get_array(array)
-
-Return a pointer to the data array of a [`t8_shmem_array`](@ref).
-
-!!! note
-
-    Writing mode must be disabled for *array*.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
-### Returns
-A pointer to the data array of *array*.
-### Prototype
-```c
-const void *t8_shmem_array_get_array (t8_shmem_array_t array);
-```
-"""
-function t8_shmem_array_get_array(array)
-    @ccall libt8.t8_shmem_array_get_array(array::t8_shmem_array_t)::Ptr{Cvoid}
-end
-
-"""
-    t8_shmem_array_index(array, index)
-
-Return a read-only pointer to an element in a [`t8_shmem_array`](@ref).
-
-!!! note
-
-    You should not modify the value.
-
-!!! note
-
-    Writing mode must be disabled for *array*.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
-* `index`:\\[in\\] The index of an element.
-### Returns
-A pointer to the element at *index* in *array*.
-### Prototype
-```c
-const void *t8_shmem_array_index (t8_shmem_array_t array, size_t index);
-```
-"""
-function t8_shmem_array_index(array, index)
-    @ccall libt8.t8_shmem_array_index(array::t8_shmem_array_t, index::Csize_t)::Ptr{Cvoid}
-end
-
-"""
-    t8_shmem_array_index_for_writing(array, index)
-
-Return a pointer to an element in a [`t8_shmem_array`](@ref) in writing mode.
-
-!!! note
-
-    You can modify the value before the next call to t8_shmem_array_end_writing.
-
-!!! note
-
-    Writing mode must be enabled for *array*.
-
-### Parameters
-* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
-* `index`:\\[in\\] The index of an element.
-### Returns
-A pointer to the element at *index* in *array*.
-### Prototype
-```c
-void *t8_shmem_array_index_for_writing (t8_shmem_array_t array, size_t index);
-```
-"""
-function t8_shmem_array_index_for_writing(array, index)
-    @ccall libt8.t8_shmem_array_index_for_writing(array::t8_shmem_array_t, index::Csize_t)::Ptr{Cvoid}
-end
-
-"""
-    t8_shmem_array_is_equal(array_a, array_b)
-
-### Prototype
-```c
-int t8_shmem_array_is_equal (t8_shmem_array_t array_a, t8_shmem_array_t array_b);
-```
-"""
-function t8_shmem_array_is_equal(array_a, array_b)
-    @ccall libt8.t8_shmem_array_is_equal(array_a::t8_shmem_array_t, array_b::t8_shmem_array_t)::Cint
-end
-
-"""
-    t8_shmem_array_destroy(parray)
-
-Free all memory associated with a [`t8_shmem_array`](@ref).
-
-### Parameters
-* `parray`:\\[in,out\\] On input a pointer to a valid [`t8_shmem_array`](@ref). This array is freed and *parray* is set to NULL on return.
-### Prototype
-```c
-void t8_shmem_array_destroy (t8_shmem_array_t *parray);
-```
-"""
-function t8_shmem_array_destroy(parray)
-    @ccall libt8.t8_shmem_array_destroy(parray::Ptr{t8_shmem_array_t})::Cvoid
-end
+"""The refcount structure is declared in public so its size is known. Its members should really never be accessed directly."""
+const sc_refcount_t = sc_refcount
 
 """
     sc_refcount_init_invalid(rc)
@@ -3482,60 +3042,82 @@ function sc_refcount_destroy(rc)
     @ccall libsc.sc_refcount_destroy(rc::Ptr{sc_refcount_t})::Cvoid
 end
 
+"""
+    sc_refcount_ref(rc)
+
+Increase a reference counter. The counter must be active, that is, have a value greater than zero.
+
+### Parameters
+* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is increased by one.
+### Prototype
+```c
+void sc_refcount_ref (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_ref(rc)
+    @ccall libsc.sc_refcount_ref(rc::Ptr{sc_refcount_t})::Cvoid
+end
+
+"""
+    sc_refcount_unref(rc)
+
+Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used further with sc_refcount_ref or
+
+### Parameters
+* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is decreased by one.
+### Returns
+True if the count has reached zero, false otherwise.
+### See also
+[`sc_refcount_unref`](@ref). It is legal, however, to reactivate it later by calling, [`sc_refcount_init`](@ref).
+
+### Prototype
+```c
+int sc_refcount_unref (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_unref(rc)
+    @ccall libsc.sc_refcount_unref(rc::Ptr{sc_refcount_t})::Cint
+end
+
+"""
+    sc_refcount_is_active(rc)
+
+Check whether a reference counter has a positive value. This means that the reference counter is in use and corresponds to a live object.
+
+### Parameters
+* `rc`:\\[in\\] A reference counter.
+### Returns
+True if the count is greater zero, false otherwise.
+### Prototype
+```c
+int sc_refcount_is_active (const sc_refcount_t * rc);
+```
+"""
+function sc_refcount_is_active(rc)
+    @ccall libsc.sc_refcount_is_active(rc::Ptr{sc_refcount_t})::Cint
+end
+
+"""
+    sc_refcount_is_last(rc)
+
+Check whether a reference counter has value one. This means that this counter is the last of its kind, which we may optimize for.
+
+### Parameters
+* `rc`:\\[in\\] A reference counter.
+### Returns
+True if the count is exactly one.
+### Prototype
+```c
+int sc_refcount_is_last (const sc_refcount_t * rc);
+```
+"""
+function sc_refcount_is_last(rc)
+    @ccall libsc.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
+end
+
 mutable struct t8_cmesh end
 
 const t8_cmesh_t = Ptr{t8_cmesh}
-
-"""We can reuse the reference counter type from libsc."""
-const t8_refcount_t = sc_refcount_t
-
-"""
-    t8_refcount_init(rc)
-
-Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
-
-### Parameters
-* `rc`:\\[out\\] The reference counter is set to one by this call.
-### Prototype
-```c
-void t8_refcount_init (t8_refcount_t *rc);
-```
-"""
-function t8_refcount_init(rc)
-    @ccall libt8.t8_refcount_init(rc::Ptr{t8_refcount_t})::Cvoid
-end
-
-"""
-    t8_refcount_new()
-
-Create a new reference counter with count initialized to 1. Equivalent to calling [`t8_refcount_init`](@ref) on a newly allocated refcount\\_t. It is mandatory to free this with t8_refcount_destroy.
-
-### Returns
-An allocated reference counter whose count has been set to one.
-### Prototype
-```c
-t8_refcount_t *t8_refcount_new (void);
-```
-"""
-function t8_refcount_new()
-    @ccall libt8.t8_refcount_new()::Ptr{t8_refcount_t}
-end
-
-"""
-    t8_refcount_destroy(rc)
-
-Destroy a reference counter that we allocated with t8_refcount_new. Its reference count must have decreased to zero.
-
-### Parameters
-* `rc`:\\[in,out\\] Allocated, formerly valid reference counter.
-### Prototype
-```c
-void t8_refcount_destroy (t8_refcount_t *rc);
-```
-"""
-function t8_refcount_destroy(rc)
-    @ccall libt8.t8_refcount_destroy(rc::Ptr{t8_refcount_t})::Cvoid
-end
 
 mutable struct t8_ctree end
 
@@ -3668,6 +3250,10 @@ void t8_cmesh_set_derive (t8_cmesh_t cmesh, t8_cmesh_t set_from);
 function t8_cmesh_set_derive(cmesh, set_from)
     @ccall libt8.t8_cmesh_set_derive(cmesh::t8_cmesh_t, set_from::t8_cmesh_t)::Cvoid
 end
+
+mutable struct t8_shmem_array end
+
+const t8_shmem_array_t = Ptr{t8_shmem_array}
 
 """
     t8_cmesh_alloc_offsets(mpisize, comm)
@@ -7222,393 +6808,6 @@ function t8_element_shape_compare(element_shape1, element_shape2)
     @ccall libt8.t8_element_shape_compare(element_shape1::t8_element_shape_t, element_shape2::t8_element_shape_t)::Cint
 end
 
-"""
-    t8_element_array_t
-
-The [`t8_element_array_t`](@ref) is an array to store [`t8_element_t`](@ref) * of a given eclass\\_scheme implementation. It is a wrapper around sc_array_t. Each time, a new element is created by the functions for t8_element_array_t, the eclass function either t8_element_new or t8_element_init is called for the element. Thus, each element in a t8_element_array_t is automatically initialized properly.
-
-| Field  | Note                                                 |
-| :----- | :--------------------------------------------------- |
-| scheme | An eclass scheme of which elements should be stored  |
-| array  | The array in which the elements are stored           |
-"""
-struct t8_element_array_t
-    scheme::Ptr{t8_eclass_scheme_c}
-    array::sc_array_t
-end
-
-"""
-    t8_element_array_new(scheme)
-
-Creates a new array structure with 0 elements.
-
-### Parameters
-* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-### Returns
-Return an allocated array of zero length.
-### Prototype
-```c
-t8_element_array_t *t8_element_array_new (t8_eclass_scheme_c *scheme);
-```
-"""
-function t8_element_array_new(scheme)
-    @ccall libt8.t8_element_array_new(scheme::Ptr{t8_eclass_scheme_c})::Ptr{t8_element_array_t}
-end
-
-"""
-    t8_element_array_new_count(scheme, num_elements)
-
-Creates a new array structure with a given length (number of elements) and calls t8_element_new for those elements.
-
-### Parameters
-* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-* `num_elements`:\\[in\\] Initial number of array elements.
-### Returns
-Return an allocated array with allocated and initialized elements for which t8_element_new was called.
-### Prototype
-```c
-t8_element_array_t *t8_element_array_new_count (t8_eclass_scheme_c *scheme, size_t num_elements);
-```
-"""
-function t8_element_array_new_count(scheme, num_elements)
-    @ccall libt8.t8_element_array_new_count(scheme::Ptr{t8_eclass_scheme_c}, num_elements::Csize_t)::Ptr{t8_element_array_t}
-end
-
-"""
-    t8_element_array_init(element_array, scheme)
-
-Initializes an already allocated (or static) array structure.
-
-### Parameters
-* `element_array`:\\[in,out\\] Array structure to be initialized.
-* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-### Prototype
-```c
-void t8_element_array_init (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme);
-```
-"""
-function t8_element_array_init(element_array, scheme)
-    @ccall libt8.t8_element_array_init(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c})::Cvoid
-end
-
-"""
-    t8_element_array_init_size(element_array, scheme, num_elements)
-
-Initializes an already allocated (or static) array structure and allocates a given number of elements and initializes them with t8_element_init.
-
-### Parameters
-* `element_array`:\\[in,out\\] Array structure to be initialized.
-* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-* `num_elements`:\\[in\\] Number of initial array elements.
-### Prototype
-```c
-void t8_element_array_init_size (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme, size_t num_elements);
-```
-"""
-function t8_element_array_init_size(element_array, scheme, num_elements)
-    @ccall libt8.t8_element_array_init_size(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c}, num_elements::Csize_t)::Cvoid
-end
-
-"""
-    t8_element_array_init_view(view, array, offset, length)
-
-Initializes an already allocated (or static) view from existing t8\\_element\\_array. The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
-
-### Parameters
-* `view`:\\[in,out\\] Array structure to be initialized.
-* `array`:\\[in\\] The array must not be resized while view is alive.
-* `offset`:\\[in\\] The offset of the viewed section in element units. This offset cannot be changed until the view is reset.
-* `length`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length. It is not necessary to call [`sc_array_reset`](@ref) later.
-### Prototype
-```c
-void t8_element_array_init_view (t8_element_array_t *view, t8_element_array_t *array, size_t offset, size_t length);
-```
-"""
-function t8_element_array_init_view(view, array, offset, length)
-    @ccall libt8.t8_element_array_init_view(view::Ptr{t8_element_array_t}, array::Ptr{t8_element_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
-end
-
-"""
-    t8_element_array_init_data(view, base, scheme, elem_count)
-
-Initializes an already allocated (or static) view from given plain C data (array of [`t8_element_t`](@ref)). The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
-
-### Parameters
-* `view`:\\[in,out\\] Array structure to be initialized.
-* `base`:\\[in\\] The data must not be moved while view is alive. Must be an array of [`t8_element_t`](@ref) corresponding to *scheme*.
-* `scheme`:\\[in\\] The eclass scheme of the elements stored in *base*.
-* `elem_count`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length. It is not necessary to call [`t8_element_array_reset`](@ref) later.
-### Prototype
-```c
-void t8_element_array_init_data (t8_element_array_t *view, t8_element_t *base, t8_eclass_scheme_c *scheme, size_t elem_count);
-```
-"""
-function t8_element_array_init_data(view, base, scheme, elem_count)
-    @ccall libt8.t8_element_array_init_data(view::Ptr{t8_element_array_t}, base::Ptr{t8_element_t}, scheme::Ptr{t8_eclass_scheme_c}, elem_count::Csize_t)::Cvoid
-end
-
-"""
-    t8_element_array_init_copy(element_array, scheme, data, num_elements)
-
-Initializes an already allocated (or static) array structure and copy an existing array of [`t8_element_t`](@ref) into it.
-
-### Parameters
-* `element_array`:\\[in,out\\] Array structure to be initialized.
-* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-* `data`:\\[in\\] An array of [`t8_element_t`](@ref) which will be copied into *element_array*. The elements in *data* must belong to *scheme* and must be properly initialized with either t8_element_new or t8_element_init.
-* `num_elements`:\\[in\\] Number of elements in *data* to be copied.
-### Prototype
-```c
-void t8_element_array_init_copy (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme, t8_element_t *data, size_t num_elements);
-```
-"""
-function t8_element_array_init_copy(element_array, scheme, data, num_elements)
-    @ccall libt8.t8_element_array_init_copy(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c}, data::Ptr{t8_element_t}, num_elements::Csize_t)::Cvoid
-end
-
-"""
-    t8_element_array_resize(element_array, new_count)
-
-Change the number of elements stored in an element array.
-
-!!! note
-
-    If *new_count* is larger than the number of current elements on *element_array*, then t8_element_init is called for the new elements.
-
-### Parameters
-* `element_array`:\\[in,out\\] The element array to be modified.
-* `new_count`:\\[in\\] The new element count of the array. If it is zero the effect equals t8_element_array_reset.
-### Prototype
-```c
-void t8_element_array_resize (t8_element_array_t *element_array, size_t new_count);
-```
-"""
-function t8_element_array_resize(element_array, new_count)
-    @ccall libt8.t8_element_array_resize(element_array::Ptr{t8_element_array_t}, new_count::Csize_t)::Cvoid
-end
-
-"""
-    t8_element_array_copy(dest, src)
-
-Copy the contents of an array into another. Both arrays must have the same eclass\\_scheme.
-
-### Parameters
-* `dest`:\\[in\\] Array will be resized and get new data.
-* `src`:\\[in\\] Array used as source of new data, will not be changed.
-### Prototype
-```c
-void t8_element_array_copy (t8_element_array_t *dest, t8_element_array_t *src);
-```
-"""
-function t8_element_array_copy(dest, src)
-    @ccall libt8.t8_element_array_copy(dest::Ptr{t8_element_array_t}, src::Ptr{t8_element_array_t})::Cvoid
-end
-
-"""
-    t8_element_array_push(element_array)
-
-Enlarge an array by one element.
-
-### Parameters
-* `element_array`:\\[in\\] Array structure to be modified.
-### Returns
-Returns a pointer to a newly added element for which t8_element_init was called.
-### Prototype
-```c
-t8_element_t *t8_element_array_push (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_push(element_array)
-    @ccall libt8.t8_element_array_push(element_array::Ptr{t8_element_array_t})::Ptr{t8_element_t}
-end
-
-"""
-    t8_element_array_push_count(element_array, count)
-
-Enlarge an array by a number of elements.
-
-### Parameters
-* `element_array`:\\[in\\] Array structure to be modified.
-* `count`:\\[in\\] The number of elements to add.
-### Returns
-Returns a pointer to the newly added elements for which t8_element_init was called.
-### Prototype
-```c
-t8_element_t *t8_element_array_push_count (t8_element_array_t *element_array, size_t count);
-```
-"""
-function t8_element_array_push_count(element_array, count)
-    @ccall libt8.t8_element_array_push_count(element_array::Ptr{t8_element_array_t}, count::Csize_t)::Ptr{t8_element_t}
-end
-
-"""
-    t8_element_array_index_locidx(element_array, index)
-
-Return a given element in an array.
-
-### Parameters
-* `element_array`:\\[in\\] Array of elements.
-* `index`:\\[in\\] The index of an element whithin the array.
-### Returns
-A pointer to the element stored at position *index* in *element_array*.
-### Prototype
-```c
-t8_element_t *t8_element_array_index_locidx (t8_element_array_t *element_array, t8_locidx_t index);
-```
-"""
-function t8_element_array_index_locidx(element_array, index)
-    @ccall libt8.t8_element_array_index_locidx(element_array::Ptr{t8_element_array_t}, index::t8_locidx_t)::Ptr{t8_element_t}
-end
-
-"""
-    t8_element_array_index_int(element_array, index)
-
-Return a given element in an array.
-
-### Parameters
-* `element_array`:\\[in\\] Array of elements.
-* `index`:\\[in\\] The index of an element whithin the array.
-### Returns
-A pointer to the element stored at position *index* in *element_array*.
-### Prototype
-```c
-t8_element_t *t8_element_array_index_int (t8_element_array_t *element_array, int index);
-```
-"""
-function t8_element_array_index_int(element_array, index)
-    @ccall libt8.t8_element_array_index_int(element_array::Ptr{t8_element_array_t}, index::Cint)::Ptr{t8_element_t}
-end
-
-"""
-    t8_element_array_get_scheme(element_array)
-
-Return the eclass scheme associated to a t8\\_element\\_array.
-
-### Parameters
-* `element_array`:\\[in\\] Array of elements.
-### Returns
-The eclass scheme stored at *element_array*.
-### Prototype
-```c
-t8_eclass_scheme_c *t8_element_array_get_scheme (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_get_scheme(element_array)
-    @ccall libt8.t8_element_array_get_scheme(element_array::Ptr{t8_element_array_t})::Ptr{t8_eclass_scheme_c}
-end
-
-"""
-    t8_element_array_get_count(element_array)
-
-Return the number of elements stored in a [`t8_element_array_t`](@ref).
-
-### Parameters
-* `element_array`:\\[in\\] Array structure.
-### Returns
-The number of elements stored in *element_array*.
-### Prototype
-```c
-size_t t8_element_array_get_count (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_get_count(element_array)
-    @ccall libt8.t8_element_array_get_count(element_array::Ptr{t8_element_array_t})::Csize_t
-end
-
-"""
-    t8_element_array_get_size(element_array)
-
-Return the data size of elements stored in a [`t8_element_array_t`](@ref).
-
-### Parameters
-* `element_array`:\\[in\\] Array structure.
-### Returns
-The size (in bytes) of a single element in *element_array*.
-### Prototype
-```c
-size_t t8_element_array_get_size (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_get_size(element_array)
-    @ccall libt8.t8_element_array_get_size(element_array::Ptr{t8_element_array_t})::Csize_t
-end
-
-"""
-    t8_element_array_get_data(element_array)
-
-Return a pointer to the real data array stored in a t8\\_element\\_array.
-
-### Parameters
-* `element_array`:\\[in\\] Array structure.
-### Returns
-A pointer to the stored data. If the number of stored elements is 0, then NULL is returned.
-### Prototype
-```c
-t8_element_t *t8_element_array_get_data (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_get_data(element_array)
-    @ccall libt8.t8_element_array_get_data(element_array::Ptr{t8_element_array_t})::Ptr{t8_element_t}
-end
-
-"""
-    t8_element_array_get_array(element_array)
-
-Return a pointer to the [`sc_array`](@ref) stored in a t8\\_element\\_array.
-
-### Parameters
-* `element_array`:\\[in\\] Array structure.
-### Returns
-A pointer to the [`sc_array`](@ref) storing the data.
-### Prototype
-```c
-sc_array_t *t8_element_array_get_array (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_get_array(element_array)
-    @ccall libt8.t8_element_array_get_array(element_array::Ptr{t8_element_array_t})::Ptr{sc_array_t}
-end
-
-"""
-    t8_element_array_reset(element_array)
-
-Sets the array count to zero and frees all elements.
-
-!!! note
-
-    Calling [`t8_element_array_init`](@ref), then any array operations, then [`t8_element_array_reset`](@ref) is memory neutral.
-
-### Parameters
-* `element_array`:\\[in,out\\] Array structure to be reset.
-### Prototype
-```c
-void t8_element_array_reset (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_reset(element_array)
-    @ccall libt8.t8_element_array_reset(element_array::Ptr{t8_element_array_t})::Cvoid
-end
-
-"""
-    t8_element_array_truncate(element_array)
-
-Sets the array count to zero, but does not free elements.
-
-!!! note
-
-    This is intended to allow an t8\\_element\\_array to be used as a reusable buffer, where the "high water mark" of the buffer is preserved, so that O(log (max n)) reallocs occur over the life of the buffer.
-
-### Parameters
-* `element_array`:\\[in,out\\] Element array structure to be truncated.
-### Prototype
-```c
-void t8_element_array_truncate (t8_element_array_t *element_array);
-```
-"""
-function t8_element_array_truncate(element_array)
-    @ccall libt8.t8_element_array_truncate(element_array::Ptr{t8_element_array_t})::Cvoid
-end
-
 # typedef double ( * t8_example_level_set_fn ) ( const double [ 3 ] , double , void * )
 """A levelset function in 3+1 space dimensions."""
 const t8_example_level_set_fn = Ptr{Cvoid}
@@ -8086,6 +7285,30 @@ function t8_flow_around_circle_with_angular_velocity(x, t, x_out)
     @ccall libt8.t8_flow_around_circle_with_angular_velocity(x::Ptr{Cdouble}, t::Cdouble, x_out::Ptr{Cdouble})::Cvoid
 end
 
+"""
+    t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
+
+### Prototype
+```c
+void t8_forest_write_netcdf (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm);
+```
+"""
+function t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
+    @ccall libt8.t8_forest_write_netcdf(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
+
+### Prototype
+```c
+void t8_forest_write_netcdf_ext (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm, int netcdf_var_storage_mode, int netcdf_var_mpi_access);
+```
+"""
+function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
+    @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
+end
+
 mutable struct t8_mesh end
 
 const t8_mesh_t = t8_mesh
@@ -8415,6 +7638,163 @@ function t8_netcdf_variable_destroy(var_destroy)
     @ccall libt8.t8_netcdf_variable_destroy(var_destroy::Ptr{t8_netcdf_variable_t})::Cvoid
 end
 
+"""We can reuse the reference counter type from libsc."""
+const t8_refcount_t = sc_refcount_t
+
+"""
+    t8_refcount_init(rc)
+
+Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
+
+### Parameters
+* `rc`:\\[out\\] The reference counter is set to one by this call.
+### Prototype
+```c
+void t8_refcount_init (t8_refcount_t *rc);
+```
+"""
+function t8_refcount_init(rc)
+    @ccall libt8.t8_refcount_init(rc::Ptr{t8_refcount_t})::Cvoid
+end
+
+"""
+    t8_refcount_new()
+
+Create a new reference counter with count initialized to 1. Equivalent to calling [`t8_refcount_init`](@ref) on a newly allocated refcount\\_t. It is mandatory to free this with t8_refcount_destroy.
+
+### Returns
+An allocated reference counter whose count has been set to one.
+### Prototype
+```c
+t8_refcount_t *t8_refcount_new (void);
+```
+"""
+function t8_refcount_new()
+    @ccall libt8.t8_refcount_new()::Ptr{t8_refcount_t}
+end
+
+"""
+    t8_refcount_destroy(rc)
+
+Destroy a reference counter that we allocated with t8_refcount_new. Its reference count must have decreased to zero.
+
+### Parameters
+* `rc`:\\[in,out\\] Allocated, formerly valid reference counter.
+### Prototype
+```c
+void t8_refcount_destroy (t8_refcount_t *rc);
+```
+"""
+function t8_refcount_destroy(rc)
+    @ccall libt8.t8_refcount_destroy(rc::Ptr{t8_refcount_t})::Cvoid
+end
+
+"""
+    t8_step3_main(argc, argv)
+
+This is the main program of this example. It creates a coarse mesh and a forest, adapts the forest and writes some output.
+
+### Prototype
+```c
+int t8_step3_main (int argc, char **argv);
+```
+"""
+function t8_step3_main(argc, argv)
+    @ccall libt8.t8_step3_main(argc::Cint, argv::Ptr{Cstring})::Cint
+end
+
+"""
+    t8_step3_print_forest_information(forest)
+
+Print the local and global number of elements of a forest.
+
+### Prototype
+```c
+void t8_step3_print_forest_information (t8_forest_t forest);
+```
+"""
+function t8_step3_print_forest_information(forest)
+    @ccall libt8.t8_step3_print_forest_information(forest::t8_forest_t)::Cvoid
+end
+
+struct t8_step3_adapt_data
+    midpoint::NTuple{3, Cdouble}
+    refine_if_inside_radius::Cdouble
+    coarsen_if_outside_radius::Cdouble
+end
+
+"""
+    t8_step3_adapt_forest(forest)
+
+Adapt a forest according to our [`t8_step3_adapt_callback`](@ref) function. Thus, the input forest will get refined inside a sphere  of radius 0.2 around (0.5, 0.5, 0.5) and coarsened outside of radius 0.4.
+
+### Parameters
+* `forest`:\\[in\\] A committed forest.
+### Returns
+A new forest that arises from the input *forest* via adaptation.
+### Prototype
+```c
+t8_forest_t t8_step3_adapt_forest (t8_forest_t forest);
+```
+"""
+function t8_step3_adapt_forest(forest)
+    @ccall libt8.t8_step3_adapt_forest(forest::t8_forest_t)::t8_forest_t
+end
+
+"""
+    t8_step3_adapt_callback(forest, forest_from, which_tree, lelement_id, ts, is_family, num_elements, elements)
+
+### Prototype
+```c
+int t8_step3_adapt_callback (t8_forest_t forest, t8_forest_t forest_from, t8_locidx_t which_tree, t8_locidx_t lelement_id, t8_eclass_scheme_c *ts, const int is_family, const int num_elements, t8_element_t *elements[]);
+```
+"""
+function t8_step3_adapt_callback(forest, forest_from, which_tree, lelement_id, ts, is_family, num_elements, elements)
+    @ccall libt8.t8_step3_adapt_callback(forest::t8_forest_t, forest_from::t8_forest_t, which_tree::t8_locidx_t, lelement_id::t8_locidx_t, ts::Ptr{t8_eclass_scheme_c}, is_family::Cint, num_elements::Cint, elements::Ptr{Ptr{t8_element_t}})::Cint
+end
+
+"""
+    t8_step4_main(argc, argv)
+
+This is the main program of this example.
+
+### Prototype
+```c
+int t8_step4_main (int argc, char **argv);
+```
+"""
+function t8_step4_main(argc, argv)
+    @ccall libt8.t8_step4_main(argc::Cint, argv::Ptr{Cstring})::Cint
+end
+
+"""
+    t8_step5_main(argc, argv)
+
+This is the main program of this example.
+
+### Prototype
+```c
+int t8_step5_main (int argc, char **argv);
+```
+"""
+function t8_step5_main(argc, argv)
+    @ccall libt8.t8_step5_main(argc::Cint, argv::Ptr{Cstring})::Cint
+end
+
+"""
+    t8_step6_main(argc, argv)
+
+This is the main program of this example.
+
+### Prototype
+```c
+int t8_step6_main (int argc, char **argv);
+```
+"""
+function t8_step6_main(argc, argv)
+    @ccall libt8.t8_step6_main(argc::Cint, argv::Ptr{Cstring})::Cint
+end
+
 """
     t8_vec_norm(vec)
 
@@ -8583,6 +7963,111 @@ function t8_vec_cross(vec_x, vec_y, cross)
     @ccall libt8.t8_vec_cross(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, cross::Ptr{Cdouble})::Cvoid
 end
 
+# no prototype is found for this function at t8_version.h:67:21, please use with caution
+"""
+    t8_get_package_string()
+
+Return the package string of t8code. This string has the format "t8 version\\_number".
+
+### Returns
+The version string of t8code.
+### Prototype
+```c
+const char *t8_get_package_string ();
+```
+"""
+function t8_get_package_string()
+    @ccall libt8.t8_get_package_string()::Cstring
+end
+
+# no prototype is found for this function at t8_version.h:72:21, please use with caution
+"""
+    t8_get_version_number()
+
+Return the version number of t8code as a string.
+
+### Returns
+The version number of t8code as a string.
+### Prototype
+```c
+const char *t8_get_version_number ();
+```
+"""
+function t8_get_version_number()
+    @ccall libt8.t8_get_version_number()::Cstring
+end
+
+# no prototype is found for this function at t8_version.h:77:21, please use with caution
+"""
+    t8_get_version_point_string()
+
+Return the version point string.
+
+### Returns
+The version point point string.
+### Prototype
+```c
+const char *t8_get_version_point_string ();
+```
+"""
+function t8_get_version_point_string()
+    @ccall libt8.t8_get_version_point_string()::Cstring
+end
+
+# no prototype is found for this function at t8_version.h:82:21, please use with caution
+"""
+    t8_get_version_major()
+
+Return the major version number of t8code.
+
+### Returns
+The major version number of t8code.
+### Prototype
+```c
+int t8_get_version_major ();
+```
+"""
+function t8_get_version_major()
+    @ccall libt8.t8_get_version_major()::Cint
+end
+
+# no prototype is found for this function at t8_version.h:87:21, please use with caution
+"""
+    t8_get_version_minor()
+
+Return the minor version number of t8code.
+
+### Returns
+The minor version number of t8code.
+### Prototype
+```c
+int t8_get_version_minor ();
+```
+"""
+function t8_get_version_minor()
+    @ccall libt8.t8_get_version_minor()::Cint
+end
+
+# no prototype is found for this function at t8_version.h:96:21, please use with caution
+"""
+    t8_get_version_patch()
+
+Return the patch version number of t8code.
+
+!!! note
+
+
+### Returns
+The patch version unmber of t8code. negative on error.
+### Prototype
+```c
+int t8_get_version_patch ();
+```
+"""
+function t8_get_version_patch()
+    @ccall libt8.t8_get_version_patch()::Cint
+end
+
 @cenum t8_vtk_data_type_t::UInt32 begin
     T8_VTK_SCALAR = 0
     T8_VTK_VECTOR = 1
@@ -8612,30 +8097,6 @@ int t8_write_pvtu (const char *filename, int num_procs, int write_tree, int writ
 """
 function t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
     @ccall libt8.t8_write_pvtu(filename::Cstring, num_procs::Cint, write_tree::Cint, write_rank::Cint, write_level::Cint, write_id::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
-end
-
-"""
-    t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
-
-### Prototype
-```c
-void t8_forest_write_netcdf (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm);
-```
-"""
-function t8_forest_write_netcdf(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm)
-    @ccall libt8.t8_forest_write_netcdf(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
-
-### Prototype
-```c
-void t8_forest_write_netcdf_ext (t8_forest_t forest, const char *file_prefix, const char *file_title, int dim, int num_extern_netcdf_vars, t8_netcdf_variable_t * ext_variables[], sc_MPI_Comm comm, int netcdf_var_storage_mode, int netcdf_var_mpi_access);
-```
-"""
-function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_extern_netcdf_vars, ext_variables, comm, netcdf_var_storage_mode, netcdf_var_mpi_access)
-    @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
 end
 
 """
@@ -12435,6 +11896,756 @@ function t8_test_create_cmesh(cmesh_id)
 end
 
 """
+    t8_element_array_t
+
+The [`t8_element_array_t`](@ref) is an array to store [`t8_element_t`](@ref) * of a given eclass\\_scheme implementation. It is a wrapper around sc_array_t. Each time, a new element is created by the functions for t8_element_array_t, the eclass function either t8_element_new or t8_element_init is called for the element. Thus, each element in a t8_element_array_t is automatically initialized properly.
+
+| Field  | Note                                                 |
+| :----- | :--------------------------------------------------- |
+| scheme | An eclass scheme of which elements should be stored  |
+| array  | The array in which the elements are stored           |
+"""
+struct t8_element_array_t
+    scheme::Ptr{t8_eclass_scheme_c}
+    array::sc_array_t
+end
+
+"""
+    t8_element_array_new(scheme)
+
+Creates a new array structure with 0 elements.
+
+### Parameters
+* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
+### Returns
+Return an allocated array of zero length.
+### Prototype
+```c
+t8_element_array_t *t8_element_array_new (t8_eclass_scheme_c *scheme);
+```
+"""
+function t8_element_array_new(scheme)
+    @ccall libt8.t8_element_array_new(scheme::Ptr{t8_eclass_scheme_c})::Ptr{t8_element_array_t}
+end
+
+"""
+    t8_element_array_new_count(scheme, num_elements)
+
+Creates a new array structure with a given length (number of elements) and calls t8_element_new for those elements.
+
+### Parameters
+* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
+* `num_elements`:\\[in\\] Initial number of array elements.
+### Returns
+Return an allocated array with allocated and initialized elements for which t8_element_new was called.
+### Prototype
+```c
+t8_element_array_t *t8_element_array_new_count (t8_eclass_scheme_c *scheme, size_t num_elements);
+```
+"""
+function t8_element_array_new_count(scheme, num_elements)
+    @ccall libt8.t8_element_array_new_count(scheme::Ptr{t8_eclass_scheme_c}, num_elements::Csize_t)::Ptr{t8_element_array_t}
+end
+
+"""
+    t8_element_array_init(element_array, scheme)
+
+Initializes an already allocated (or static) array structure.
+
+### Parameters
+* `element_array`:\\[in,out\\] Array structure to be initialized.
+* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
+### Prototype
+```c
+void t8_element_array_init (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme);
+```
+"""
+function t8_element_array_init(element_array, scheme)
+    @ccall libt8.t8_element_array_init(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c})::Cvoid
+end
+
+"""
+    t8_element_array_init_size(element_array, scheme, num_elements)
+
+Initializes an already allocated (or static) array structure and allocates a given number of elements and initializes them with t8_element_init.
+
+### Parameters
+* `element_array`:\\[in,out\\] Array structure to be initialized.
+* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
+* `num_elements`:\\[in\\] Number of initial array elements.
+### Prototype
+```c
+void t8_element_array_init_size (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme, size_t num_elements);
+```
+"""
+function t8_element_array_init_size(element_array, scheme, num_elements)
+    @ccall libt8.t8_element_array_init_size(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c}, num_elements::Csize_t)::Cvoid
+end
+
+"""
+    t8_element_array_init_view(view, array, offset, length)
+
+Initializes an already allocated (or static) view from existing t8\\_element\\_array. The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
+
+### Parameters
+* `view`:\\[in,out\\] Array structure to be initialized.
+* `array`:\\[in\\] The array must not be resized while view is alive.
+* `offset`:\\[in\\] The offset of the viewed section in element units. This offset cannot be changed until the view is reset.
+* `length`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length. It is not necessary to call [`sc_array_reset`](@ref) later.
+### Prototype
+```c
+void t8_element_array_init_view (t8_element_array_t *view, t8_element_array_t *array, size_t offset, size_t length);
+```
+"""
+function t8_element_array_init_view(view, array, offset, length)
+    @ccall libt8.t8_element_array_init_view(view::Ptr{t8_element_array_t}, array::Ptr{t8_element_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
+end
+
+"""
+    t8_element_array_init_data(view, base, scheme, elem_count)
+
+Initializes an already allocated (or static) view from given plain C data (array of [`t8_element_t`](@ref)). The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
+
+### Parameters
+* `view`:\\[in,out\\] Array structure to be initialized.
+* `base`:\\[in\\] The data must not be moved while view is alive. Must be an array of [`t8_element_t`](@ref) corresponding to *scheme*.
+* `scheme`:\\[in\\] The eclass scheme of the elements stored in *base*.
+* `elem_count`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length. It is not necessary to call [`t8_element_array_reset`](@ref) later.
+### Prototype
+```c
+void t8_element_array_init_data (t8_element_array_t *view, t8_element_t *base, t8_eclass_scheme_c *scheme, size_t elem_count);
+```
+"""
+function t8_element_array_init_data(view, base, scheme, elem_count)
+    @ccall libt8.t8_element_array_init_data(view::Ptr{t8_element_array_t}, base::Ptr{t8_element_t}, scheme::Ptr{t8_eclass_scheme_c}, elem_count::Csize_t)::Cvoid
+end
+
+"""
+    t8_element_array_init_copy(element_array, scheme, data, num_elements)
+
+Initializes an already allocated (or static) array structure and copy an existing array of [`t8_element_t`](@ref) into it.
+
+### Parameters
+* `element_array`:\\[in,out\\] Array structure to be initialized.
+* `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
+* `data`:\\[in\\] An array of [`t8_element_t`](@ref) which will be copied into *element_array*. The elements in *data* must belong to *scheme* and must be properly initialized with either t8_element_new or t8_element_init.
+* `num_elements`:\\[in\\] Number of elements in *data* to be copied.
+### Prototype
+```c
+void t8_element_array_init_copy (t8_element_array_t *element_array, t8_eclass_scheme_c *scheme, t8_element_t *data, size_t num_elements);
+```
+"""
+function t8_element_array_init_copy(element_array, scheme, data, num_elements)
+    @ccall libt8.t8_element_array_init_copy(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_eclass_scheme_c}, data::Ptr{t8_element_t}, num_elements::Csize_t)::Cvoid
+end
+
+"""
+    t8_element_array_resize(element_array, new_count)
+
+Change the number of elements stored in an element array.
+
+!!! note
+
+    If *new_count* is larger than the number of current elements on *element_array*, then t8_element_init is called for the new elements.
+
+### Parameters
+* `element_array`:\\[in,out\\] The element array to be modified.
+* `new_count`:\\[in\\] The new element count of the array. If it is zero the effect equals t8_element_array_reset.
+### Prototype
+```c
+void t8_element_array_resize (t8_element_array_t *element_array, size_t new_count);
+```
+"""
+function t8_element_array_resize(element_array, new_count)
+    @ccall libt8.t8_element_array_resize(element_array::Ptr{t8_element_array_t}, new_count::Csize_t)::Cvoid
+end
+
+"""
+    t8_element_array_copy(dest, src)
+
+Copy the contents of an array into another. Both arrays must have the same eclass\\_scheme.
+
+### Parameters
+* `dest`:\\[in\\] Array will be resized and get new data.
+* `src`:\\[in\\] Array used as source of new data, will not be changed.
+### Prototype
+```c
+void t8_element_array_copy (t8_element_array_t *dest, t8_element_array_t *src);
+```
+"""
+function t8_element_array_copy(dest, src)
+    @ccall libt8.t8_element_array_copy(dest::Ptr{t8_element_array_t}, src::Ptr{t8_element_array_t})::Cvoid
+end
+
+"""
+    t8_element_array_push(element_array)
+
+Enlarge an array by one element.
+
+### Parameters
+* `element_array`:\\[in\\] Array structure to be modified.
+### Returns
+Returns a pointer to a newly added element for which t8_element_init was called.
+### Prototype
+```c
+t8_element_t *t8_element_array_push (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_push(element_array)
+    @ccall libt8.t8_element_array_push(element_array::Ptr{t8_element_array_t})::Ptr{t8_element_t}
+end
+
+"""
+    t8_element_array_push_count(element_array, count)
+
+Enlarge an array by a number of elements.
+
+### Parameters
+* `element_array`:\\[in\\] Array structure to be modified.
+* `count`:\\[in\\] The number of elements to add.
+### Returns
+Returns a pointer to the newly added elements for which t8_element_init was called.
+### Prototype
+```c
+t8_element_t *t8_element_array_push_count (t8_element_array_t *element_array, size_t count);
+```
+"""
+function t8_element_array_push_count(element_array, count)
+    @ccall libt8.t8_element_array_push_count(element_array::Ptr{t8_element_array_t}, count::Csize_t)::Ptr{t8_element_t}
+end
+
+"""
+    t8_element_array_index_locidx(element_array, index)
+
+Return a given element in an array.
+
+### Parameters
+* `element_array`:\\[in\\] Array of elements.
+* `index`:\\[in\\] The index of an element whithin the array.
+### Returns
+A pointer to the element stored at position *index* in *element_array*.
+### Prototype
+```c
+t8_element_t *t8_element_array_index_locidx (t8_element_array_t *element_array, t8_locidx_t index);
+```
+"""
+function t8_element_array_index_locidx(element_array, index)
+    @ccall libt8.t8_element_array_index_locidx(element_array::Ptr{t8_element_array_t}, index::t8_locidx_t)::Ptr{t8_element_t}
+end
+
+"""
+    t8_element_array_index_int(element_array, index)
+
+Return a given element in an array.
+
+### Parameters
+* `element_array`:\\[in\\] Array of elements.
+* `index`:\\[in\\] The index of an element whithin the array.
+### Returns
+A pointer to the element stored at position *index* in *element_array*.
+### Prototype
+```c
+t8_element_t *t8_element_array_index_int (t8_element_array_t *element_array, int index);
+```
+"""
+function t8_element_array_index_int(element_array, index)
+    @ccall libt8.t8_element_array_index_int(element_array::Ptr{t8_element_array_t}, index::Cint)::Ptr{t8_element_t}
+end
+
+"""
+    t8_element_array_get_scheme(element_array)
+
+Return the eclass scheme associated to a t8\\_element\\_array.
+
+### Parameters
+* `element_array`:\\[in\\] Array of elements.
+### Returns
+The eclass scheme stored at *element_array*.
+### Prototype
+```c
+t8_eclass_scheme_c *t8_element_array_get_scheme (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_get_scheme(element_array)
+    @ccall libt8.t8_element_array_get_scheme(element_array::Ptr{t8_element_array_t})::Ptr{t8_eclass_scheme_c}
+end
+
+"""
+    t8_element_array_get_count(element_array)
+
+Return the number of elements stored in a [`t8_element_array_t`](@ref).
+
+### Parameters
+* `element_array`:\\[in\\] Array structure.
+### Returns
+The number of elements stored in *element_array*.
+### Prototype
+```c
+size_t t8_element_array_get_count (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_get_count(element_array)
+    @ccall libt8.t8_element_array_get_count(element_array::Ptr{t8_element_array_t})::Csize_t
+end
+
+"""
+    t8_element_array_get_size(element_array)
+
+Return the data size of elements stored in a [`t8_element_array_t`](@ref).
+
+### Parameters
+* `element_array`:\\[in\\] Array structure.
+### Returns
+The size (in bytes) of a single element in *element_array*.
+### Prototype
+```c
+size_t t8_element_array_get_size (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_get_size(element_array)
+    @ccall libt8.t8_element_array_get_size(element_array::Ptr{t8_element_array_t})::Csize_t
+end
+
+"""
+    t8_element_array_get_data(element_array)
+
+Return a pointer to the real data array stored in a t8\\_element\\_array.
+
+### Parameters
+* `element_array`:\\[in\\] Array structure.
+### Returns
+A pointer to the stored data. If the number of stored elements is 0, then NULL is returned.
+### Prototype
+```c
+t8_element_t *t8_element_array_get_data (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_get_data(element_array)
+    @ccall libt8.t8_element_array_get_data(element_array::Ptr{t8_element_array_t})::Ptr{t8_element_t}
+end
+
+"""
+    t8_element_array_get_array(element_array)
+
+Return a pointer to the [`sc_array`](@ref) stored in a t8\\_element\\_array.
+
+### Parameters
+* `element_array`:\\[in\\] Array structure.
+### Returns
+A pointer to the [`sc_array`](@ref) storing the data.
+### Prototype
+```c
+sc_array_t *t8_element_array_get_array (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_get_array(element_array)
+    @ccall libt8.t8_element_array_get_array(element_array::Ptr{t8_element_array_t})::Ptr{sc_array_t}
+end
+
+"""
+    t8_element_array_reset(element_array)
+
+Sets the array count to zero and frees all elements.
+
+!!! note
+
+    Calling [`t8_element_array_init`](@ref), then any array operations, then [`t8_element_array_reset`](@ref) is memory neutral.
+
+### Parameters
+* `element_array`:\\[in,out\\] Array structure to be reset.
+### Prototype
+```c
+void t8_element_array_reset (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_reset(element_array)
+    @ccall libt8.t8_element_array_reset(element_array::Ptr{t8_element_array_t})::Cvoid
+end
+
+"""
+    t8_element_array_truncate(element_array)
+
+Sets the array count to zero, but does not free elements.
+
+!!! note
+
+    This is intended to allow an t8\\_element\\_array to be used as a reusable buffer, where the "high water mark" of the buffer is preserved, so that O(log (max n)) reallocs occur over the life of the buffer.
+
+### Parameters
+* `element_array`:\\[in,out\\] Element array structure to be truncated.
+### Prototype
+```c
+void t8_element_array_truncate (t8_element_array_t *element_array);
+```
+"""
+function t8_element_array_truncate(element_array)
+    @ccall libt8.t8_element_array_truncate(element_array::Ptr{t8_element_array_t})::Cvoid
+end
+
+"""
+    t8_shmem_init(comm)
+
+### Prototype
+```c
+void t8_shmem_init (sc_MPI_Comm comm);
+```
+"""
+function t8_shmem_init(comm)
+    @ccall libt8.t8_shmem_init(comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_shmem_finalize(comm)
+
+### Prototype
+```c
+void t8_shmem_finalize (sc_MPI_Comm comm);
+```
+"""
+function t8_shmem_finalize(comm)
+    @ccall libt8.t8_shmem_finalize(comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_shmem_set_type(comm, type)
+
+### Prototype
+```c
+void t8_shmem_set_type (sc_MPI_Comm comm, sc_shmem_type_t type);
+```
+"""
+function t8_shmem_set_type(comm, type)
+    @ccall libt8.t8_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
+end
+
+"""
+    t8_shmem_array_init(parray, elem_size, elem_count, comm)
+
+### Prototype
+```c
+void t8_shmem_array_init (t8_shmem_array_t *parray, size_t elem_size, size_t elem_count, sc_MPI_Comm comm);
+```
+"""
+function t8_shmem_array_init(parray, elem_size, elem_count, comm)
+    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_shmem_array_start_writing(array)
+
+Enable writing mode for a shmem array. Only some processes may be allowed to write into the array, which is indicated by the return value being non-zero.
+
+!!! note
+
+    This function is MPI collective.
+
+### Parameters
+* `array`:\\[in,out\\] Initialized array. Writing will be enabled on certain processes.
+### Returns
+True if the calling process can write into the array.
+### Prototype
+```c
+int t8_shmem_array_start_writing (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_start_writing(array)
+    @ccall libt8.t8_shmem_array_start_writing(array::t8_shmem_array_t)::Cint
+end
+
+"""
+    t8_shmem_array_end_writing(array)
+
+Disable writing mode for a shmem array.
+
+!!! note
+
+    This function is MPI collective.
+
+### Parameters
+* `array`:\\[in,out\\] Initialized with writing mode enabled.
+### See also
+[`t8_shmem_array_start_writing`](@ref).
+
+### Prototype
+```c
+void t8_shmem_array_end_writing (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_end_writing(array)
+    @ccall libt8.t8_shmem_array_end_writing(array::t8_shmem_array_t)::Cvoid
+end
+
+"""
+    t8_shmem_array_set_gloidx(array, index, value)
+
+Set an entry of a t8\\_shmem array that is used to store [`t8_gloidx_t`](@ref). The array must have writing mode enabled t8_shmem_array_start_writing.
+
+### Parameters
+* `array`:\\[in,out\\] The array to be mofified.
+* `index`:\\[in\\] The array entry to be modified.
+* `value`:\\[in\\] The new value to be set.
+### Prototype
+```c
+void t8_shmem_array_set_gloidx (t8_shmem_array_t array, int index, t8_gloidx_t value);
+```
+"""
+function t8_shmem_array_set_gloidx(array, index, value)
+    @ccall libt8.t8_shmem_array_set_gloidx(array::t8_shmem_array_t, index::Cint, value::t8_gloidx_t)::Cvoid
+end
+
+"""
+    t8_shmem_array_copy(dest, source)
+
+Copy the contents of one t8\\_shmem array into another.
+
+!!! note
+
+    *dest* must be initialized and match in element size and element count to *source*.
+
+!!! note
+
+    *dest* must have writing mode disabled.
+
+### Parameters
+* `dest`:\\[in,out\\] The array in which *source* should be copied.
+* `source`:\\[in\\] The array to copy.
+### Prototype
+```c
+void t8_shmem_array_copy (t8_shmem_array_t dest, t8_shmem_array_t source);
+```
+"""
+function t8_shmem_array_copy(dest, source)
+    @ccall libt8.t8_shmem_array_copy(dest::t8_shmem_array_t, source::t8_shmem_array_t)::Cvoid
+end
+
+"""
+    t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount, recvtype)
+
+### Prototype
+```c
+void t8_shmem_array_allgather (const void *sendbuf, int sendcount, sc_MPI_Datatype sendtype, t8_shmem_array_t recvarray, int recvcount, sc_MPI_Datatype recvtype);
+```
+"""
+function t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount, recvtype)
+    @ccall libt8.t8_shmem_array_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvcount::Cint, recvtype::Cint)::Cvoid
+end
+
+"""
+    t8_shmem_array_get_comm(array)
+
+### Prototype
+```c
+sc_MPI_Comm t8_shmem_array_get_comm (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_comm(array)
+    @ccall libt8.t8_shmem_array_get_comm(array::t8_shmem_array_t)::Cint
+end
+
+"""
+    t8_shmem_array_get_elem_size(array)
+
+Get the element size of a [`t8_shmem_array`](@ref)
+
+### Parameters
+* `array`:\\[in\\] The array.
+### Returns
+The element size of *array*'s elements.
+### Prototype
+```c
+size_t t8_shmem_array_get_elem_size (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_elem_size(array)
+    @ccall libt8.t8_shmem_array_get_elem_size(array::t8_shmem_array_t)::Csize_t
+end
+
+"""
+    t8_shmem_array_get_elem_count(array)
+
+Get the number of elements of a [`t8_shmem_array`](@ref)
+
+### Parameters
+* `array`:\\[in\\] The array.
+### Returns
+The number of elements in *array*.
+### Prototype
+```c
+size_t t8_shmem_array_get_elem_count (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_elem_count(array)
+    @ccall libt8.t8_shmem_array_get_elem_count(array::t8_shmem_array_t)::Csize_t
+end
+
+"""
+    t8_shmem_array_get_gloidx_array(array)
+
+Return a read-only pointer to the data of a shared memory array interpreted as an [`t8_gloidx_t`](@ref) array.
+
+!!! note
+
+    Writing mode must be disabled for *array*.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
+### Returns
+The data of *array* as [`t8_gloidx_t`](@ref) pointer.
+### Prototype
+```c
+const t8_gloidx_t *t8_shmem_array_get_gloidx_array (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_gloidx_array(array)
+    @ccall libt8.t8_shmem_array_get_gloidx_array(array::t8_shmem_array_t)::Ptr{t8_gloidx_t}
+end
+
+"""
+    t8_shmem_array_get_gloidx_array_for_writing(array)
+
+Return a pointer to the data of a shared memory array interpreted as an [`t8_gloidx_t`](@ref) array. The array must have writing enabled t8_shmem_array_start_writing and you should not write into the memory after t8_shmem_array_end_writing was called.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
+### Returns
+The data of *array* as [`t8_gloidx_t`](@ref) pointer.
+### Prototype
+```c
+t8_gloidx_t *t8_shmem_array_get_gloidx_array_for_writing (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_gloidx_array_for_writing(array)
+    @ccall libt8.t8_shmem_array_get_gloidx_array_for_writing(array::t8_shmem_array_t)::Ptr{t8_gloidx_t}
+end
+
+"""
+    t8_shmem_array_get_gloidx(array, index)
+
+Return an entry of a shared memory array that stores [`t8_gloidx_t`](@ref).
+
+!!! note
+
+    Writing mode must be disabled for *array*.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref)
+* `index`:\\[in\\] The index of the entry to be queried.
+### Returns
+The *index*-th entry of *array* as [`t8_gloidx_t`](@ref).
+### Prototype
+```c
+t8_gloidx_t t8_shmem_array_get_gloidx (t8_shmem_array_t array, int index);
+```
+"""
+function t8_shmem_array_get_gloidx(array, index)
+    @ccall libt8.t8_shmem_array_get_gloidx(array::t8_shmem_array_t, index::Cint)::t8_gloidx_t
+end
+
+"""
+    t8_shmem_array_get_array(array)
+
+Return a pointer to the data array of a [`t8_shmem_array`](@ref).
+
+!!! note
+
+    Writing mode must be disabled for *array*.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
+### Returns
+A pointer to the data array of *array*.
+### Prototype
+```c
+const void *t8_shmem_array_get_array (t8_shmem_array_t array);
+```
+"""
+function t8_shmem_array_get_array(array)
+    @ccall libt8.t8_shmem_array_get_array(array::t8_shmem_array_t)::Ptr{Cvoid}
+end
+
+"""
+    t8_shmem_array_index(array, index)
+
+Return a read-only pointer to an element in a [`t8_shmem_array`](@ref).
+
+!!! note
+
+    You should not modify the value.
+
+!!! note
+
+    Writing mode must be disabled for *array*.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
+* `index`:\\[in\\] The index of an element.
+### Returns
+A pointer to the element at *index* in *array*.
+### Prototype
+```c
+const void *t8_shmem_array_index (t8_shmem_array_t array, size_t index);
+```
+"""
+function t8_shmem_array_index(array, index)
+    @ccall libt8.t8_shmem_array_index(array::t8_shmem_array_t, index::Csize_t)::Ptr{Cvoid}
+end
+
+"""
+    t8_shmem_array_index_for_writing(array, index)
+
+Return a pointer to an element in a [`t8_shmem_array`](@ref) in writing mode.
+
+!!! note
+
+    You can modify the value before the next call to t8_shmem_array_end_writing.
+
+!!! note
+
+    Writing mode must be enabled for *array*.
+
+### Parameters
+* `array`:\\[in\\] The [`t8_shmem_array`](@ref).
+* `index`:\\[in\\] The index of an element.
+### Returns
+A pointer to the element at *index* in *array*.
+### Prototype
+```c
+void *t8_shmem_array_index_for_writing (t8_shmem_array_t array, size_t index);
+```
+"""
+function t8_shmem_array_index_for_writing(array, index)
+    @ccall libt8.t8_shmem_array_index_for_writing(array::t8_shmem_array_t, index::Csize_t)::Ptr{Cvoid}
+end
+
+"""
+    t8_shmem_array_is_equal(array_a, array_b)
+
+### Prototype
+```c
+int t8_shmem_array_is_equal (t8_shmem_array_t array_a, t8_shmem_array_t array_b);
+```
+"""
+function t8_shmem_array_is_equal(array_a, array_b)
+    @ccall libt8.t8_shmem_array_is_equal(array_a::t8_shmem_array_t, array_b::t8_shmem_array_t)::Cint
+end
+
+"""
+    t8_shmem_array_destroy(parray)
+
+Free all memory associated with a [`t8_shmem_array`](@ref).
+
+### Parameters
+* `parray`:\\[in,out\\] On input a pointer to a valid [`t8_shmem_array`](@ref). This array is freed and *parray* is set to NULL on return.
+### Prototype
+```c
+void t8_shmem_array_destroy (t8_shmem_array_t *parray);
+```
+"""
+function t8_shmem_array_destroy(parray)
+    @ccall libt8.t8_shmem_array_destroy(parray::Ptr{t8_shmem_array_t})::Cvoid
+end
+
+"""
     t8_forest_adapt(forest)
 
 ### Prototype
@@ -14500,6 +14711,81 @@ function t8_geom_get_edge_vertices(tree_class, tree_vertices, edge_index, dim, e
 end
 
 """
+    t8_geometry_linear_new(dimension)
+
+Create a new linear geometry of a given dimension.
+
+### Parameters
+* `dimension`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
+### Returns
+A pointer to an allocated t8\\_geometry\\_linear struct, as if the t8\\_geometry\\_linear (int dimension) constructor was called.
+### Prototype
+```c
+t8_geometry_c *t8_geometry_linear_new (int dimension);
+```
+"""
+function t8_geometry_linear_new(dimension)
+    @ccall libt8.t8_geometry_linear_new(dimension::Cint)::Ptr{t8_geometry_c}
+end
+
+"""
+    t8_geometry_linear_destroy(geom)
+
+Destroy a linear geometry that was created with t8_geometry_linear_new.
+
+### Parameters
+* `geom`:\\[in,out\\] A linear geometry. Set to NULL on output.
+### Prototype
+```c
+void t8_geometry_linear_destroy (t8_geometry_c **geom);
+```
+"""
+function t8_geometry_linear_destroy(geom)
+    @ccall libt8.t8_geometry_linear_destroy(geom::Ptr{Ptr{t8_geometry_c}})::Cvoid
+end
+
+mutable struct t8_geometry_occ end
+
+"""This typedef holds virtual functions for a particular geometry. We need it so that we can use [`t8_geometry_occ_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling)"""
+const t8_geometry_occ_c = t8_geometry_occ
+
+"""
+    t8_geometry_occ_new(dimension, fileprefix, name_in)
+
+Create a new occ geometry of a given dimension.
+
+### Parameters
+* `dimension`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
+* `fileprefix`:\\[in\\] Prefix of a .brep file from which to extract an occ geometry.
+* `name`:\\[in\\] The name to give this geometry.
+### Returns
+A pointer to an allocated [`t8_geometry_occ`](@ref) struct, as if the [`t8_geometry_occ`](@ref) (int dimension, const char *fileprefix, const char *name)  constructor was called.
+### Prototype
+```c
+t8_geometry_occ_c *t8_geometry_occ_new (int dimension, const char *fileprefix, const char *name_in);
+```
+"""
+function t8_geometry_occ_new(dimension, fileprefix, name_in)
+    @ccall libt8.t8_geometry_occ_new(dimension::Cint, fileprefix::Cstring, name_in::Cstring)::Ptr{t8_geometry_occ_c}
+end
+
+"""
+    t8_geometry_occ_destroy(geom)
+
+Destroy a occ geometry that was created with t8_geometry_occ_new.
+
+### Parameters
+* `geom`:\\[in,out\\] A occ geometry. Set to NULL on output.
+### Prototype
+```c
+void t8_geometry_occ_destroy (t8_geometry_occ_c ** geom);
+```
+"""
+function t8_geometry_occ_destroy(geom)
+    @ccall libt8.t8_geometry_occ_destroy(geom::Ptr{Ptr{t8_geometry_occ_c}})::Cvoid
+end
+
+"""
     t8_scheme_new_default_cxx()
 
 Return the default element implementation of t8code.
@@ -14770,8 +15056,6 @@ const T8_MPI_LINEARIDX = sc_MPI_UNSIGNED_LONG_LONG
 
 const T8_PRECISION_EPS = SC_EPS
 
-const T8_SHMEM_BEST_TYPE = SC_SHMEM_WINDOW
-
 const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 2
 
 const T8_CC = "mpicc"
@@ -14870,6 +15154,7 @@ const T8_ECLASS_MAX_DIM = 3
 const T8_ELEMENT_SHAPE_MAX_FACES = 6
 
 const T8_ELEMENT_SHAPE_MAX_CORNERS = 8
+
 
 const T8_VTK_LOCIDX = "Int32"
 
@@ -15079,6 +15364,8 @@ const P8EST_STRING = "p8est"
 const P8EST_ONDISK_FORMAT = 0x03000009
 
 const T8_CMESH_FORMAT = 0x0002
+
+const T8_SHMEM_BEST_TYPE = SC_SHMEM_WINDOW
 
 
 

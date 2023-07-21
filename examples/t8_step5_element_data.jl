@@ -188,6 +188,8 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
 
   # The number of user defined data fields to write.
   num_data = 1
+
+  # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
   # For each user defined data field we need one t8_vtk_data_field_t variable.
   vtk_data = t8_vtk_data_field_t(
     T8_VTK_SCALAR, # Set the type of this variable. Since we have one value per element, we pick T8_VTK_SCALAR.

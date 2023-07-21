@@ -333,6 +333,7 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
     curvature[ielem] = element_data[ielem].curvature
   end
 
+  # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
   vtk_data = [
     t8_vtk_data_field_t(
       T8_VTK_SCALAR,

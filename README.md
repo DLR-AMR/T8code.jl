@@ -104,6 +104,65 @@ Note that you should restart your Julia session after changing the preferences.
 Currently, custom builds of [`t8code`](https://github.com/DLR-AMR/t8code)
 without MPI support are not supported.
 
+## Usage
+
+[T8code.jl](https://github.com/DLR-AMR/T8code.jl) provides Julia bindings for three
+libraries:
+  - [`t8code`](https://github.com/DLR-AMR/t8code)
+  - [`p4est`](https://github.com/cburstedde/p4est)
+  - [`libsc`](https://github.com/cburstedde/libsc)
+
+The bindings for `t8code` are imported by default to the global namespace. They all
+start wit the prefixes `t8_*` or `T8_*`. The bindings for `p4est` and `libsc` are
+not exportet and must be qualified by their full namespace. I.e.:
+```julia
+T8code.Libt8.sc_some_function(...)
+T8code.Libt8.p4est_some_function(...)
+T8code.Libt8.p8est_some_function(...)
+```
+
+A typical initialization of `T8code.jl` may look as follows:
+```julia
+using MPI
+using T8code
+
+using T8code.Libt8: sc_init
+using T8code.Libt8: sc_finalize
+using T8code.Libt8: SC_LP_ESSENTIAL
+using T8code.Libt8: SC_LP_PRODUCTION
+
+# Initialize MPI. This has to happen before we initialize sc or t8code.
+mpiret = MPI.Init()
+
+comm = MPI.COMM_WORLD
+
+# Initialize the sc library, has to happen before we initialize t8code.
+sc_init(comm, 1, 1, C_NULL, SC_LP_ESSENTIAL)
+
+# Initialize t8code with log level SC_LP_PRODUCTION. See sc.h for more info on the log levels.
+t8_init(SC_LP_PRODUCTION)
+
+# Some more code [...]
+
+```
+At the end of the application finalize with to check for unbalanced references resp. unfreed memory
+```julia
+sc_finalize()
+```
+
+See `examples/` for more information on how to use `T8code.jl`.
+
+## Issues
+
+It is highly recommended to use Julia `v1.9` or newer. Oder versions showed
+some issues like extremely long computing times (basically hanging) when
+initializing some structs defined by `t8code`. Nevertheless, most functionality
+has been tested with older Julia versions and should work just fine.
+
+The `compat` entry is set to `julia = "1.6"` for broader support of other
+packages using `T8code.jl`. In the future, this workaround will be dropped when
+Julia `v1.9` (or newer) is more widely established in the community.
+
 ## Authors
 
 T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de) (German

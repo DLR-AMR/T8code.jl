@@ -145,7 +145,8 @@ t8_init(SC_LP_PRODUCTION)
 # Some more code [...]
 
 ```
-At the end of the application finalize with to check for unbalanced references resp. unfreed memory
+At the end of the application finalize in order to check for unbalanced
+references resp. unfreed memory.
 ```julia
 sc_finalize()
 ```

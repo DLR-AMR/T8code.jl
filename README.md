@@ -114,7 +114,7 @@ libraries:
 
 The bindings for `t8code` are imported by default to the global namespace. They all
 start wit the prefixes `t8_*` or `T8_*`. The bindings for `p4est` and `libsc` are
-not exportet and must be qualified by their full namespace. I.e.:
+not exported and must be qualified by their full namespace. I.e.:
 ```julia
 T8code.Libt8.sc_some_function(...)
 T8code.Libt8.p4est_some_function(...)
@@ -155,7 +155,7 @@ See `examples/` for more information on how to use `T8code.jl`.
 
 ## Issues
 
-It is highly recommended to use Julia `v1.9` or newer. Oder versions showed
+It is highly recommended to use Julia `v1.9` or newer. Older versions showed
 some issues like extremely long computing times (basically hanging) when
 initializing some structs defined by `t8code`. Nevertheless, most functionality
 has been tested with older Julia versions and should work just fine.

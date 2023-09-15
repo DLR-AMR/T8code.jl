@@ -19,16 +19,16 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 # See also: https://github.com/DLR-AMR/t8code/wiki/Step-6-Computing-stencils
-# 
+#
 # This is step6 of the t8code tutorials using the C++ interface of t8code.
-# In the following we will store data in the individual elements of our forest. 
-# To do this, we will create a uniform forest in 2D, which will get adapted, 
+# In the following we will store data in the individual elements of our forest.
+# To do this, we will create a uniform forest in 2D, which will get adapted,
 # partitioned, balanced and create ghost elements all in one go.
-# After adapting the forest we build a data array and gather data for 
+# After adapting the forest we build a data array and gather data for
 # the local elements. Next, we exchange the data values of the ghost elements and compute
 # various stencils resp. finite differences. Finally, vtu files are stored with three
 # custom data fields.
-# 
+#
 # How you can experiment here:
 #   - Look at the paraview output files of the adapted forest.
 #   - Change the adaptation criterion as you wish to adapt elements or families as desired.
@@ -72,9 +72,9 @@ end
 
 # In this function we first allocate a new uniformly refined forest at given
 # refinement level. Then a second forest is created, where user data for the
-# adaption call (cf. step 3) is registered.  The second forest inherts all
+# adaption call (cf. step 3) is registered.  The second forest inherits all
 # properties of the first ("root") forest and deallocates it. The final
-# adapted and commited forest is returned back to the calling scope.
+# adapted and committed forest is returned back to the calling scope.
 function t8_step6_build_forest(comm, dim, level)
   cmesh = t8_cmesh_new_periodic(comm, dim)
 
@@ -160,7 +160,7 @@ function t8_step6_create_element_data(forest)
       # Shift x and y to the center since the domain is [0,1] x [0,1].
       x = midpoint[1] - 0.5
       y = midpoint[2] - 0.5
-      r = sqrt(x * x + y * y) * 20.0      # arbitrarly scaled radius
+      r = sqrt(x * x + y * y) * 20.0      # arbitrarily scaled radius
 
       # Some 'interesting' height function.
       height = sin(2.0 * r) / r
@@ -180,7 +180,7 @@ function t8_step6_compute_stencil(forest, element_data)
   # Check that forest is a committed, that is valid and usable, forest.
   @T8_ASSERT(t8_forest_is_committed(forest) == 1)
 
-  # Get the number of trees that have elements of this process. 
+  # Get the number of trees that have elements of this process.
   num_local_trees = t8_forest_get_num_local_trees(forest)
 
   stencil = Matrix{Cdouble}(undef, 3, 3)
@@ -280,13 +280,13 @@ function t8_step6_compute_stencil(forest, element_data)
       curvature = sqrt(xcurve * xcurve + ycurve * ycurve)
 
       element_data[current_index] = t8_step6_data_per_element_t(
-        element_data[current_index].level, 
+        element_data[current_index].level,
         element_data[current_index].volume,
         element_data[current_index].midpoint,
         element_data[current_index].dx,
         element_data[current_index].dy,
         element_data[current_index].height,
-        schlieren, 
+        schlieren,
         curvature
       )
     end
@@ -311,7 +311,7 @@ function t8_step6_exchange_ghost_data(forest, element_data)
 end
 
 # Write the forest as vtu and also write the element's volumes in the file.
-# 
+#
 # t8code supports writing element based data to vtu as long as its stored
 # as doubles. Each of the data fields to write has to be provided in its own
 # array of length num_local_elements.
@@ -326,7 +326,7 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
   schlieren = Vector{Cdouble}(undef, num_elements)
   curvature = Vector{Cdouble}(undef, num_elements)
 
-  # Copy the elment's volumes from our data array to the output array.
+  # Copy the element's volumes from our data array to the output array.
   for ielem = 1:num_elements
     heights[ielem] = element_data[ielem].height
     schlieren[ielem] = element_data[ielem].schlieren

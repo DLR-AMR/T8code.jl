@@ -1,0 +1,3 @@
+[default.extend-words]
+consistend = "consistend" # is used in API function names...
+Inout = "Inout"

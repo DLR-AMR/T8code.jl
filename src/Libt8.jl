@@ -3367,7 +3367,7 @@ end
 """
     t8_cmesh_set_dimension(cmesh, dim)
 
-Set the dimension of a cmesh. If any tree is inserted to the cmesh via [`t8_cmesh_set_tree_class`](@ref), then the dimension is set automatically to that of the inserted tree. However, if the cmesh is constructed partitioned and the part on this process is empty, it is neccessary to set the dimension by hand.
+Set the dimension of a cmesh. If any tree is inserted to the cmesh via [`t8_cmesh_set_tree_class`](@ref), then the dimension is set automatically to that of the inserted tree. However, if the cmesh is constructed partitioned and the part on this process is empty, it is necessary to set the dimension by hand.
 
 ### Parameters
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
@@ -3402,7 +3402,7 @@ end
 """
     t8_cmesh_set_attribute(cmesh, gtree_id, package_id, key, data, data_size, data_persists)
 
-Store an attribute at a tree in a cmesh. Attributes can be arbitrary data that is copied to an internal storage associated to the tree. Each application can set multiple attributes and attributes are distinguished by an interger key, where each application can use any integer as key.
+Store an attribute at a tree in a cmesh. Attributes can be arbitrary data that is copied to an internal storage associated to the tree. Each application can set multiple attributes and attributes are distinguished by an integer key, where each application can use any integer as key.
 
 !!! note
 
@@ -3740,7 +3740,7 @@ end
 """
     t8_cmesh_get_first_treeid(cmesh)
 
-Return the global index of the first local tree of a cmesh. If the cmesh is not partitioned this is allways 0.
+Return the global index of the first local tree of a cmesh. If the cmesh is not partitioned this is always 0.
 
 ### Parameters
 * `cmesh`:\\[in\\] The cmesh to be considered.
@@ -3814,7 +3814,7 @@ Given a local tree id that belongs to a ghost, return the index of the ghost.
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltreeid`:\\[in\\] The local id of a ghost, satisfying t8_cmesh_treeid_is_ghost, thus num\\_trees <= *ltreeid* < num\\_trees + num\\_ghosts
 ### Returns
-The index of the ghost whithin all ghosts, thus an index 0 <= index < num\\_ghosts *cmesh* must be committed before calling this function.
+The index of the ghost within all ghosts, thus an index 0 <= index < num\\_ghosts *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
 t8_locidx_t t8_cmesh_ltreeid_to_ghostid (const t8_cmesh_t cmesh, const t8_locidx_t ltreeid);
@@ -5824,7 +5824,7 @@ Copy all entries of **source** to **dest**. **dest** must be an existing element
 ### Parameters
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `source`:\\[in\\] The element whose entries will be copied to **dest**.
-* `dest`:\\[in,out\\] This element's entries will be overwritted with the entries of **source**.
+* `dest`:\\[in,out\\] This element's entries will be overwrite with the entries of **source**.
 ### Prototype
 ```c
 void t8_element_copy (const t8_eclass_scheme_c *ts, const t8_element_t *source, t8_element_t *dest);
@@ -5844,7 +5844,7 @@ Compare two elements.
 * `elem1`:\\[in\\] The first element.
 * `elem2`:\\[in\\] The second element.
 ### Returns
-negativ if elem1 < elem2, zero if elem1 equals elem2 and positiv if elem1 > elem2. If elem2 is a copy of elem1 then the elements are equal.
+negative if elem1 < elem2, zero if elem1 equals elem2 and positive if elem1 > elem2. If elem2 is a copy of elem1 then the elements are equal.
 ### Prototype
 ```c
 int t8_element_compare (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, const t8_element_t *elem2);
@@ -6235,7 +6235,7 @@ Given a face of an element and a child number of a child of that face, return th
 * `face`:\\[in\\] Then number of the face.
 * `face_child`:\\[in\\] A number 0 <= *face_child* < num\\_face\\_children, specifying a child of *elem* that shares a face with *face*. These children are counted in linear order. This coincides with the order of children from a call to t8_element_children_at_face.
 ### Returns
-The face number of the face of a child of *elem* that conincides with *face_child*.
+The face number of the face of a child of *elem* that coincides with *face_child*.
 ### Prototype
 ```c
 int t8_element_face_child_face (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int face, int face_child);
@@ -6301,7 +6301,7 @@ Suppose we have two trees that share a common face f. Given an element e that is
 ### Parameters
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The face element.
-* `elem2`:\\[in,out\\] On return the face elment *elem1* with respective to the coordinate system of the other tree.
+* `elem2`:\\[in,out\\] On return the face element *elem1* with respective to the coordinate system of the other tree.
 * `orientation`:\\[in\\] The orientation of the tree-tree connection.
 * `sign`:\\[in\\] Depending on the topological orientation of the two tree faces, either 0 (both faces have opposite orientation) or 1 (both faces have the same top. orientattion). t8_eclass_face_orientation
 * `is_smaller_face`:\\[in\\] Flag to declare whether *elem1* belongs to the smaller face. A face f of tree T is smaller than f' of T' if either the eclass of T is smaller or if the classes are equal and f<f'. The orientation is defined in relation to the smaller face.
@@ -6557,7 +6557,7 @@ end
 """
     t8_element_root_len(ts, elem)
 
-Compute the root lenght of a given element, that is the length of its level 0 ancestor.
+Compute the root length of a given element, that is the length of its level 0 ancestor.
 
 ### Parameters
 * `ts`:\\[in\\] Implementation of a class scheme.
@@ -7585,7 +7585,7 @@ end
 """
     t8_netcdf_create_integer_var(var_name, var_long_name, var_unit, var_data)
 
-Create an extern integer variable which additionally should be put out to the NetCDF File (The disctinction if it wille be a NC\\_INT or NC\\_INT64 variable is based on the elementsize of the given [`sc_array_t`](@ref))
+Create an extern integer variable which additionally should be put out to the NetCDF File (The distinction if it will be a NC\\_INT or NC\\_INT64 variable is based on the elementsize of the given [`sc_array_t`](@ref))
 
 ### Parameters
 * `var_name`:\\[in\\] A String which will be the name of the created variable.
@@ -12121,7 +12121,7 @@ Return a given element in an array.
 
 ### Parameters
 * `element_array`:\\[in\\] Array of elements.
-* `index`:\\[in\\] The index of an element whithin the array.
+* `index`:\\[in\\] The index of an element within the array.
 ### Returns
 A pointer to the element stored at position *index* in *element_array*.
 ### Prototype
@@ -12140,7 +12140,7 @@ Return a given element in an array.
 
 ### Parameters
 * `element_array`:\\[in\\] Array of elements.
-* `index`:\\[in\\] The index of an element whithin the array.
+* `index`:\\[in\\] The index of an element within the array.
 ### Returns
 A pointer to the element stored at position *index* in *element_array*.
 ### Prototype
@@ -12381,7 +12381,7 @@ end
 Set an entry of a t8\\_shmem array that is used to store [`t8_gloidx_t`](@ref). The array must have writing mode enabled t8_shmem_array_start_writing.
 
 ### Parameters
-* `array`:\\[in,out\\] The array to be mofified.
+* `array`:\\[in,out\\] The array to be modified.
 * `index`:\\[in\\] The array entry to be modified.
 * `value`:\\[in\\] The new value to be set.
 ### Prototype
@@ -12836,7 +12836,7 @@ end
 """
     t8_forest_set_level(forest, level)
 
-Set the initial refinement level to be used when **forest** is commited.
+Set the initial refinement level to be used when **forest** is committed.
 
 !!! note
 
@@ -12844,7 +12844,7 @@ Set the initial refinement level to be used when **forest** is commited.
 
 ### Parameters
 * `forest`:\\[in,out\\] The forest whose level will be set.
-* `level`:\\[in\\] The initial refinement level of **forest**, when it is commited.
+* `level`:\\[in\\] The initial refinement level of **forest**, when it is committed.
 ### Prototype
 ```c
 void t8_forest_set_level (t8_forest_t forest, int level);
@@ -12857,7 +12857,7 @@ end
 """
     t8_forest_set_copy(forest, from)
 
-Set a forest as source for copying on commiting. By default, the forest takes ownership of the source **from** such that it will be destroyed on calling t8_forest_commit. To keep ownership of **from**, call t8_forest_ref before passing it into this function. This means that it is ILLEGAL to continue using **from** or dereferencing it UNLESS it is referenced directly before passing it into this function.
+Set a forest as source for copying on committing. By default, the forest takes ownership of the source **from** such that it will be destroyed on calling t8_forest_commit. To keep ownership of **from**, call t8_forest_ref before passing it into this function. This means that it is ILLEGAL to continue using **from** or dereferencing it UNLESS it is referenced directly before passing it into this function.
 
 !!! note
 
@@ -12878,7 +12878,7 @@ end
 """
     t8_forest_set_adapt(forest, set_from, adapt_fn, recursive)
 
-Set a source forest with an adapt function to be adapted on commiting. By default, the forest takes ownership of the source **set_from** such that it will be destroyed on calling t8_forest_commit. To keep ownership of **set_from**, call t8_forest_ref before passing it into this function. This means that it is ILLEGAL to continue using **set_from** or dereferencing it UNLESS it is referenced directly before passing it into this function.
+Set a source forest with an adapt function to be adapted on committing. By default, the forest takes ownership of the source **set_from** such that it will be destroyed on calling t8_forest_commit. To keep ownership of **set_from**, call t8_forest_ref before passing it into this function. This means that it is ILLEGAL to continue using **set_from** or dereferencing it UNLESS it is referenced directly before passing it into this function.
 
 !!! note
 
@@ -12891,7 +12891,7 @@ Set a source forest with an adapt function to be adapted on commiting. By defaul
 ### Parameters
 * `forest`:\\[in,out\\] The forest
 * `set_from`:\\[in\\] The source forest from which **forest** will be adapted. We take ownership. This can be prevented by referencing **set_from**. If NULL, a previously (or later) set forest will be taken (t8_forest_set_partition, t8_forest_set_balance).
-* `adapt_fn`:\\[in\\] The adapt function used on commiting.
+* `adapt_fn`:\\[in\\] The adapt function used on committing.
 * `recursive`:\\[in\\] A flag specifying whether adaptation is to be done recursively or not. If the value is zero, adaptation is not recursive and it is recursive otherwise.
 ### Prototype
 ```c
@@ -12991,11 +12991,11 @@ end
 """
     t8_forest_set_partition(forest, set_from, set_for_coarsening)
 
-Set a source forest to be partitioned during commit. The partitioning is done according to the SFC and each rank is assinged the same (maybe +1) number of elements.
+Set a source forest to be partitioned during commit. The partitioning is done according to the SFC and each rank is assigned the same (maybe +1) number of elements.
 
 !!! note
 
-    This setting can be combined with t8_forest_set_adapt and t8_forest_set_balance. The order in which these operations are executed is always 1) Adapt 2) Balance 3) Partition If t8_forest_set_balance is called with the *no_repartition* parameter set as false, it is not neccessary to call t8_forest_set_partition additionally.
+    This setting can be combined with t8_forest_set_adapt and t8_forest_set_balance. The order in which these operations are executed is always 1) Adapt 2) Balance 3) Partition If t8_forest_set_balance is called with the *no_repartition* parameter set as false, it is not necessary to call t8_forest_set_partition additionally.
 
 !!! note
 
@@ -13030,7 +13030,7 @@ Set a source forest to be balanced during commit. A forest is said to be balance
 ### Parameters
 * `forest`:\\[in,out\\] The forest.
 * `set_from`:\\[in\\] A second forest that should be balanced. We take ownership. This can be prevented by referencing **set_from**. If NULL, a previously (or later) set forest will be taken (t8_forest_set_adapt, t8_forest_set_partition)
-* `no_repartition`:\\[in\\] Balance constructs several intermediate forest that are refined from each other. In order to maintain a balanced load these forest are repartitioned in each round and the resulting forest is load-balanced per default. If this behaviour is not desired, *no_repartition* should be set to true. If *no_repartition* is false, an additional call of t8_forest_set_partition is not neccessary.
+* `no_repartition`:\\[in\\] Balance constructs several intermediate forest that are refined from each other. In order to maintain a balanced load these forest are repartitioned in each round and the resulting forest is load-balanced per default. If this behaviour is not desired, *no_repartition* should be set to true. If *no_repartition* is false, an additional call of t8_forest_set_partition is not necessary.
 ### Prototype
 ```c
 void t8_forest_set_balance (t8_forest_t forest, const t8_forest_t set_from, int no_repartition);
@@ -13129,7 +13129,7 @@ Return the maximum allowed refinement level for any element in a forest.
 ### Parameters
 * `forest`:\\[in\\] A forest.
 ### Returns
-The maximum level of refinement that is allowed for an element in this forest. It is guarenteed that any tree in *forest* can be refined this many times and it is not allowed to refine further. *forest* must be committed before calling this function. For forest with a single element class (non-hybrid) maxlevel is the maximum refinement level of this element class, whilst for hybrid forests the maxlevel is the minimum of all maxlevels of the element classes in this forest.
+The maximum level of refinement that is allowed for an element in this forest. It is guaranteed that any tree in *forest* can be refined this many times and it is not allowed to refine further. *forest* must be committed before calling this function. For forest with a single element class (non-hybrid) maxlevel is the maximum refinement level of this element class, whilst for hybrid forests the maxlevel is the minimum of all maxlevels of the element classes in this forest.
 ### Prototype
 ```c
 int t8_forest_get_maxlevel (t8_forest_t forest);
@@ -14082,7 +14082,7 @@ end
 """
     t8_forest_iterate_replace(forest_new, forest_old, replace_fn)
 
-Given two forest where the elemnts in one forest are either direct children or parents of the elements in the other forest compare the two forests and for each refined element or coarsened family in the old one, call a callback function providing the local indices of the old and new elements.
+Given two forest where the elements in one forest are either direct children or parents of the elements in the other forest compare the two forests and for each refined element or coarsened family in the old one, call a callback function providing the local indices of the old and new elements.
 
 !!! note
 
@@ -14406,7 +14406,7 @@ Write the forest in .pvtu file format. Writes one .vtu file per process and a me
 * `num_data`:\\[in\\] Number of user defined double valued data fields to write.
 * `data`:\\[in\\] Array of [`t8_vtk_data_field_t`](@ref) of length *num_data* providing the used defined per element data. If scalar and vector fields are used, all scalar fields must come first in the array.
 ### Returns
-True if succesful, false if not (process local).
+True if successful, false if not (process local).
 ### Prototype
 ```c
 int t8_forest_vtk_write_file (t8_forest_t forest, const char *fileprefix, int write_treeid, int write_mpirank, int write_level, int write_element_id, int write_ghosts, int num_data, t8_vtk_data_field_t *data);
@@ -14584,7 +14584,7 @@ Given a geometry's name find that geometry in the geometry handler and return it
 * `geom_handler`:\\[in\\] A committed geometry handler.
 * `name`:\\[in\\] The name of a geometry.
 ### Returns
-A pointer to the geomery or NULL if it was not found.
+A pointer to the geometry or NULL if it was not found.
 ### Prototype
 ```c
 t8_geometry_c *t8_geom_handler_find_geometry (const t8_geometry_handler_t *geom_handler, const char *name);

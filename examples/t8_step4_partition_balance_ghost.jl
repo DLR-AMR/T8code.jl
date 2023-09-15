@@ -19,33 +19,33 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 # See also: https://github.com/holke/t8code/wiki/Step-4---Partition,-Balance,-Ghost
-# 
+#
 # This is step4 of the t8code tutorials.
 # After generating a coarse mesh (step1), building a uniform forest
-# on it (step2) and adapting this forest (step3) 
+# on it (step2) and adapting this forest (step3)
 # we will now lear how to control the forest creation in more detail,
 # how to partition and balance a forest and how to generate a layer of ghost elements.
-# 
+#
 # Partition: Each forest is distributed among the MPI processes. Partitioning a forest means
-#            to change this distribution in order to maintain a load balance. After we 
+#            to change this distribution in order to maintain a load balance. After we
 #            applied partition to a forest the new forest will have equal numbers of elements
 #            on each process (+- 1).
 #            In our example we start with a uniform forest from a cmesh. This forest is constructed
-#            such that each process has the same number of elements. 
+#            such that each process has the same number of elements.
 #            We then adapt this forest, thus refining and coarsening its elements. This changes the
 #            number of elements on each process and will almost always result in a load imbalance.
-#            You can verify this yourself by printing the process local number on each process for the 
+#            You can verify this yourself by printing the process local number on each process for the
 #            adapted forest (for example with t8_productionf).
 #            In order to reestablish a load balance, we will construct a new forest from the adapted
 #            one via the partition feature.
-# 
-# Ghost:     Many applications require a layer of ghost elements. Ghost element of a process are 
+#
+# Ghost:     Many applications require a layer of ghost elements. Ghost element of a process are
 #            those elements that are not local to this process but have a (face) neighbor element that is.
 #            Telling a forest to create a ghost layer will gather all necessary information and give
 #            us access to the ghost elements.
 #            t8code does not create a layer of ghost elements by default, thus our initial uniform forest
 #            and the adapted forest will not have one.
-# 
+#
 # Balance:   A forest fulfills the balance property if (and only if) for each element its (face) neighbors
 #            have refinement level at most +1 or -1 in comparison to the element's level.
 #            The balance property is often broken after adaptation. The Balance algorithm iterates through
@@ -57,13 +57,13 @@
 #            since we have level l+1 elements in the inner sphere, level l elements in the middle and level l+1 elements
 #            outside. This may not be the case for very small initial refinement levels levels or with different radius thresholds (why don't you try it out?).
 #            Therefore, in this example we will apply the adaptation two times, resulting in level l+2 elements
-#            in the inner sphere, level l elements in the middle and level l - 2 element in the outher sphere
+#            in the inner sphere, level l elements in the middle and level l - 2 element in the outer sphere
 #            (and probably some, but not many, level l-1 and level l+1 elements in between).
 #            This forest will be unbalanced and we will then apply the balance routine to it.
 #            Note that balance changes the local number of elements and thus may also change the load balance
 #            and hence require repartitioning.
 #            Balance is usually the most expensive of t8code's mesh manipulation algorithms.
-# 
+#
 # How you can experiment here:
 #    Partition:
 #         - Test the program with different numbers of processes and compare the local
@@ -73,11 +73,11 @@
 #    Ghost:
 #         - We actually print the ghost elements in the vtu files and you can look at them.
 #           Ghost elements have treeid = -1 in the vtu files. To view the ghosts of a single process (say process 1)
-#           you can set a threshhold on mpirank to view only the elements of process 1 and then set a threshold
+#           you can set a threshold on mpirank to view only the elements of process 1 and then set a threshold
 #           on treeid to only view those elements with treeid = -1.
 #    Balance:
 #         - View the unbalanced and balanced forest vtu files and compare them.
-#           You can color the elements by level.       
+#           You can color the elements by level.
 #         - Exercise: Apply balance to forest_adapt and not to the twice adapted forest.
 #         - Set the no_repartition flag of t8_forest_set_balance to true and observe how the
 #           partition of the resulting forest changes.
@@ -85,22 +85,22 @@
 # So far we have seen t8_forest_new_* functions to create forests.
 # These directly returned a new forest.
 # However, t8code offers us more control over the creation of forests.
-# For example we can control wether or not a forest should have a ghost layer,
+# For example we can control whether or not a forest should have a ghost layer,
 # be balanced/partitioned from another forest, etc.
-# 
+#
 # Usually, there are three steps involved in creating a forest:
 # 1. Initialize the forest with t8_forest_init.
-#      This function will prepare a forest by setting default values for its members and 
+#      This function will prepare a forest by setting default values for its members and
 #      initializing necessary structures.
 # 2. Set all properties that the forest should have.
 #      Here we can for example set a cmesh and refinement scheme or specify that the
 #      forest should be adapted/partitioned/balanced from another forest etc.
 #      See the t8_forest_set functions in t8_forest.h
 #      The order in which you call the set functions does not matter.
-# 3. Commit the forest with t8_forest_commit. 
+# 3. Commit the forest with t8_forest_commit.
 #      In this step the forest is actually created after setting all
-#      desired properties. The forest cannot be changed after it was committed.   
-# 
+#      desired properties. The forest cannot be changed after it was committed.
+#
 # The t8_forest_new functions are just wrappers around this process.
 
 using MPI
@@ -111,7 +111,7 @@ using T8code.Libt8: SC_LP_ESSENTIAL
 using T8code.Libt8: SC_LP_PRODUCTION
 
 # In this function we create a new forest that repartitions a given forest
-# and has a layer of ghost elements. 
+# and has a layer of ghost elements.
 function t8_step4_partition_ghost(forest)
   # Check that forest is a committed, that is a valid and usable, forest.
   @T8_ASSERT(t8_forest_is_committed(forest) == 1)
@@ -125,7 +125,7 @@ function t8_step4_partition_ghost(forest)
   # This will change the distribution of the forest elements among the processes
   # in such a way that afterwards each process has the same number of elements
   # (+- 1 if the number of elements is not divisible by the number of processes).
-  # 
+  #
   # The third 0 argument is the flag 'partition_for_coarsening' which is currently not
   # implemented. Once it is, this will ensure that a family of elements will not be split
   # across multiple processes and thus one level coarsening is always possible (see also the
@@ -135,7 +135,7 @@ function t8_step4_partition_ghost(forest)
   # Tell the new_forest to create a ghost layer.
   # This will gather those face neighbor elements of process local element that reside
   # on a different process.
-  # 
+  #
   # We currently support ghost mode T8_GHOST_FACES that creates face neighbor ghost elements
   # and will in future also support other modes for edge/vertex neighbor ghost elements.
   t8_forest_set_ghost(new_forest, 1, T8_GHOST_FACES)

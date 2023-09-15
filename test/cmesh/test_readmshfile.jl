@@ -30,7 +30,7 @@ function t8_supported_msh_file(cmesh)
 
   @assert cmesh != C_NULL
 
-  # Checks if the cmesh was comitted.
+  # Checks if the cmesh was committed.
   @assert t8_cmesh_is_committed(cmesh) == 1
 
   # `t8_cmesh_is_face_consistend` is not part of the public API.

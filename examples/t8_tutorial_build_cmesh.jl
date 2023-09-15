@@ -24,8 +24,8 @@
 # In the following we will create two user defined meshes.
 # The first example is given by a periodic two dimensional mesh using linear
 # geometry consisting of four triangles and and two quads.
-# The second example is given by a non-periodic three dimensional mesh 
-# with linear geometry constructed using two tetrahedra, two prisms, one pyramid, and one 
+# The second example is given by a non-periodic three dimensional mesh
+# with linear geometry constructed using two tetrahedra, two prisms, one pyramid, and one
 # hexaedron.
 #
 # How you can experiment here:
@@ -59,7 +59,7 @@
 #                   .
 #                   .
 #
-#               //point values for the last cell 
+#               //point values for the last cell
 #               x_1,y_1,z_1         //(x,y,z) of first point of the last cell
 #               x_2,y_2,z_2         //(x,y,z) of second point of the last cell
 #                   .
@@ -71,7 +71,7 @@
 # 2. Initialization of the mesh
 #    Example: t8_cmesh_t          cmesh
 #             t8_cmesh_init (&cmesh)
-# 
+#
 #
 # 3. Definition of the geometry
 #             t8_geometry_c      *linear_geom = [defineTheGeometry]
@@ -98,8 +98,8 @@
 #             // Vertices of the last tree
 #             t8_cmesh_set_tree_vertices (cmesh, x, [pointerToVerticesOfTree(x+1)] , [numberOfVerticesTree(x+1)])
 #
-# 6. Definition of the face neighboors between the different trees
-#             // List of all face neighboor connections
+# 6. Definition of the face neighbors between the different trees
+#             // List of all face neighbor connections
 #             t8_cmesh_set_join (cmesh, [treeId1], [treeId2], [faceIdInTree1], [faceIdInTree2], [orientation])
 #             t8_cmesh_set_join (cmesh, [treeId1], [treeId2], [faceIdInTree1], [faceIdInTree2], [orientation])
 #                   .
@@ -233,9 +233,9 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   t8_cmesh_set_join(cmesh, 3, 5, 1, 1, 0)
   t8_cmesh_set_join(cmesh, 4, 5, 4, 2, 0)
 
-  #  
+  #
   #  Definition of the first tree
-  #  
+  #
 
   # Tetrahedron 1 vertices.
   vertices[1] = 0.43
@@ -257,7 +257,7 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   # Classification of the vertices for the first tree.
   t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 4)
 
-  # 
+  #
   #  Definition of the second tree
   #
 
@@ -275,9 +275,9 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   # Classification of the vertices for the second tree.
   t8_cmesh_set_tree_vertices(cmesh, 1, vertices, 4)
 
-  # 
+  #
   # Definition of the third tree
-  # 
+  #
 
   # Prism 1 vertices.
   vertices[1] = 0
@@ -302,7 +302,7 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   # Classification of the vertices for the third tree.
   t8_cmesh_set_tree_vertices(cmesh, 2, vertices, 6)
 
-  # 
+  #
   #  Definition of the fourth tree
   #
 
@@ -326,7 +326,7 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   # Classification of the vertices for the fourth tree.
   t8_cmesh_set_tree_vertices(cmesh, 3, vertices, 6)
 
-  # 
+  #
   #  Definition of the fifth tree
   #
 
@@ -354,7 +354,7 @@ function t8_cmesh_new_hybrid_gate_3d(comm)
   # Classification of the vertices for the fifth tree.
   t8_cmesh_set_tree_vertices(cmesh, 4, vertices, 5)
 
-  # 
+  #
   #  Definition of the sixth tree
   #
 
@@ -378,9 +378,9 @@ end
 prefix_2D = "t8_step8_user_defined_mesh_2D"
 prefix_3D = "t8_step8_user_defined_mesh_3D"
 
-# 
+#
 # Initialization.
-# 
+#
 
 # Initialize MPI. This has to happen before we initialize sc or t8code.
 mpiret = MPI.Init()
@@ -394,9 +394,9 @@ t8_init(SC_LP_PRODUCTION)
 
 # We will use MPI_COMM_WORLD as a communicator.
 
-# 
+#
 # Definition of the meshes.
-# 
+#
 
 # Creation of a two dimensional cmesh with periodic boundaries. */
 cmesh_2D = t8_cmesh_new_periodic_hybrid_2d(comm)
@@ -414,9 +414,9 @@ t8_global_productionf("[tutorial] Wrote the 2D cmesh to vtu files.\n")
 t8_cmesh_vtk_write_file(cmesh_3D, prefix_3D, 1.0)
 t8_global_productionf("[tutorial] Wrote the 3D cmesh to vtu files.\n")
 
-# 
+#
 # Clean-up
-# 
+#
 
 # Deallocate the cmeshes.
 t8_cmesh_destroy(Ref(cmesh_2D))

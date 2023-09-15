@@ -60,7 +60,7 @@ end
           if eclass == T8_ECLASS_PYRAMID
             shape_volume = pyramid_control_volume(eclass_scheme, element)
             # WORKAROUND: See `function pyramid_control_volume` for a comment
-            # why the following test is splitted into two.
+            # why the following test is split into two.
             @test abs(shape_volume-volume) <= epsilon || abs(shape_volume/2-volume) <= epsilon
           else
             @test abs(volume-control_volume) <= epsilon

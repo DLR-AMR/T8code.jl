@@ -54,7 +54,7 @@ macro T8_ASSERT(q)
 end
 
 function t8_free(ptr)
-  sc_free(t8_get_package_id(), ptr)
+  Libt8.sc_free(t8_get_package_id(), ptr)
 end
 
 # typedef int         (*t8_forest_adapt_t) (t8_forest_t forest,

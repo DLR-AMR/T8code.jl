@@ -176,11 +176,11 @@ function t8_cmesh_new_periodic_hybrid_2d(comm)
 
   # 5. Classification of the vertices for each tree.
   t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 1, vertices + 9, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 2, vertices + 18, 4)
-  t8_cmesh_set_tree_vertices(cmesh, 3, vertices + 30, 4)
-  t8_cmesh_set_tree_vertices(cmesh, 4, vertices + 42, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 5, vertices + 51, 3)
+  t8_cmesh_set_tree_vertices(cmesh, 1, vertices .+ 9, 3)
+  t8_cmesh_set_tree_vertices(cmesh, 2, vertices .+ 18, 4)
+  t8_cmesh_set_tree_vertices(cmesh, 3, vertices .+ 30, 4)
+  t8_cmesh_set_tree_vertices(cmesh, 4, vertices .+ 42, 3)
+  t8_cmesh_set_tree_vertices(cmesh, 5, vertices .+ 51, 3)
 
   # 6. Definition of the face neighbors between the different trees.
   t8_cmesh_set_join(cmesh, 0, 1, 1, 2, 0)

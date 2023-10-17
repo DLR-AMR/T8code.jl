@@ -1,11 +1,11 @@
 [[t8code]]
 arch = "x86_64"
-git-tree-sha1 = "e64234a2a40ef46bd1d483ff53c7b75bd11dbfa9"
+git-tree-sha1 = "f97590b25d163ec66a54407cfb4c52318d255995"
 lazy = true
 libc = "glibc"
 mpi = "mpich"
 os = "linux"
 
     [[t8code.download]]
-    sha256 = "5c39d61d0498d6e501a5e4caad322031095f007ac4c92425041a80512d34d101"
-    url = "https://github.com/jmark/t8code_jll.jl/releases/download/t8code-v1.1.2+4/t8code.v1.1.2.x86_64-linux-gnu-mpi+mpich.tar.gz"
+    sha256 = "3563131482991b72bb258af19fd2a09c22aa6d49d8b3c36a707f623feeb66ac7"
+    url = "https://github.com/jmark/t8code_jll.jl/releases/download/t8code-v1.5.2+0/t8code.v1.5.2.x86_64-linux-gnu-mpi+mpich.tar.gz"

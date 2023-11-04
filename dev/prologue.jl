@@ -2,20 +2,27 @@ using t8code_jll: t8code_jll
 export t8code_jll
 
 using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
+using MPIPreferences: MPIPreferences
 
-@static if _PREFERENCE_LIBT8 == "t8code_jll"
+@static if _PREFERENCE_LIBT8 == "t8code_jll" && MPIPreferences.binary == "system"
+    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences."
+elseif _PREFERENCE_LIBP4EST == "t8code_jll"
     const libt8 = t8code_jll.libt8
 else
     const libt8 = _PREFERENCE_LIBT8
 end
 
-@static if _PREFERENCE_LIBP4EST == "t8code_jll"
+@static if _PREFERENCE_LIBP4EST == "t8code_jll" && MPIPreferences.binary == "system"
+    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences."
+elseif _PREFERENCE_LIBP4EST == "t8code_jll"
     const libp4est = t8code_jll.libp4est
 else
     const libp4est = _PREFERENCE_LIBP4EST
 end
 
-@static if _PREFERENCE_LIBSC == "t8code_jll"
+@static if _PREFERENCE_LIBSC == "t8code_jll" && MPIPreferences.binary == "system"
+    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences."
+elseif _PREFERENCE_LIBP4EST == "t8code_jll"
     const libsc = t8code_jll.libsc
 else
     const libsc = _PREFERENCE_LIBSC

@@ -196,4 +196,10 @@ macro t8_replace_callback(callback)
   :( @cfunction($callback, Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, t8_locidx_t, Cint, t8_locidx_t)) )
 end
 
+function __init__()
+    if !preferences_set_correctly()
+       @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences."
+    end
+end
+
 end

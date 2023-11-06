@@ -198,7 +198,7 @@ end
 
 function __init__()
     if !preferences_set_correctly()
-       @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences."
+       @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
     end
 end
 

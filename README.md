@@ -67,18 +67,7 @@ To enable this, you first need to obtain a local binary installation of
 implementation used to build your local installation of
 [`t8code`](https://github.com/DLR-AMR/t8code), see
 [the documentation of MPI.jl](https://juliaparallel.org/MPI.jl/stable/configuration/).
-At the time of writing, this can be done via
-
-```julia
-julia> using MPIPreferences
-
-julia> MPIPreferences.use_system_binary()
-```
-
-if you use the default system MPI binary installation to build
-[`t8code`](https://github.com/DLR-AMR/t8code).
-
-Next, you need to set up the
+At the time of writing, this can be done by first setting up the
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl)
 setting containing the path to your local build of the shared library of
 [`t8code`](https://github.com/DLR-AMR/t8code).
@@ -98,8 +87,50 @@ julia> set_preferences!(
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
            "libsc" => "/path/to/your/libsc.so", force = true)
 ```
+Alternatively, you can use the convenience functions `set_library_t8code!`,
+`set_library_p4est!` and `set_library_sc!` to set the paths:
+
+```julia
+julia> using T8code
+
+julia> T8code.set_library_t8code!("/path/to/your/libt8.so")
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+
+julia> T8code.set_library_p4est!("/path/to/your/libp4est.so")
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+
+julia> T8code.set_library_sc!("/path/to/your/libsc.so")
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+
+```
+
+If all libraries are located in the same directory and have the default names (`libt8.so`,
+`libp4est.so` and `libsc.so` or other file endings according to your system), you can also
+set all three preferences by only specifying the directory:
+
+```julia
+julia> using T8code
+
+julia> T8code.set_libraries_path!("/path/to/your/lib/directory/")
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+[ Info: Please restart Julia and reload T8code.jl for the library changes to take effect
+```
+To delete the preferences again, you can call `T8code.set_libraries_path!`() or for
+each library `T8code.set_library_t8code!()`, `T8code.set_library_p4est!()` and
+`T8code.set_library_sc!()`, respectively.
 
 Note that you should restart your Julia session after changing the preferences.
+
+Next, you need to set up the preferences for MPI, which can be done by
+```julia
+julia> using MPIPreferences
+
+julia> MPIPreferences.use_system_binary()
+```
+
+if you use the default system MPI binary installation to build
+[`p4est`](https://github.com/cburstedde/p4est).
 
 Currently, custom builds of [`t8code`](https://github.com/DLR-AMR/t8code)
 without MPI support are not supported.

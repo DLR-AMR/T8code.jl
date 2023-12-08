@@ -16,9 +16,7 @@ import MPIPreferences
 
     @info "Starting parallel tests"
 
-    mpiexec() do cmd
-      run(`$cmd -n 2 $(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("test_all.jl"))`)
-    end
+    run(`$(mpiexec()) -n 2 $(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("test_all.jl"))`)
 
     @info "Finished parallel tests"
   end

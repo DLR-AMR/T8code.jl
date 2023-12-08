@@ -50,7 +50,7 @@ function t8_step3_adapt_callback(forest, forest_from, which_tree, lelement_id,
   t8_forest_element_centroid(forest_from, which_tree, elements[1], pointer(centroid))
 
   # Compute the distance to our sphere midpoint.
-  dist = t8_vec_dist(centroid, Ref(adapt_data.midpoint[1]))
+  dist = sqrt(sum((centroid .- adapt_data.midpoint).^2))
   if dist < adapt_data.refine_if_inside_radius
     # Refine this element.
     return 1

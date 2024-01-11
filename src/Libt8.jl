@@ -15262,7 +15262,7 @@ void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, t8_locidx_t ltree_id, double 
 ```
 """
 function t8_cmesh_set_tree_vertices(cmesh, ltree_id, vertices, num_vertices)
-    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::Cint, ltree_id::Cint, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, ltree_id::Cint, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
 end
 
 """

@@ -202,4 +202,38 @@ function __init__()
     end
 end
 
+function t8_free(ptr)
+    T8code.Libt8.sc_free(t8_get_package_id(), ptr)
+end
+
+# Following functions are not part of the official public API of t8code but are
+# needed nevertheless by some application codes. This will be fixed resp. more
+# streamlined in future releases of t8code.
+
+function t8_forest_ghost_get_remotes(forest)
+    num_remotes_ref = Ref{Cint}()
+    remotes_ptr = @ccall T8code.Libt8.libt8.t8_forest_ghost_get_remotes(forest::t8_forest_t,
+                                                                        num_remotes_ref::Ptr{Cint})::Ptr{Cint}
+    remotes = unsafe_wrap(Array, remotes_ptr, num_remotes_ref[])
+end
+
+function t8_forest_ghost_remote_first_elem(forest, remote)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_remote_first_elem(forest::t8_forest_t,
+                                                                remote::Cint)::t8_locidx_t
+end
+
+function t8_forest_ghost_num_trees(forest)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_num_trees(forest::t8_forest_t)::t8_locidx_t
+end
+
+function t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_get_tree_element_offset(forest::t8_forest_t,
+                                                                      lghost_tree::t8_locidx_t)::t8_locidx_t
+end
+
+function t8_forest_ghost_get_global_treeid(forest, lghost_tree)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_get_global_treeid(forest::t8_forest_t,
+                                                                lghost_tree::t8_locidx_t)::t8_gloidx_t
+end
+
 end

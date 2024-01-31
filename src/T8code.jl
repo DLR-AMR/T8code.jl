@@ -202,10 +202,6 @@ function __init__()
     end
 end
 
-function t8_free(ptr)
-    T8code.Libt8.sc_free(t8_get_package_id(), ptr)
-end
-
 # Following functions are not part of the official public API of t8code but are
 # needed nevertheless by some application codes. This will be fixed resp. more
 # streamlined in future releases of t8code.

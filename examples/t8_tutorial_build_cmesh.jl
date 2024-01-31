@@ -132,246 +132,246 @@ using T8code.Libt8: SC_LP_PRODUCTION
 #   +---+---+
 
 function t8_cmesh_new_periodic_hybrid_2d(comm)
-  # 1. Defining an array with all vertices.
-  # Just all vertices of all trees. partly duplicated.
-  vertices = [
-    0, 0, 0,                    # tree 0, triangle
-    0.5, 0, 0,
-    0.5, 0.5, 0,
-    0, 0, 0,                    # tree 1, triangle
-    0.5, 0.5, 0,
-    0, 0.5, 0,
-    0.5, 0, 0,                  # tree 2, quad
-    1, 0, 0,
-    0.5, 0.5, 0,
-    1, 0.5, 0,
-    0, 0.5, 0,                  # tree 3, quad
-    0.5, 0.5, 0,
-    0, 1, 0,
-    0.5, 1, 0,
-    0.5, 0.5, 0,                # tree 4, triangle
-    1, 0.5, 0,
-    1, 1, 0,
-    0.5, 0.5, 0,                # tree 5, triangle
-    1, 1, 0,
-    0.5, 1, 0
-  ]
+    # 1. Defining an array with all vertices.
+    # Just all vertices of all trees. partly duplicated.
+    vertices = [
+        0, 0, 0,                    # tree 0, triangle
+        0.5, 0, 0,
+        0.5, 0.5, 0,
+        0, 0, 0,                    # tree 1, triangle
+        0.5, 0.5, 0,
+        0, 0.5, 0,
+        0.5, 0, 0,                  # tree 2, quad
+        1, 0, 0,
+        0.5, 0.5, 0,
+        1, 0.5, 0,
+        0, 0.5, 0,                  # tree 3, quad
+        0.5, 0.5, 0,
+        0, 1, 0,
+        0.5, 1, 0,
+        0.5, 0.5, 0,                # tree 4, triangle
+        1, 0.5, 0,
+        1, 1, 0,
+        0.5, 0.5, 0,                # tree 5, triangle
+        1, 1, 0,
+        0.5, 1, 0,
+    ]
 
-  # 2. Initialization of the mesh.
-  cmesh_ref = Ref(t8_cmesh_t())
-  t8_cmesh_init(cmesh_ref)
-  cmesh = cmesh_ref[]
+    # 2. Initialization of the mesh.
+    cmesh_ref = Ref(t8_cmesh_t())
+    t8_cmesh_init(cmesh_ref)
+    cmesh = cmesh_ref[]
 
-  # 3. Definition of the geometry.
-  linear_geom = t8_geometry_linear_new(2)
-  t8_cmesh_register_geometry(cmesh, linear_geom)      # Use linear geometry.
+    # 3. Definition of the geometry.
+    linear_geom = t8_geometry_linear_new(2)
+    t8_cmesh_register_geometry(cmesh, linear_geom)      # Use linear geometry.
 
-  # 4. Definition of the classes of the different trees.
-  t8_cmesh_set_tree_class(cmesh, 0, T8_ECLASS_TRIANGLE)
-  t8_cmesh_set_tree_class(cmesh, 1, T8_ECLASS_TRIANGLE)
-  t8_cmesh_set_tree_class(cmesh, 2, T8_ECLASS_QUAD)
-  t8_cmesh_set_tree_class(cmesh, 3, T8_ECLASS_QUAD)
-  t8_cmesh_set_tree_class(cmesh, 4, T8_ECLASS_TRIANGLE)
-  t8_cmesh_set_tree_class(cmesh, 5, T8_ECLASS_TRIANGLE)
+    # 4. Definition of the classes of the different trees.
+    t8_cmesh_set_tree_class(cmesh, 0, T8_ECLASS_TRIANGLE)
+    t8_cmesh_set_tree_class(cmesh, 1, T8_ECLASS_TRIANGLE)
+    t8_cmesh_set_tree_class(cmesh, 2, T8_ECLASS_QUAD)
+    t8_cmesh_set_tree_class(cmesh, 3, T8_ECLASS_QUAD)
+    t8_cmesh_set_tree_class(cmesh, 4, T8_ECLASS_TRIANGLE)
+    t8_cmesh_set_tree_class(cmesh, 5, T8_ECLASS_TRIANGLE)
 
-  # 5. Classification of the vertices for each tree.
-  t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 1, vertices + 9, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 2, vertices + 18, 4)
-  t8_cmesh_set_tree_vertices(cmesh, 3, vertices + 30, 4)
-  t8_cmesh_set_tree_vertices(cmesh, 4, vertices + 42, 3)
-  t8_cmesh_set_tree_vertices(cmesh, 5, vertices + 51, 3)
+    # 5. Classification of the vertices for each tree.
+    t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 3)
+    t8_cmesh_set_tree_vertices(cmesh, 1, vertices + 9, 3)
+    t8_cmesh_set_tree_vertices(cmesh, 2, vertices + 18, 4)
+    t8_cmesh_set_tree_vertices(cmesh, 3, vertices + 30, 4)
+    t8_cmesh_set_tree_vertices(cmesh, 4, vertices + 42, 3)
+    t8_cmesh_set_tree_vertices(cmesh, 5, vertices + 51, 3)
 
-  # 6. Definition of the face neighbors between the different trees.
-  t8_cmesh_set_join(cmesh, 0, 1, 1, 2, 0)
-  t8_cmesh_set_join(cmesh, 0, 2, 0, 0, 0)
-  t8_cmesh_set_join(cmesh, 0, 3, 2, 3, 0)
+    # 6. Definition of the face neighbors between the different trees.
+    t8_cmesh_set_join(cmesh, 0, 1, 1, 2, 0)
+    t8_cmesh_set_join(cmesh, 0, 2, 0, 0, 0)
+    t8_cmesh_set_join(cmesh, 0, 3, 2, 3, 0)
 
-  t8_cmesh_set_join(cmesh, 1, 3, 0, 2, 1)
-  t8_cmesh_set_join(cmesh, 1, 2, 1, 1, 0)
+    t8_cmesh_set_join(cmesh, 1, 3, 0, 2, 1)
+    t8_cmesh_set_join(cmesh, 1, 2, 1, 1, 0)
 
-  t8_cmesh_set_join(cmesh, 2, 4, 3, 2, 0)
-  t8_cmesh_set_join(cmesh, 2, 5, 2, 0, 1)
+    t8_cmesh_set_join(cmesh, 2, 4, 3, 2, 0)
+    t8_cmesh_set_join(cmesh, 2, 5, 2, 0, 1)
 
-  t8_cmesh_set_join(cmesh, 3, 5, 1, 1, 0)
-  t8_cmesh_set_join(cmesh, 3, 4, 0, 0, 0)
+    t8_cmesh_set_join(cmesh, 3, 5, 1, 1, 0)
+    t8_cmesh_set_join(cmesh, 3, 4, 0, 0, 0)
 
-  t8_cmesh_set_join(cmesh, 4, 5, 1, 2, 0)
+    t8_cmesh_set_join(cmesh, 4, 5, 1, 2, 0)
 
-  # 7. Commit the mesh.
-  t8_cmesh_commit(cmesh, comm)
+    # 7. Commit the mesh.
+    t8_cmesh_commit(cmesh, comm)
 
-  return cmesh
+    return cmesh
 end
 
 # Definition of a three dimensional mesh with linear geometry.
 # The mesh consists of two tetrahedra, two prisms, one pyramid, and one hexahedron.
 function t8_cmesh_new_hybrid_gate_3d(comm)
-  vertices = Vector{Cdouble}(undef, 24)
-  linear_geom = t8_geometry_linear_new(3)
+    vertices = Vector{Cdouble}(undef, 24)
+    linear_geom = t8_geometry_linear_new(3)
 
-  # Initialization of the mesh.
-  cmesh_ref = Ref(t8_cmesh_t())
-  t8_cmesh_init(cmesh_ref)
-  cmesh = cmesh_ref[]
+    # Initialization of the mesh.
+    cmesh_ref = Ref(t8_cmesh_t())
+    t8_cmesh_init(cmesh_ref)
+    cmesh = cmesh_ref[]
 
-  # Definition of the geometry.
-  t8_cmesh_register_geometry(cmesh, linear_geom)      # Use linear geometry.
+    # Definition of the geometry.
+    t8_cmesh_register_geometry(cmesh, linear_geom)      # Use linear geometry.
 
-  # Defitition of the classes of the different trees.
-  t8_cmesh_set_tree_class(cmesh, 0, T8_ECLASS_TET)
-  t8_cmesh_set_tree_class(cmesh, 1, T8_ECLASS_TET)
-  t8_cmesh_set_tree_class(cmesh, 2, T8_ECLASS_PRISM)
-  t8_cmesh_set_tree_class(cmesh, 3, T8_ECLASS_PRISM)
-  t8_cmesh_set_tree_class(cmesh, 4, T8_ECLASS_PYRAMID)
-  t8_cmesh_set_tree_class(cmesh, 5, T8_ECLASS_HEX)
+    # Defitition of the classes of the different trees.
+    t8_cmesh_set_tree_class(cmesh, 0, T8_ECLASS_TET)
+    t8_cmesh_set_tree_class(cmesh, 1, T8_ECLASS_TET)
+    t8_cmesh_set_tree_class(cmesh, 2, T8_ECLASS_PRISM)
+    t8_cmesh_set_tree_class(cmesh, 3, T8_ECLASS_PRISM)
+    t8_cmesh_set_tree_class(cmesh, 4, T8_ECLASS_PYRAMID)
+    t8_cmesh_set_tree_class(cmesh, 5, T8_ECLASS_HEX)
 
-  # Classification of the vertices for each tree.
-  t8_cmesh_set_join(cmesh, 0, 2, 0, 4, 0)
-  t8_cmesh_set_join(cmesh, 1, 3, 0, 4, 0)
-  t8_cmesh_set_join(cmesh, 2, 5, 0, 0, 0)
-  t8_cmesh_set_join(cmesh, 3, 5, 1, 1, 0)
-  t8_cmesh_set_join(cmesh, 4, 5, 4, 2, 0)
+    # Classification of the vertices for each tree.
+    t8_cmesh_set_join(cmesh, 0, 2, 0, 4, 0)
+    t8_cmesh_set_join(cmesh, 1, 3, 0, 4, 0)
+    t8_cmesh_set_join(cmesh, 2, 5, 0, 0, 0)
+    t8_cmesh_set_join(cmesh, 3, 5, 1, 1, 0)
+    t8_cmesh_set_join(cmesh, 4, 5, 4, 2, 0)
 
-  #
-  #  Definition of the first tree
-  #
+    #
+    #  Definition of the first tree
+    #
 
-  # Tetrahedron 1 vertices.
-  vertices[1] = 0.43
-  vertices[2] = 0
-  vertices[3] = 2
+    # Tetrahedron 1 vertices.
+    vertices[1] = 0.43
+    vertices[2] = 0
+    vertices[3] = 2
 
-  vertices[4] = 0
-  vertices[5] = 0
-  vertices[6] = 1
+    vertices[4] = 0
+    vertices[5] = 0
+    vertices[6] = 1
 
-  vertices[7] = 0.86
-  vertices[8] = -0.5
-  vertices[9] = 1
+    vertices[7] = 0.86
+    vertices[8] = -0.5
+    vertices[9] = 1
 
-  vertices[10] = 0.86
-  vertices[11] = 0.5
-  vertices[12] = 1
+    vertices[10] = 0.86
+    vertices[11] = 0.5
+    vertices[12] = 1
 
-  # Classification of the vertices for the first tree.
-  t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 4)
+    # Classification of the vertices for the first tree.
+    t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 4)
 
-  #
-  #  Definition of the second tree
-  #
+    #
+    #  Definition of the second tree
+    #
 
-  # Tetrahedron 2 vertices.
-  for itet = 0:2
-    vertices[ 1 + itet] = vertices[ 1 + itet] + (itet == 0 ? 1 + 0.86 : 0)
-    vertices[ 4 + itet] = vertices[ 7 + itet] + (itet == 0 ? 1 : 0)
-    vertices[10 + itet] = vertices[10 + itet] + (itet == 0 ? 1 : 0)
-  end
+    # Tetrahedron 2 vertices.
+    for itet in 0:2
+        vertices[1 + itet] = vertices[1 + itet] + (itet == 0 ? 1 + 0.86 : 0)
+        vertices[4 + itet] = vertices[7 + itet] + (itet == 0 ? 1 : 0)
+        vertices[10 + itet] = vertices[10 + itet] + (itet == 0 ? 1 : 0)
+    end
 
-  vertices[7] = 1 + 2 * 0.86
-  vertices[8] = 0
-  vertices[9] = 1
+    vertices[7] = 1 + 2 * 0.86
+    vertices[8] = 0
+    vertices[9] = 1
 
-  # Classification of the vertices for the second tree.
-  t8_cmesh_set_tree_vertices(cmesh, 1, vertices, 4)
+    # Classification of the vertices for the second tree.
+    t8_cmesh_set_tree_vertices(cmesh, 1, vertices, 4)
 
-  #
-  # Definition of the third tree
-  #
+    #
+    # Definition of the third tree
+    #
 
-  # Prism 1 vertices.
-  vertices[1] = 0
-  vertices[2] = 0
-  vertices[3] = 0
+    # Prism 1 vertices.
+    vertices[1] = 0
+    vertices[2] = 0
+    vertices[3] = 0
 
-  vertices[4] = 0.86
-  vertices[5] = -0.5
-  vertices[6] = 0
+    vertices[4] = 0.86
+    vertices[5] = -0.5
+    vertices[6] = 0
 
-  vertices[7] = 0.86
-  vertices[8] = 0.5
-  vertices[9] = 0
+    vertices[7] = 0.86
+    vertices[8] = 0.5
+    vertices[9] = 0
 
-  # Translate +1 in z-axis for the upper vertices.
-  for iprism1 = 0:2
-    vertices[10 + 3 * iprism1    ] = vertices[3 * iprism1 + 1]
-    vertices[10 + 3 * iprism1 + 1] = vertices[3 * iprism1 + 2]
-    vertices[10 + 3 * iprism1 + 2] = vertices[3 * iprism1 + 3] + 1
-  end
+    # Translate +1 in z-axis for the upper vertices.
+    for iprism1 in 0:2
+        vertices[10 + 3 * iprism1] = vertices[3 * iprism1 + 1]
+        vertices[10 + 3 * iprism1 + 1] = vertices[3 * iprism1 + 2]
+        vertices[10 + 3 * iprism1 + 2] = vertices[3 * iprism1 + 3] + 1
+    end
 
-  # Classification of the vertices for the third tree.
-  t8_cmesh_set_tree_vertices(cmesh, 2, vertices, 6)
+    # Classification of the vertices for the third tree.
+    t8_cmesh_set_tree_vertices(cmesh, 2, vertices, 6)
 
-  #
-  #  Definition of the fourth tree
-  #
+    #
+    #  Definition of the fourth tree
+    #
 
-  # Prism 2 vertices.
-  for iprism2 = 0:2
-    vertices[4 + iprism2] = vertices[1 + iprism2] + (iprism2 == 0 ? 1 + 2 * 0.86 : 0)
-    vertices[7 + iprism2] = vertices[7 + iprism2] + (iprism2 == 0 ? 1 : 0)
-  end
+    # Prism 2 vertices.
+    for iprism2 in 0:2
+        vertices[4 + iprism2] = vertices[1 + iprism2] + (iprism2 == 0 ? 1 + 2 * 0.86 : 0)
+        vertices[7 + iprism2] = vertices[7 + iprism2] + (iprism2 == 0 ? 1 : 0)
+    end
 
-  vertices[1] = 0.86 + 1
-  vertices[2] = -0.5
-  vertices[3] = 0
+    vertices[1] = 0.86 + 1
+    vertices[2] = -0.5
+    vertices[3] = 0
 
-  # Translate +1 in z-axis for the upper vertices.
-  for iprism2 = 0:2
-    vertices[10 + 3 * iprism2    ] = vertices[3 * iprism2 + 1]
-    vertices[10 + 3 * iprism2 + 1] = vertices[3 * iprism2 + 2]
-    vertices[10 + 3 * iprism2 + 2] = vertices[3 * iprism2 + 3] + 1
-  end
+    # Translate +1 in z-axis for the upper vertices.
+    for iprism2 in 0:2
+        vertices[10 + 3 * iprism2] = vertices[3 * iprism2 + 1]
+        vertices[10 + 3 * iprism2 + 1] = vertices[3 * iprism2 + 2]
+        vertices[10 + 3 * iprism2 + 2] = vertices[3 * iprism2 + 3] + 1
+    end
 
-  # Classification of the vertices for the fourth tree.
-  t8_cmesh_set_tree_vertices(cmesh, 3, vertices, 6)
+    # Classification of the vertices for the fourth tree.
+    t8_cmesh_set_tree_vertices(cmesh, 3, vertices, 6)
 
-  #
-  #  Definition of the fifth tree
-  #
+    #
+    #  Definition of the fifth tree
+    #
 
-  # Pyramid vertices.
-  vertices[1] = 0.86
-  vertices[2] = 0.5
-  vertices[3] = 0
+    # Pyramid vertices.
+    vertices[1] = 0.86
+    vertices[2] = 0.5
+    vertices[3] = 0
 
-  vertices[4] = 1.86
-  vertices[5] = 0.5
-  vertices[6] = 0
+    vertices[4] = 1.86
+    vertices[5] = 0.5
+    vertices[6] = 0
 
-  vertices[7] = 0.86
-  vertices[8] = -0.5
-  vertices[9] = 0
+    vertices[7] = 0.86
+    vertices[8] = -0.5
+    vertices[9] = 0
 
-  vertices[10] = 1.86
-  vertices[11] = -0.5
-  vertices[12] = 0
+    vertices[10] = 1.86
+    vertices[11] = -0.5
+    vertices[12] = 0
 
-  vertices[13] = 1.36
-  vertices[14] = 0
-  vertices[15] = -0.5
+    vertices[13] = 1.36
+    vertices[14] = 0
+    vertices[15] = -0.5
 
-  # Classification of the vertices for the fifth tree.
-  t8_cmesh_set_tree_vertices(cmesh, 4, vertices, 5)
+    # Classification of the vertices for the fifth tree.
+    t8_cmesh_set_tree_vertices(cmesh, 4, vertices, 5)
 
-  #
-  #  Definition of the sixth tree
-  #
+    #
+    #  Definition of the sixth tree
+    #
 
-  # Hex coordinates.
-  for hex = 0:3
-    vertices[3 * hex +  2] = vertices[3 * hex + 2] * (-1)
-    vertices[3 * hex + 13] = vertices[3 * hex + 1]
-    vertices[3 * hex + 14] = vertices[3 * hex + 2]
-    vertices[3 * hex + 15] = vertices[3 * hex + 3] + 1
-  end
+    # Hex coordinates.
+    for hex in 0:3
+        vertices[3 * hex + 2] = vertices[3 * hex + 2] * (-1)
+        vertices[3 * hex + 13] = vertices[3 * hex + 1]
+        vertices[3 * hex + 14] = vertices[3 * hex + 2]
+        vertices[3 * hex + 15] = vertices[3 * hex + 3] + 1
+    end
 
-  # Classification of the vertices for the fifth tree.
-  t8_cmesh_set_tree_vertices(cmesh, 5, vertices, 8)
+    # Classification of the vertices for the fifth tree.
+    t8_cmesh_set_tree_vertices(cmesh, 5, vertices, 8)
 
-  # Commit the mesh.
-  t8_cmesh_commit(cmesh, comm)
-  return cmesh
+    # Commit the mesh.
+    t8_cmesh_commit(cmesh, comm)
+    return cmesh
 end
 
 # The prefix for our output files.

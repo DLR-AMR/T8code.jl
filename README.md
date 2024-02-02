@@ -198,10 +198,12 @@ Julia `v1.9` (or newer) is more widely established in the community.
 ## Authors
 
 T8code.jl is mainly maintained by [Johannes Markert](https://jmark.de) (German
-Aerospace Center (DLR), Germany).  It is an adapted fork from
-[P4est.jl](https://github.com/trixi-framework/P4est.jl) maintained by [Michael
-Schlottke-Lakemper](https://lakemper.eu) (RWTH Aachen University, Germany) and
-[Hendrik Ranocha](https://ranocha.de) (University of Hamburg, Germany).
+Aerospace Center (DLR), Germany) and [Joshua Lampert](https://github.com/JoshuaLampert)
+(University of Hamburg, Germany). It is an adapted fork from
+[P4est.jl](https://github.com/trixi-framework/P4est.jl) maintained by [Joshua
+Lampert](https://github.com/JoshuaLampert), [Michael Schlottke-Lakemper](https://lakemper.eu)
+(RWTH Aachen University, Germany), and [Hendrik Ranocha](https://ranocha.de)
+(Johannes Gutenberg University Mainz, Germany).
 
 The [`t8code`](https://github.com/DLR-AMR/t8code) library itself is written by
 Johannes Holke and Carsten Burstedde, and others.

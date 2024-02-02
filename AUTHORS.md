@@ -2,7 +2,7 @@
 
 T8code.jl is written by
 
-- [Johannes Markrt](https://jmark.de)
+- [Johannes Markert](https://jmark.de)
 
 hereby called the "T8code Authors".
 

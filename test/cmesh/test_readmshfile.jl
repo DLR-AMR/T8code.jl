@@ -4,29 +4,23 @@ function t8_supported_msh_file(cmesh)
     number_elements = 4
     elem_type = T8_ECLASS_TRIANGLE
 
-    vertex = [
-        [0, 0],
-        [2, 0],
-        [4, 0],
-        [1, 2],
-        [3, 2],
-        [2, 4],
-    ]
+    vertex = [[0, 0],
+              [2, 0],
+              [4, 0],
+              [1, 2],
+              [3, 2],
+              [2, 4]]
 
     # 0-based indexing
-    elements = [
-        [0, 1, 3],
-        [1, 4, 3],
-        [1, 2, 4],
-        [3, 4, 5],
-    ]
+    elements = [[0, 1, 3],
+                [1, 4, 3],
+                [1, 2, 4],
+                [3, 4, 5]]
 
-    face_neigh_elem = [
-        [1, -1, -1],
-        [3, 0, 2],
-        [-1, 1, -1],
-        [-1, -1, 1],
-    ]
+    face_neigh_elem = [[1, -1, -1],
+                       [3, 0, 2],
+                       [-1, 1, -1],
+                       [-1, -1, 1]]
 
     @assert cmesh != C_NULL
 

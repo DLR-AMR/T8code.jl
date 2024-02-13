@@ -134,26 +134,28 @@ using T8code.Libt8: SC_LP_PRODUCTION
 function t8_cmesh_new_periodic_hybrid_2d(comm)
     # 1. Defining an array with all vertices.
     # Just all vertices of all trees. partly duplicated.
-    vertices = [0, 0, 0,                    # tree 0, triangle
-                0.5, 0, 0,
-                0.5, 0.5, 0,
-                0, 0, 0,                    # tree 1, triangle
-                0.5, 0.5, 0,
-                0, 0.5, 0,
-                0.5, 0, 0,                  # tree 2, quad
-                1, 0, 0,
-                0.5, 0.5, 0,
-                1, 0.5, 0,
-                0, 0.5, 0,                  # tree 3, quad
-                0.5, 0.5, 0,
-                0, 1, 0,
-                0.5, 1, 0,
-                0.5, 0.5, 0,                # tree 4, triangle
-                1, 0.5, 0,
-                1, 1, 0,
-                0.5, 0.5, 0,                # tree 5, triangle
-                1, 1, 0,
-                0.5, 1, 0]
+    vertices = [
+        0, 0, 0,                    # tree 0, triangle
+        0.5, 0, 0,
+        0.5, 0.5, 0,
+        0, 0, 0,                    # tree 1, triangle
+        0.5, 0.5, 0,
+        0, 0.5, 0,
+        0.5, 0, 0,                  # tree 2, quad
+        1, 0, 0,
+        0.5, 0.5, 0,
+        1, 0.5, 0,
+        0, 0.5, 0,                  # tree 3, quad
+        0.5, 0.5, 0,
+        0, 1, 0,
+        0.5, 1, 0,
+        0.5, 0.5, 0,                # tree 4, triangle
+        1, 0.5, 0,
+        1, 1, 0,
+        0.5, 0.5, 0,                # tree 5, triangle
+        1, 1, 0,
+        0.5, 1, 0,
+    ]
 
     # 2. Initialization of the mesh.
     cmesh_ref = Ref(t8_cmesh_t())

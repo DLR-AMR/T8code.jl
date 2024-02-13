@@ -339,15 +339,17 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
     end
 
     # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
-    vtk_data = [t8_vtk_data_field_t(T8_VTK_SCALAR,
-                                    NTuple{8192, Cchar}(rpad("height\0", 8192, ' ')),
-                                    pointer(heights)),
-                t8_vtk_data_field_t(T8_VTK_SCALAR,
-                                    NTuple{8192, Cchar}(rpad("schlieren\0", 8192, ' ')),
-                                    pointer(schlieren)),
-                t8_vtk_data_field_t(T8_VTK_SCALAR,
-                                    NTuple{8192, Cchar}(rpad("curvature\0", 8192, ' ')),
-                                    pointer(curvature))]
+    vtk_data = [
+        t8_vtk_data_field_t(T8_VTK_SCALAR,
+                            NTuple{8192, Cchar}(rpad("height\0", 8192, ' ')),
+                            pointer(heights)),
+        t8_vtk_data_field_t(T8_VTK_SCALAR,
+                            NTuple{8192, Cchar}(rpad("schlieren\0", 8192, ' ')),
+                            pointer(schlieren)),
+        t8_vtk_data_field_t(T8_VTK_SCALAR,
+                            NTuple{8192, Cchar}(rpad("curvature\0", 8192, ' ')),
+                            pointer(curvature)),
+    ]
 
     # The number of user defined data fields to write.
     num_data = length(vtk_data)

@@ -43,7 +43,6 @@ Returns the version of the underlying `t8code` library (*not* of T8code.jl).
 """
 version() = VersionNumber(T8_VERSION_MAJOR, T8_VERSION_MINOR)
 
-
 const T8CODE_UUID = UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1")
 
 """
@@ -153,7 +152,8 @@ path_sc_library() = _PREFERENCE_LIBSC
 Returns `false` if a system-provided MPI installation is set via the MPIPreferences, but
 not a system-provided `t8code` installation. In this case, T8code.jl is not usable.
 """
-preferences_set_correctly() = !(_PREFERENCE_LIBT8 == "t8code_jll" && MPIPreferences.binary == "system")
+preferences_set_correctly() = !(_PREFERENCE_LIBT8 == "t8code_jll" &&
+                                MPIPreferences.binary == "system")
 
 const T8_QUAD_MAXLEVEL = 30
 const T8_HEX_MAXLEVEL = 19
@@ -165,11 +165,11 @@ const t8_hex_root_len = 1 << T8_HEX_MAXLEVEL
 @inline t8_hex_len(l) = 1 << (T8_HEX_MAXLEVEL - l)
 
 macro T8_ASSERT(q)
-  :( $(esc(q)) ? nothing : throw(AssertionError($(string(q)))) )
+    :($(esc(q)) ? nothing : throw(AssertionError($(string(q)))))
 end
 
 function t8_free(ptr)
-  Libt8.sc_free(t8_get_package_id(), ptr)
+    Libt8.sc_free(t8_get_package_id(), ptr)
 end
 
 # typedef int         (*t8_forest_adapt_t) (t8_forest_t forest,
@@ -181,7 +181,9 @@ end
 #                                           const int num_elements,
 #                                           t8_element_t *elements[]);
 macro t8_adapt_callback(callback)
-  :( @cfunction($callback, Cint, (Ptr{t8_forest}, Ptr{t8_forest}, t8_locidx_t, t8_locidx_t, Ptr{t8_eclass_scheme}, Cint, Cint, Ptr{Ptr{t8_element}})) )
+    :(@cfunction($callback, Cint,
+                 (Ptr{t8_forest}, Ptr{t8_forest}, t8_locidx_t, t8_locidx_t,
+                  Ptr{t8_eclass_scheme}, Cint, Cint, Ptr{Ptr{t8_element}})))
 end
 
 # typedef void        (*t8_forest_replace_t) (t8_forest_t forest_old,
@@ -193,13 +195,50 @@ end
 #                                             int num_incoming,
 #                                             t8_locidx_t first_incoming);
 macro t8_replace_callback(callback)
-  :( @cfunction($callback, Cvoid, (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, t8_locidx_t, Cint, t8_locidx_t)) )
+    :(@cfunction($callback, Cvoid,
+                 (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, t8_locidx_t,
+                  Cint, t8_locidx_t)))
 end
 
 function __init__()
     if !preferences_set_correctly()
-       @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
+        @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
     end
+end
+
+# Following functions are not part of the official public API of t8code but are
+# needed nevertheless by some application codes. This will be fixed resp. more
+# streamlined in future releases of t8code.
+
+export t8_forest_ghost_get_remotes
+function t8_forest_ghost_get_remotes(forest)
+    num_remotes_ref = Ref{Cint}()
+    remotes_ptr = @ccall T8code.Libt8.libt8.t8_forest_ghost_get_remotes(forest::t8_forest_t,
+                                                                        num_remotes_ref::Ptr{Cint})::Ptr{Cint}
+    remotes = unsafe_wrap(Array, remotes_ptr, num_remotes_ref[])
+end
+
+export t8_forest_ghost_remote_first_elem
+function t8_forest_ghost_remote_first_elem(forest, remote)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_remote_first_elem(forest::t8_forest_t,
+                                                                remote::Cint)::t8_locidx_t
+end
+
+export t8_forest_ghost_num_trees
+function t8_forest_ghost_num_trees(forest)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_num_trees(forest::t8_forest_t)::t8_locidx_t
+end
+
+export t8_forest_ghost_get_tree_element_offset
+function t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_get_tree_element_offset(forest::t8_forest_t,
+                                                                      lghost_tree::t8_locidx_t)::t8_locidx_t
+end
+
+export t8_forest_ghost_get_global_treeid
+function t8_forest_ghost_get_global_treeid(forest, lghost_tree)
+    @ccall T8code.Libt8.libt8.t8_forest_ghost_get_global_treeid(forest::t8_forest_t,
+                                                                lghost_tree::t8_locidx_t)::t8_gloidx_t
 end
 
 end

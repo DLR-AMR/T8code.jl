@@ -54,12 +54,12 @@ using T8code.Libt8: SC_LP_PRODUCTION
 # \param [in] comm   MPI Communicator to use.
 # \return            The coarse mesh.
 function t8_step2_build_prismcube_coarse_mesh(comm)
-  # Build a coarse mesh of 2 prism trees that form a cube.
-  cmesh = t8_cmesh_new_hypercube(T8_ECLASS_PRISM, comm, 0, 0, 0)
+    # Build a coarse mesh of 2 prism trees that form a cube.
+    cmesh = t8_cmesh_new_hypercube(T8_ECLASS_PRISM, comm, 0, 0, 0)
 
-  t8_global_productionf(" [step2] Constructed coarse mesh with 2 prism trees.\n")
+    t8_global_productionf(" [step2] Constructed coarse mesh with 2 prism trees.\n")
 
-  return cmesh
+    return cmesh
 end
 
 # Build a uniform forest on a cmesh 
@@ -70,12 +70,12 @@ end
 # \return            A uniform forest with the given refinement level that is
 #                    partitioned across the processes in \a comm.
 function t8_step2_build_uniform_forest(comm, cmesh, level)
-  # /* Create the refinement scheme. */
-  scheme = t8_scheme_new_default_cxx()
-  # /* Creat the uniform forest. */
-  forest = t8_forest_new_uniform(cmesh, scheme, level, 0, comm)
+    # /* Create the refinement scheme. */
+    scheme = t8_scheme_new_default_cxx()
+    # /* Creat the uniform forest. */
+    forest = t8_forest_new_uniform(cmesh, scheme, level, 0, comm)
 
-  return forest
+    return forest
 end
 
 # Write vtk (or more accurately vtu) files of the forest.
@@ -85,7 +85,7 @@ end
 # This will create the file prefix.pvtu
 # and additionally one file prefix_MPIRANK.vtu per MPI rank.
 function t8_step2_write_forest_vtk(forest, prefix)
-  t8_forest_write_vtk(forest, prefix)
+    t8_forest_write_vtk(forest, prefix)
 end
 
 # Destroy a forest. This will free all allocated memory.
@@ -95,7 +95,7 @@ end
 #       If we do not want this behaviour, but want to reuse for example the cmesh,
 #       we need to call t8_cmesh_ref (cmesh) before passing it to t8_forest_new_uniform.
 function t8_step2_destroy_forest(forest)
-  t8_forest_unref(Ref(forest))
+    t8_forest_unref(Ref(forest))
 end
 
 # The prefix for our output files.

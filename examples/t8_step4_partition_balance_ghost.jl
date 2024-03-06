@@ -113,65 +113,66 @@ using T8code.Libt8: SC_LP_PRODUCTION
 # In this function we create a new forest that repartitions a given forest
 # and has a layer of ghost elements.
 function t8_step4_partition_ghost(forest)
-  # Check that forest is a committed, that is a valid and usable, forest.
-  @T8_ASSERT(t8_forest_is_committed(forest) == 1)
+    # Check that forest is a committed, that is a valid and usable, forest.
+    @T8_ASSERT(t8_forest_is_committed(forest)==1)
 
-  # Initialize.
-  new_forest_ref = Ref(t8_forest_t())
-  t8_forest_init(new_forest_ref)
-  new_forest = new_forest_ref[]
+    # Initialize.
+    new_forest_ref = Ref(t8_forest_t())
+    t8_forest_init(new_forest_ref)
+    new_forest = new_forest_ref[]
 
-  # Tell the new_forest that is should partition the existing forest.
-  # This will change the distribution of the forest elements among the processes
-  # in such a way that afterwards each process has the same number of elements
-  # (+- 1 if the number of elements is not divisible by the number of processes).
-  #
-  # The third 0 argument is the flag 'partition_for_coarsening' which is currently not
-  # implemented. Once it is, this will ensure that a family of elements will not be split
-  # across multiple processes and thus one level coarsening is always possible (see also the
-  # comments on coarsening in t8_step3).
-  t8_forest_set_partition(new_forest, forest, 0)
+    # Tell the new_forest that is should partition the existing forest.
+    # This will change the distribution of the forest elements among the processes
+    # in such a way that afterwards each process has the same number of elements
+    # (+- 1 if the number of elements is not divisible by the number of processes).
+    #
+    # The third 0 argument is the flag 'partition_for_coarsening' which is currently not
+    # implemented. Once it is, this will ensure that a family of elements will not be split
+    # across multiple processes and thus one level coarsening is always possible (see also the
+    # comments on coarsening in t8_step3).
+    t8_forest_set_partition(new_forest, forest, 0)
 
-  # Tell the new_forest to create a ghost layer.
-  # This will gather those face neighbor elements of process local element that reside
-  # on a different process.
-  #
-  # We currently support ghost mode T8_GHOST_FACES that creates face neighbor ghost elements
-  # and will in future also support other modes for edge/vertex neighbor ghost elements.
-  t8_forest_set_ghost(new_forest, 1, T8_GHOST_FACES)
+    # Tell the new_forest to create a ghost layer.
+    # This will gather those face neighbor elements of process local element that reside
+    # on a different process.
+    #
+    # We currently support ghost mode T8_GHOST_FACES that creates face neighbor ghost elements
+    # and will in future also support other modes for edge/vertex neighbor ghost elements.
+    t8_forest_set_ghost(new_forest, 1, T8_GHOST_FACES)
 
-  # Commit the forest, this step will perform the partitioning and ghost layer creation.
-  t8_forest_commit(new_forest)
+    # Commit the forest, this step will perform the partitioning and ghost layer creation.
+    t8_forest_commit(new_forest)
 
-  return new_forest
+    return new_forest
 end
 
 # In this function we adapt a forest as in step3 and balance it.  In our main
 # program the input forest is already adapted and then the resulting twice
 # adapted forest will be unbalanced.
 function t8_step4_balance(forest)
-  # Adapt the input forest.
-  unbalanced_forest = t8_step3_adapt_forest(forest)
+    # Adapt the input forest.
+    unbalanced_forest = t8_step3_adapt_forest(forest)
 
-  # Output to vtk.
-  t8_forest_write_vtk(unbalanced_forest, "t8_step4_unbalanced_forest")
-  t8_global_productionf(" [step4] Wrote unbalanced forest to vtu files: %s*\n", "t8_step4_unbalanced_forest")
+    # Output to vtk.
+    t8_forest_write_vtk(unbalanced_forest, "t8_step4_unbalanced_forest")
+    t8_global_productionf(" [step4] Wrote unbalanced forest to vtu files: %s*\n",
+                          "t8_step4_unbalanced_forest")
 
-  # Initialize new forest.
-  balanced_forest_ref = Ref(t8_forest_t())
-  t8_forest_init(balanced_forest_ref)
-  balanced_forest = balanced_forest_ref[]
+    # Initialize new forest.
+    balanced_forest_ref = Ref(t8_forest_t())
+    t8_forest_init(balanced_forest_ref)
+    balanced_forest = balanced_forest_ref[]
 
-  # Specify that this forest should result from balancing unbalanced_forest.
-  # The last argument is the flag 'no_repartition'.
-  # Since balancing will refine elements, the load-balance will be broken afterwards.
-  # Setting this flag to false (no_repartition = false -> yes repartition) will repartition
-  # the forest after balance, such that every process has the same number of elements afterwards.
-  t8_forest_set_balance(balanced_forest, unbalanced_forest, 0)
-  # Commit the forest.
-  t8_forest_commit(balanced_forest)
+    # Specify that this forest should result from balancing unbalanced_forest.
+    # The last argument is the flag 'no_repartition'.
+    # Since balancing will refine elements, the load-balance will be broken afterwards.
+    # Setting this flag to false (no_repartition = false -> yes repartition) will repartition
+    # the forest after balance, such that every process has the same number of elements afterwards.
+    t8_forest_set_balance(balanced_forest, unbalanced_forest, 0)
+    # Commit the forest.
+    t8_forest_commit(balanced_forest)
 
-  return balanced_forest
+    return balanced_forest
 end
 
 include("t8_step3_common.jl")
@@ -221,7 +222,8 @@ t8_step3_print_forest_information(forest);
 
 # Write forest to vtu files.
 t8_forest_write_vtk(forest, prefix_uniform)
-t8_global_productionf(" [step4] Wrote uniform level %i forest to vtu files: %s*\n", level, prefix_uniform)
+t8_global_productionf(" [step4] Wrote uniform level %i forest to vtu files: %s*\n", level,
+                      prefix_uniform)
 
 #
 # Adapt the forest.

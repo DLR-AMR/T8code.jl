@@ -1,6 +1,7 @@
 # T8code.jl
 
 [![All Tests Status](https://github.com/DLR-AMR/T8code.jl/actions/workflows/test.yml/badge.svg)](https://github.com/DLR-AMR/T8code.jl/actions/workflows/test.yml)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
 

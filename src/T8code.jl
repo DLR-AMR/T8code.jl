@@ -1,7 +1,7 @@
 module T8code
 
 using Reexport: @reexport
-using Libdl
+using Libdl: Libdl
 
 using MPIPreferences: MPIPreferences
 # We need to load the preference setting from here and not from `Libt8.jl`

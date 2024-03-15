@@ -6,6 +6,7 @@ import MPIPreferences
 @info "Testing T8code.jl with" MPIPreferences.binary MPIPreferences.abi
 
 @time @testset "T8code.jl tests" begin
+    include("test_aqua.jl")
     # For some weird reason, the MPI tests must come first since they fail
     # otherwise with a custom MPI installation.
     @time @testset "MPI" begin

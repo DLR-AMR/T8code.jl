@@ -1,6 +1,6 @@
 module Libt8
 
-using CEnum
+using CEnum: CEnum, @cenum
 
 to_c_type(t::Type) = t
 to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
@@ -41,7 +41,7 @@ end
 const ptrdiff_t = Cptrdiff_t
 
 # Definitions used from MPI.jl
-using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_Group, MPI_File
+using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_File
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SELF = MPI.COMM_SELF

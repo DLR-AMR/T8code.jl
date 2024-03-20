@@ -181,6 +181,12 @@ end
 #                                           const int is_family,
 #                                           const int num_elements,
 #                                           t8_element_t *elements[]);
+"""
+    @t8_adapt_callback(callback)
+
+Wrap the Julia function `callback` in an `@cfunction` with the appropriate
+signature required for callback functions in [`t8_forest_adapt`](@ref).
+"""
 macro t8_adapt_callback(callback)
     :(@cfunction($callback, Cint,
                  (Ptr{t8_forest}, Ptr{t8_forest}, t8_locidx_t, t8_locidx_t,
@@ -195,6 +201,12 @@ end
 #                                             t8_locidx_t first_outgoing,
 #                                             int num_incoming,
 #                                             t8_locidx_t first_incoming);
+"""
+    @t8_replace_callback(callback)
+
+Wrap the Julia function `callback` in an `@cfunction` with the appropriate
+signature required for callback functions in [`t8_forest_iterate_replace`](@ref).
+"""
 macro t8_replace_callback(callback)
     :(@cfunction($callback, Cvoid,
                  (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, t8_locidx_t,

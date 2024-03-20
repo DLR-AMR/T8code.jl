@@ -18,6 +18,7 @@ include("Libt8.jl")
 @reexport using .Libt8
 
 export @t8_adapt_callback
+export @t8_replace_callback
 export @T8_ASSERT
 export t8_free
 

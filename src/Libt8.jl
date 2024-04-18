@@ -1,6 +1,6 @@
 module Libt8
 
-using CEnum: CEnum, @cenum
+using CEnum
 
 to_c_type(t::Type) = t
 to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
@@ -41,7 +41,7 @@ end
 const ptrdiff_t = Cptrdiff_t
 
 # Definitions used from MPI.jl
-using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_File
+using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_Group, MPI_File
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SELF = MPI.COMM_SELF
@@ -151,7 +151,7 @@ end
 
 The central log function to be called by all packages. Dispatches the log calls by package and filters by category and priority.
 
-### Parameters
+# Arguments
 * `package`:\\[in\\] Must be a registered package id or -1.
 * `category`:\\[in\\] Must be `SC_LC_NORMAL` or `SC_LC_GLOBAL`.
 * `priority`:\\[in\\] Must be > `SC_LP_ALWAYS` and < `SC_LP_SILENT`.
@@ -172,7 +172,7 @@ end
 """
     sc_array
 
-The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by  sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested).
+The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested).
 
 | Field        | Note                                                                                                                                            |
 | :----------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -188,7 +188,7 @@ struct sc_array
     array::Ptr{Int8}
 end
 
-"""The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by  sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested)."""
+"""The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested)."""
 const sc_array_t = sc_array
 
 """
@@ -196,10 +196,10 @@ const sc_array_t = sc_array
 
 Creates a new array structure with a given length (number of elements).
 
-### Parameters
+# Arguments
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 * `elem_count`:\\[in\\] Initial number of array elements.
-### Returns
+# Returns
 Return an allocated array with allocated but uninitialized elements.
 ### Prototype
 ```c
@@ -215,7 +215,7 @@ end
 
 Query the package identity as registered in libsc.
 
-### Returns
+# Returns
 This is -1 before t8_init has been called and a proper package identifier afterwards.
 ### Prototype
 ```c
@@ -350,10 +350,10 @@ end
 
 Turn an MPI error code into its error class. When MPI is enabled, we pass version 1.1 errors to MPI\\_Error\\_class. When MPI I/O is not enabled, we process file errors outside of MPI. Thus, within libsc, it is always legal to call this function with any errorcode defined above in this header file.
 
-### Parameters
+# Arguments
 * `errorcode`:\\[in\\] Returned from a direct MPI call or libsc.
 * `errorclass`:\\[out\\] Non-NULL pointer. Filled with matching error class on success.
-### Returns
+# Returns
 [`sc_MPI_SUCCESS`](@ref) on successful conversion, Other MPI error code otherwise.
 ### Prototype
 ```c
@@ -369,11 +369,11 @@ end
 
 Turn MPI error code into a string.
 
-### Parameters
+# Arguments
 * `errorcode`:\\[in\\] This (MPI) error code is converted.
 * `string`:\\[in,out\\] At least [`sc_MPI_MAX_ERROR_STRING`](@ref) bytes.
 * `resultlen`:\\[out\\] Length of string on return.
-### Returns
+# Returns
 [`sc_MPI_SUCCESS`](@ref) on success or other MPI error cocde on invalid arguments.
 ### Prototype
 ```c
@@ -545,9 +545,9 @@ end
 
 Safe version of the standard library atoi (3) function.
 
-### Parameters
+# Arguments
 * `nptr`:\\[in\\] NUL-terminated string.
-### Returns
+# Returns
 Converted integer value. 0 if no valid number. INT\\_MAX on overflow, INT\\_MIN on underflow.
 ### Prototype
 ```c
@@ -563,9 +563,9 @@ end
 
 Safe version of the standard library atol (3) function.
 
-### Parameters
+# Arguments
 * `nptr`:\\[in\\] NUL-terminated string.
-### Returns
+# Returns
 Converted long value. 0 if no valid number. LONG\\_MAX on overflow, LONG\\_MIN on underflow.
 ### Prototype
 ```c
@@ -581,7 +581,7 @@ end
 
 Controls the default SC log behavior.
 
-### Parameters
+# Arguments
 * `log_stream`:\\[in\\] Set stream to use by `sc_logf` (or NULL for stdout).
 * `log_handler`:\\[in\\] Set default SC log handler (NULL selects builtin).
 * `log_threshold`:\\[in\\] Set default SC log threshold (or `SC_LP_DEFAULT`). May be `SC_LP_ALWAYS` or `SC_LP_SILENT`.
@@ -599,7 +599,7 @@ end
 
 Set the default SC abort behavior.
 
-### Parameters
+# Arguments
 * `abort_handler`:\\[in\\] Set default SC above handler (NULL selects builtin). If it returns, we abort (2) then.
 ### Prototype
 ```c
@@ -699,7 +699,7 @@ end
 
 Register a software package with SC. This function must only be called before additional threads are created. The logging parameters are as in [`sc_set_log_defaults`](@ref).
 
-### Returns
+# Returns
 Returns a unique package id.
 ### Prototype
 ```c
@@ -715,9 +715,9 @@ end
 
 Query whether an identifier matches a registered package.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Only a non-negative id can be registered.
-### Returns
+# Returns
 True if and only if the package id is non-negative and package is registered.
 ### Prototype
 ```c
@@ -733,7 +733,7 @@ end
 
 Acquire a pthread mutex lock. If configured without --enable-pthread, this function does nothing. This function must be followed with a matching sc_package_unlock.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Either -1 for an undefined package or an id returned from sc_package_register. Depending on the value, the appropriate mutex is chosen. Thus, we may overlap locking calls with distinct package\\_id.
 ### Prototype
 ```c
@@ -749,7 +749,7 @@ end
 
 Release a pthread mutex lock. If configured without --enable-pthread, this function does nothing. This function must be follow a matching sc_package_lock.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Either -1 for an undefined package or an id returned from sc_package_register. Depending on the value, the appropriate mutex is chosen. Thus, we may overlap locking calls with distinct package\\_id.
 ### Prototype
 ```c
@@ -765,7 +765,7 @@ end
 
 Set the logging verbosity of a registered package. This can be called at any point in the program, any number of times. It can only lower the verbosity at and below the value of `SC_LP_THRESHOLD`.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Must be a registered package identifier.
 ### Prototype
 ```c
@@ -781,7 +781,7 @@ end
 
 Set the unregister behavior of [`sc_package_unregister`](@ref)().
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Must be -1 for the default package or the identifier of a registered package.
 * `set_abort`:\\[in\\] True if [`sc_package_unregister`](@ref)() should abort if the number of allocs does not match the number of frees; false otherwise.
 ### Prototype
@@ -812,7 +812,7 @@ end
 
 Print a summary of all packages registered with SC. Uses the `SC_LC_GLOBAL` log category which by default only prints on rank 0.
 
-### Parameters
+# Arguments
 * `log_priority`:\\[in\\] Priority passed to sc log functions.
 ### Prototype
 ```c
@@ -844,7 +844,7 @@ Return whether SC has been initialized or not.
 
     This routine is not thread-safe.
 
-### Returns
+# Returns
 True if libsc has been initialized with a call to sc_init and false otherwise. After sc_finalize the result resets to false.
 ### Prototype
 ```c
@@ -864,7 +864,7 @@ Query SC's own package identity.
 
     This routine is not thread-safe.
 
-### Returns
+# Returns
 This is -1 before sc_init has been called and a proper package identifier (>= 0) afterwards. After sc_finalize the identifier resets to -1.
 ### Prototype
 ```c
@@ -894,7 +894,7 @@ end
 
 Unregisters all packages, runs the memory check, removes the signal handlers and resets sc\\_identifier and sc\\_root\\_*. This function never aborts but returns the number of errors encountered. Function is optional if memory cleanliness is no concern. This function does not require [`sc_init`](@ref) to be called first. In any case it makes sc_is_initialized return false.
 
-### Returns
+# Returns
 0 when everything is consistent, nonzero otherwise.
 ### Prototype
 ```c
@@ -910,7 +910,7 @@ end
 
 Identify the root process. Only meaningful between [`sc_init`](@ref) and [`sc_finalize`](@ref) and with a communicator that is not `sc_MPI_COMM_NULL` (otherwise always true).
 
-### Returns
+# Returns
 Return true for the root process and false otherwise.
 ### Prototype
 ```c
@@ -926,11 +926,11 @@ end
 
 Provide a string copy function.
 
-### Parameters
+# Arguments
 * `dest`:\\[out\\] Buffer of length at least *size*. On output, not touched if NULL or *size* == 0. Otherwise, *src* is copied to *dest* and *dest* is padded with '\\0' from the right if strlen (src) < size - 1.
 * `size`:\\[in\\] Allocation length of *dest*.
 * `src`:\\[in\\] Null-terminated string.
-### Returns
+# Returns
 Equivalent to sc_snprintf (dest, size, "s", src).
 ### Prototype
 ```c
@@ -951,7 +951,7 @@ end
 
 Return the full version of libsc.
 
-### Returns
+# Returns
 Return the version of libsc using the format `VERSION\\_MAJOR.VERSION\\_MINOR.VERSION\\_POINT`, where `VERSION_POINT` can contain dots and characters, e.g. to indicate the additional number of commits and a git commit hash.
 ### Prototype
 ```c
@@ -967,7 +967,7 @@ end
 
 Return the major version of libsc.
 
-### Returns
+# Returns
 Return the major version of libsc.
 ### Prototype
 ```c
@@ -983,7 +983,7 @@ end
 
 Return the minor version of libsc.
 
-### Returns
+# Returns
 Return the minor version of libsc.
 ### Prototype
 ```c
@@ -999,7 +999,7 @@ end
 
 Return a boolean indicating whether zlib has been configured.
 
-### Returns
+# Returns
 True if zlib including adler32\\_combine (3) has been found on running configure or respectively on calling cmake.
 ### Prototype
 ```c
@@ -1015,7 +1015,7 @@ end
 
 Return whether we have found a JSON library at configure time.
 
-### Returns
+# Returns
 True if and only if SC\\_HAVE\\_JSON is defined.
 ### Prototype
 ```c
@@ -1030,10 +1030,10 @@ end
 """
 Function to compute a hash value of an object.
 
-### Parameters
+# Arguments
 * `v`:\\[in\\] The object to hash.
 * `u`:\\[in\\] Arbitrary user data.
-### Returns
+# Returns
 Returns an unsigned integer.
 """
 const sc_hash_function_t = Ptr{Cvoid}
@@ -1042,21 +1042,23 @@ const sc_hash_function_t = Ptr{Cvoid}
 """
 Function to check equality of two objects.
 
-### Parameters
+# Arguments
+* `v1`:\\[in\\] Pointer to first object checked for equality.
+* `v2`:\\[in\\] Pointer to second object checked for equality.
 * `u`:\\[in\\] Arbitrary user data.
-### Returns
-Returns false if *v1 is unequal *v2 and true otherwise.
+# Returns
+False if *v1 is unequal *v2 and true otherwise.
 """
 const sc_equal_function_t = Ptr{Cvoid}
 
 # typedef int ( * sc_hash_foreach_t ) ( void * * v , const void * u )
 """
-Function to call on every data item of a hash table.
+Function to call on every data item of a hash table or hash array.
 
-### Parameters
+# Arguments
 * `v`:\\[in\\] The address of the pointer to the current object.
 * `u`:\\[in\\] Arbitrary user data.
-### Returns
+# Returns
 Return true if the traversal should continue, false to stop.
 """
 const sc_hash_foreach_t = Ptr{Cvoid}
@@ -1066,10 +1068,10 @@ const sc_hash_foreach_t = Ptr{Cvoid}
 
 Calculate the memory used by an array.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array.
 * `is_dynamic`:\\[in\\] True if created with [`sc_array_new`](@ref), false if initialized with [`sc_array_init`](@ref)
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -1085,9 +1087,9 @@ end
 
 Creates a new array structure with 0 elements.
 
-### Parameters
+# Arguments
 * `elem_size`:\\[in\\] Size of one array element in bytes.
-### Returns
+# Returns
 Return an allocated array of zero length.
 ### Prototype
 ```c
@@ -1103,7 +1105,7 @@ end
 
 Creates a new view of an existing [`sc_array_t`](@ref).
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array must not be resized while view is alive.
 * `offset`:\\[in\\] The offset of the viewed section in element units. This offset cannot be changed until the view is reset.
 * `length`:\\[in\\] The length of the viewed section in element units. The view cannot be resized to exceed this length.
@@ -1121,7 +1123,7 @@ end
 
 Creates a new view of an existing plain C array.
 
-### Parameters
+# Arguments
 * `base`:\\[in\\] The data must not be moved while view is alive.
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 * `elem_count`:\\[in\\] The length of the view in element units. The view cannot be resized to exceed this length.
@@ -1139,7 +1141,7 @@ end
 
 Destroys an array structure.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array to be destroyed.
 ### Prototype
 ```c
@@ -1155,7 +1157,7 @@ end
 
 Destroys an array structure and sets the pointer to NULL.
 
-### Parameters
+# Arguments
 * `parray`:\\[in,out\\] Pointer to address of array to be destroyed. On output, *parray is NULL.
 ### Prototype
 ```c
@@ -1171,7 +1173,7 @@ end
 
 Initializes an already allocated (or static) array structure.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Array structure to be initialized.
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 ### Prototype
@@ -1188,7 +1190,7 @@ end
 
 Initializes an already allocated (or static) array structure and allocates a given number of elements. Deprecated: use sc_array_init_count.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Array structure to be initialized.
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 * `elem_count`:\\[in\\] Number of initial array elements.
@@ -1206,7 +1208,7 @@ end
 
 Initializes an already allocated (or static) array structure and allocates a given number of elements. This function supersedes sc_array_init_size.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Array structure to be initialized.
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 * `elem_count`:\\[in\\] Number of initial array elements.
@@ -1224,7 +1226,7 @@ end
 
 Initializes an already allocated (or static) view from existing [`sc_array_t`](@ref). The array view returned does not require [`sc_array_reset`](@ref) (doesn't hurt though).
 
-### Parameters
+# Arguments
 * `view`:\\[in,out\\] Array structure to be initialized.
 * `array`:\\[in\\] The array must not be resized while view is alive.
 * `offset`:\\[in\\] The offset of the viewed section in element units. This offset cannot be changed until the view is reset.
@@ -1243,7 +1245,7 @@ end
 
 Initialize an already allocated (or static) view from existing [`sc_array_t`](@ref). The total data size of the view is the same, but size and count may differ. The array view returned does not require [`sc_array_reset`](@ref) (doesn't hurt though).
 
-### Parameters
+# Arguments
 * `view`:\\[in,out\\] Array structure to be initialized.
 * `array`:\\[in\\] The array must not be resized while view is alive.
 * `elem_size`:\\[in\\] Size of one array element of the view in bytes. The product of size and count of *array* must be the same as *elem_size* * *elem_count*.
@@ -1262,7 +1264,7 @@ end
 
 Initializes an already allocated (or static) view from given plain C data. The array view returned does not require [`sc_array_reset`](@ref) (doesn't hurt though).
 
-### Parameters
+# Arguments
 * `view`:\\[in,out\\] Array structure to be initialized.
 * `base`:\\[in\\] The data must not be moved while view is alive.
 * `elem_size`:\\[in\\] Size of one array element in bytes.
@@ -1281,7 +1283,7 @@ end
 
 Run memset on the array storage. We pass the character to memset unchanged. Thus, care must be taken when setting values below -1 or above 127, just as with standard memset (3).
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] This array's storage will be overwritten.
 * `c`:\\[in\\] Character to overwrite every byte with.
 ### Prototype
@@ -1302,7 +1304,7 @@ Sets the array count to zero and frees all elements. This function turns a view 
 
     Calling [`sc_array_init`](@ref), then any array operations, then [`sc_array_reset`](@ref) is memory neutral. As an exception, the two functions [`sc_array_init_view`](@ref) and [`sc_array_init_data`](@ref) do not require a subsequent call to [`sc_array_reset`](@ref). Regardless, it is legal to call [`sc_array_reset`](@ref) anyway.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Array structure to be reset.
 ### Prototype
 ```c
@@ -1322,7 +1324,7 @@ Sets the array count to zero, but does not free elements. Not allowed for views.
 
     This is intended to allow an [`sc_array`](@ref) to be used as a reusable buffer, where the "high water mark" of the buffer is preserved, so that O(log (max n)) reallocs occur over the life of the buffer.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Array structure to be truncated.
 ### Prototype
 ```c
@@ -1338,7 +1340,7 @@ end
 
 Shorten an array without reallocating it.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] The element count of this array is modified.
 * `new_count`:\\[in\\] Must be less or equal than the **array**'s count. If it is less, the number of elements in the array is reduced without reallocating memory. The exception is a **new_count** of zero specified for an array that is not a view: In this case sc_array_reset is equivalent.
 ### Prototype
@@ -1355,7 +1357,7 @@ end
 
 Sets the element count to new\\_count. If the array is not a view, reallocation takes place occasionally. If the array is a view, new\\_count must not be greater than the element count of the view when it was created. The original offset of the view cannot be changed.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] The element count and address is modified.
 * `new_count`:\\[in\\] New element count of the array. If it is zero and the array is not a view, the effect equals sc_array_reset.
 ### Prototype
@@ -1372,7 +1374,7 @@ end
 
 Copy the contents of one array into another. Both arrays must have equal element sizes. The source array may be a view. We use memcpy (3): If the two arrays overlap, results are undefined.
 
-### Parameters
+# Arguments
 * `dest`:\\[in\\] Array (not a view) will be resized and get new data.
 * `src`:\\[in\\] Array used as source of new data, will not be changed.
 ### Prototype
@@ -1389,7 +1391,7 @@ end
 
 Copy the contents of one array into some portion of another. Both arrays must have equal element sizes. Either array may be a view. The destination array must be large enough. We use memcpy (3): If the two arrays overlap, results are undefined.
 
-### Parameters
+# Arguments
 * `dest`:\\[in\\] Array will be written into. Its element count must be at least **dest_offset** + **src**->elem_count.
 * `dest_offset`:\\[in\\] First index in **dest** array to be overwritten. As every index, it refers to elements, not bytes.
 * `src`:\\[in\\] Array used as source of new data, will not be changed.
@@ -1407,7 +1409,7 @@ end
 
 Copy part of one array into another using memmove (3). Both arrays must have equal element sizes. Either array may be a view. The destination array must be large enough. We use memmove (3): The two arrays may overlap.
 
-### Parameters
+# Arguments
 * `dest`:\\[in\\] Array will be written into. Its element count must be at least **dest_offset** + **count**.
 * `dest_offset`:\\[in\\] First index in **dest** array to be overwritten. As every index, it refers to elements, not bytes.
 * `src`:\\[in\\] Array will be read from. Its element count must be at least **src_offset** + **count**.
@@ -1427,7 +1429,7 @@ end
 
 Sorts the array in ascending order wrt. the comparison function.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array to sort.
 * `compar`:\\[in\\] The comparison function to be used.
 ### Prototype
@@ -1444,10 +1446,10 @@ end
 
 Check whether the array is sorted wrt. the comparison function.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array to check.
 * `compar`:\\[in\\] The comparison function to be used.
-### Returns
+# Returns
 True if array is sorted, false otherwise.
 ### Prototype
 ```c
@@ -1463,10 +1465,10 @@ end
 
 Check whether two arrays have equal size, count, and content. Either array may be a view. Both arrays will not be changed.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] One array to be compared.
 * `other`:\\[in\\] A second array to be compared.
-### Returns
+# Returns
 True if array and other are equal, false otherwise.
 ### Prototype
 ```c
@@ -1482,7 +1484,7 @@ end
 
 Removed duplicate entries from a sorted array. This function is not allowed for views.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] The array size will be reduced as necessary.
 * `compar`:\\[in\\] The comparison function to be used.
 ### Prototype
@@ -1499,11 +1501,11 @@ end
 
 Performs a binary search on an array. The array must be sorted.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] A sorted array to search in.
 * `key`:\\[in\\] An element to be searched for.
 * `compar`:\\[in\\] The comparison function to be used.
-### Returns
+# Returns
 Returns the index into array for the item found, or -1.
 ### Prototype
 ```c
@@ -1518,7 +1520,7 @@ end
 """
 Function to determine the enumerable type of an object in an array.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] Array containing the object.
 * `index`:\\[in\\] The location of the object.
 * `data`:\\[in\\] Arbitrary user data.
@@ -1530,7 +1532,7 @@ const sc_array_type_t = Ptr{Cvoid}
 
 Compute the offsets of groups of enumerable types in an array.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] Array that is sorted in ascending order by type. If k indexes *array*, then 0 <= *type_fn* (*array*, k, *data*) < *num_types*.
 * `offsets`:\\[in,out\\] An initialized array of type size\\_t that is resized to *num_types* + 1 entries. The indices j of *array* that contain objects of type k are *offsets*[k] <= j < *offsets*[k + 1]. If there are no objects of type k, then *offsets*[k] = *offset*[k + 1].
 * `num_types`:\\[in\\] The number of possible types of objects in *array*.
@@ -1550,9 +1552,9 @@ end
 
 Determine whether *array* is an array of size\\_t's whose entries include every integer 0 <= i < array->elem\\_count.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] An array.
-### Returns
+# Returns
 Returns 1 if array contains size\\_t elements whose entries include every integer 0 <= i < *array*->elem_count, 0 otherwise.
 ### Prototype
 ```c
@@ -1568,7 +1570,7 @@ end
 
 Given permutation *newindices*, permute *array* in place. The data that on input is contained in *array*[i] will be contained in *array*[newindices[i]] on output. The entries of newindices will be altered unless *keepperm* is true.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] An array.
 * `newindices`:\\[in,out\\] Permutation array (see [`sc_array_is_permutation`](@ref)).
 * `keepperm`:\\[in\\] If true, *newindices* will be unchanged by the algorithm; if false, *newindices* will be the identity permutation on output, but the algorithm will only use O(1) space.
@@ -1598,16 +1600,21 @@ end
 """
     sc_array_pqueue_add(array, temp, compar)
 
-Adds an element to a priority queue. PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. The priority queue is implemented as a heap in ascending order. A heap is a binary tree where the children are not less than their parent. Assumes that elements [0]..[elem\\_count-2] form a valid heap. Then propagates [elem\\_count-1] upward by swapping if necessary.
+Adds an element to a priority queue.
+
+!!! note
+
+    PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. The priority queue is implemented as a heap in ascending order. A heap is a binary tree where the children are not less than their parent. Assumes that elements [0]..[elem\\_count-2] form a valid heap. Then propagates [elem\\_count-1] upward by swapping if necessary.
 
 !!! note
 
     If the return value is zero for all elements in an array, the array is sorted linearly and unchanged.
 
-### Parameters
+# Arguments
+* `array`:\\[in,out\\] Valid priority queue object.
 * `temp`:\\[in\\] Pointer to unused allocated memory of elem\\_size.
 * `compar`:\\[in\\] The comparison function to be used.
-### Returns
+# Returns
 Returns the number of swap operations.
 ### Prototype
 ```c
@@ -1621,16 +1628,21 @@ end
 """
     sc_array_pqueue_pop(array, result, compar)
 
-Pops the smallest element from a priority queue. PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. This function assumes that the array forms a valid heap in ascending order.
+Pops the smallest element from a priority queue.
+
+!!! note
+
+    PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. This function assumes that the array forms a valid heap in ascending order.
 
 !!! note
 
     This function resizes the array to elem\\_count-1.
 
-### Parameters
+# Arguments
+* `array`:\\[in,out\\] Valid priority queue object.
 * `result`:\\[out\\] Pointer to unused allocated memory of elem\\_size.
 * `compar`:\\[in\\] The comparison function to be used.
-### Returns
+# Returns
 Returns the number of swap operations.
 ### Prototype
 ```c
@@ -1792,7 +1804,7 @@ const sc_mstamp_t = sc_mstamp
 
 Initialize a memory stamp container. We provide allocation of fixed-size memory items without allocating new memory in every request. Instead we block the allocations in what we call a stamp of multiple items. Even if no allocations are done, the container's internal memory must be freed eventually by sc_mstamp_reset.
 
-### Parameters
+# Arguments
 * `mst`:\\[in,out\\] Legal pointer to a stamp structure.
 * `stamp_unit`:\\[in\\] Size of each memory block that we allocate. If it is larger than the element size, we may place more than one element in it. Passing 0 is legal and forces stamps that hold one item each.
 * `elem_size`:\\[in\\] Size of each item. Passing 0 is legal. In that case, sc_mstamp_alloc returns NULL.
@@ -1810,7 +1822,7 @@ end
 
 Free all memory in a stamp structure and all items previously returned.
 
-### Parameters
+# Arguments
 * `mst`:\\[in,out\\] Properly initialized stamp container. On output, the structure is undefined.
 ### Prototype
 ```c
@@ -1826,7 +1838,7 @@ end
 
 Free all memory in a stamp structure and initialize it anew. Equivalent to calling sc_mstamp_reset followed by sc_mstamp_init with the same stamp\\_unit and elem\\_size.
 
-### Parameters
+# Arguments
 * `mst`:\\[in,out\\] Properly initialized stamp container. On output, its elements have been freed and it is ready for further use.
 ### Prototype
 ```c
@@ -1842,9 +1854,9 @@ end
 
 Return a new item. The memory returned will stay legal until container is destroyed or truncated.
 
-### Parameters
+# Arguments
 * `mst`:\\[in,out\\] Properly initialized stamp container.
-### Returns
+# Returns
 Pointer to an item ready to use. Legal until sc_mstamp_reset or sc_mstamp_truncate is called on mst.
 ### Prototype
 ```c
@@ -1860,9 +1872,9 @@ end
 
 Return memory size in bytes of all data allocated in the container.
 
-### Parameters
+# Arguments
 * `mst`:\\[in\\] Properly initialized stamp container.
-### Returns
+# Returns
 Total container memory size in bytes.
 ### Prototype
 ```c
@@ -1902,9 +1914,9 @@ const sc_mempool_t = sc_mempool
 
 Calculate the memory used by a memory pool.
 
-### Parameters
+# Arguments
 * `mempool`:\\[in\\] The memory pool.
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -1920,9 +1932,9 @@ end
 
 Creates a new mempool structure with the zero\\_and\\_persist option off. The contents of any elements returned by [`sc_mempool_alloc`](@ref) are undefined.
 
-### Parameters
+# Arguments
 * `elem_size`:\\[in\\] Size of one element in bytes.
-### Returns
+# Returns
 Returns an allocated and initialized memory pool.
 ### Prototype
 ```c
@@ -1938,9 +1950,9 @@ end
 
 Creates a new mempool structure with the zero\\_and\\_persist option on. The memory of newly created elements is zero'd out, and the contents of an element are not touched between freeing and re-returning it.
 
-### Parameters
+# Arguments
 * `elem_size`:\\[in\\] Size of one element in bytes.
-### Returns
+# Returns
 Returns an allocated and initialized memory pool.
 ### Prototype
 ```c
@@ -1954,8 +1966,11 @@ end
 """
     sc_mempool_init(mempool, elem_size)
 
-Same as [`sc_mempool_new`](@ref), but for an already allocated [`sc_mempool_t`](@ref) pointer.
+Same as [`sc_mempool_new`](@ref), but for an already allocated object.
 
+# Arguments
+* `mempool`:\\[out\\] Allocated memory is overwritten and initialized.
+* `elem_size`:\\[in\\] Size of one element in bytes.
 ### Prototype
 ```c
 void sc_mempool_init (sc_mempool_t * mempool, size_t elem_size);
@@ -1970,7 +1985,7 @@ end
 
 Destroy a mempool structure. All elements that are still in use are invalidated.
 
-### Parameters
+# Arguments
 * `mempool`:\\[in,out\\] Its memory is freed.
 ### Prototype
 ```c
@@ -1986,7 +2001,7 @@ end
 
 Destroy a mempool structure. All elements that are still in use are invalidated.
 
-### Parameters
+# Arguments
 * `pmempool`:\\[in,out\\] Address of pointer to memory pool. Its memory is freed, pointer is NULLed.
 ### Prototype
 ```c
@@ -2000,8 +2015,10 @@ end
 """
     sc_mempool_reset(mempool)
 
-Same as [`sc_mempool_destroy`](@ref), but does not free the pointer
+Same as [`sc_mempool_destroy`](@ref), but does not free the pointer.
 
+# Arguments
+* `mempool`:\\[in,out\\] Valid mempool object is deallocated. The structure memory itself stays alive.
 ### Prototype
 ```c
 void sc_mempool_reset (sc_mempool_t * mempool);
@@ -2016,6 +2033,8 @@ end
 
 Invalidates all previously returned pointers, resets count to 0.
 
+# Arguments
+* `mempool`:\\[in,out\\] Valid mempool is truncated.
 ### Prototype
 ```c
 void sc_mempool_truncate (sc_mempool_t * mempool);
@@ -2053,6 +2072,11 @@ end
     sc_link
 
 The [`sc_link`](@ref) structure is one link of a linked list.
+
+| Field | Note                                |
+| :---- | :---------------------------------- |
+| data  | Arbitrary payload.                  |
+| next  | Pointer to list successor element.  |
 """
 struct sc_link
     data::Ptr{Cvoid}
@@ -2066,6 +2090,14 @@ const sc_link_t = sc_link
     sc_list
 
 The [`sc_list`](@ref) object provides a linked list.
+
+| Field             | Note                                           |
+| :---------------- | :--------------------------------------------- |
+| elem\\_count      | Number of elements in this list.               |
+| first             | Pointer to first element in list.              |
+| last              | Pointer to last element in list.               |
+| allocator\\_owned | Boolean to designate owned allocator.          |
+| allocator         | Must allocate objects of [`sc_link_t`](@ref).  |
 """
 struct sc_list
     elem_count::Csize_t
@@ -2083,10 +2115,10 @@ const sc_list_t = sc_list
 
 Calculate the total memory used by a list.
 
-### Parameters
+# Arguments
 * `list`:\\[in\\] The list.
 * `is_dynamic`:\\[in\\] True if created with [`sc_list_new`](@ref), false if initialized with [`sc_list_init`](@ref)
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -2102,9 +2134,9 @@ end
 
 Allocate a new, empty linked list.
 
-### Parameters
+# Arguments
 * `allocator`:\\[in\\] Memory allocator for [`sc_link_t`](@ref), can be NULL in which case an internal allocator is created.
-### Returns
+# Returns
 Pointer to a newly allocated, empty list object.
 ### Prototype
 ```c
@@ -2124,7 +2156,7 @@ Destroy a linked list structure in O(N).
 
     If allocator was provided in [`sc_list_new`](@ref), it will not be destroyed.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] All memory allocated for this list is freed.
 ### Prototype
 ```c
@@ -2140,7 +2172,7 @@ end
 
 Initialize a list object with an external link allocator.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] List structure to be initialized.
 * `allocator`:\\[in\\] External memory allocator for [`sc_link_t`](@ref), which must exist already.
 ### Prototype
@@ -2161,7 +2193,7 @@ Remove all elements from a list in O(N).
 
     Calling [`sc_list_init`](@ref), then any list operations, then [`sc_list_reset`](@ref) is memory neutral.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] List structure to be emptied.
 ### Prototype
 ```c
@@ -2177,7 +2209,7 @@ end
 
 Unlink all list elements without returning them to the mempool. This runs in O(1) but is dangerous because the link memory stays alive.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] List structure to be unlinked.
 ### Prototype
 ```c
@@ -2193,10 +2225,10 @@ end
 
 Insert a list element at the beginning of the list.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] Valid list object.
 * `data`:\\[in\\] A new link is created holding this data.
-### Returns
+# Returns
 The link that has been created for data.
 ### Prototype
 ```c
@@ -2212,10 +2244,10 @@ end
 
 Insert a list element at the end of the list.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] Valid list object.
 * `data`:\\[in\\] A new link is created holding this data.
-### Returns
+# Returns
 The link that has been created for data.
 ### Prototype
 ```c
@@ -2231,11 +2263,11 @@ end
 
 Insert an element after a given list position.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] Valid list object.
 * `pred`:\\[in,out\\] The predecessor of the element to be inserted.
 * `data`:\\[in\\] A new link is created holding this data.
-### Returns
+# Returns
 The link that has been created for data.
 ### Prototype
 ```c
@@ -2251,10 +2283,10 @@ end
 
 Remove an element after a given list position.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] Valid, non-empty list object.
 * `pred`:\\[in\\] The predecessor of the element to be removed. If *pred* == NULL, the first element is removed, which is equivalent to calling [`sc_list_pop`](@ref) (list).
-### Returns
+# Returns
 The data of the removed and freed link.
 ### Prototype
 ```c
@@ -2270,9 +2302,9 @@ end
 
 Remove an element from the front of the list.
 
-### Parameters
+# Arguments
 * `list`:\\[in,out\\] Valid, non-empty list object.
-### Returns
+# Returns
 Returns the data of the removed first list element.
 ### Prototype
 ```c
@@ -2288,17 +2320,22 @@ end
 
 The [`sc_hash`](@ref) implements a hash table. It uses an array which has linked lists as elements.
 
-| Field        | Note                                   |
-| :----------- | :------------------------------------- |
-| elem\\_count | total number of objects contained      |
-| slots        | the slot count is slots->elem\\_count  |
-| user\\_data  | user data passed to hash function      |
-| allocator    | must allocate [`sc_link_t`](@ref)      |
+| Field             | Note                                            |
+| :---------------- | :---------------------------------------------- |
+| elem\\_count      | total number of objects contained               |
+| user\\_data       | User data passed to hash function.              |
+| slots             | The slot count is slots->elem\\_count.          |
+| hash\\_fn         | Function called to compute the hash value.      |
+| equal\\_fn        | Function called to check objects for equality.  |
+| resize\\_checks   | Running count of resize checks.                 |
+| resize\\_actions  | Running count of resize actions.                |
+| allocator\\_owned | Boolean designating allocator ownership.        |
+| allocator         | Must allocate [`sc_link_t`](@ref) objects.      |
 """
 struct sc_hash
     elem_count::Csize_t
-    slots::Ptr{sc_array_t}
     user_data::Ptr{Cvoid}
+    slots::Ptr{sc_array_t}
     hash_fn::sc_hash_function_t
     equal_fn::sc_equal_function_t
     resize_checks::Csize_t
@@ -2315,10 +2352,10 @@ const sc_hash_t = sc_hash
 
 Compute a hash value from a null-terminated string. This hash function is NOT cryptographically safe! Use libcrypt then.
 
-### Parameters
+# Arguments
 * `s`:\\[in\\] Null-terminated string to be hashed.
 * `u`:\\[in\\] Not used.
-### Returns
+# Returns
 The computed hash value as an unsigned integer.
 ### Prototype
 ```c
@@ -2334,9 +2371,9 @@ end
 
 Calculate the memory used by a hash table.
 
-### Parameters
+# Arguments
 * `hash`:\\[in\\] The hash table.
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -2352,7 +2389,7 @@ end
 
 Create a new hash table. The number of hash slots is chosen dynamically.
 
-### Parameters
+# Arguments
 * `hash_fn`:\\[in\\] Function to compute the hash value.
 * `equal_fn`:\\[in\\] Function to test two objects for equality.
 * `user_data`:\\[in\\] User data passed through to the hash function.
@@ -2391,7 +2428,7 @@ end
 
 Destroy a hash table and set its pointer to NULL. Destruction is done using sc_hash_destroy.
 
-### Parameters
+# Arguments
 * `phash`:\\[in,out\\] Address of pointer to hash table. On output, pointer is NULLed.
 ### Prototype
 ```c
@@ -2425,7 +2462,7 @@ Unlink all hash elements without returning them to the mempool.
 
 If the allocator is not owned, this runs faster than [`sc_hash_truncate`](@ref), but is dangerous because of potential memory leaks.
 
-### Parameters
+# Arguments
 * `hash`:\\[in,out\\] Hash structure to be unlinked.
 ### Prototype
 ```c
@@ -2441,7 +2478,7 @@ end
 
 Same effect as unlink and destroy, but in O(1). This is dangerous because of potential memory leaks.
 
-### Parameters
+# Arguments
 * `hash`:\\[in\\] Hash structure to be unlinked and destroyed.
 ### Prototype
 ```c
@@ -2457,10 +2494,11 @@ end
 
 Check if an object is contained in the hash table.
 
-### Parameters
+# Arguments
+* `hash`:\\[in\\] Valid hash table.
 * `v`:\\[in\\] The object to be looked up.
 * `found`:\\[out\\] If found != NULL, *found is set to the address of the pointer to the already contained object if the object is found. You can assign to **found to override.
-### Returns
+# Returns
 Returns true if object is found, false otherwise.
 ### Prototype
 ```c
@@ -2476,10 +2514,11 @@ end
 
 Insert an object into a hash table if it is not contained already.
 
-### Parameters
+# Arguments
+* `hash`:\\[in,out\\] Valid hash table.
 * `v`:\\[in\\] The object to be inserted.
 * `found`:\\[out\\] If found != NULL, *found is set to the address of the pointer to the already contained, or if not present, the new object. You can assign to **found to override.
-### Returns
+# Returns
 Returns true if object is added, false if it is already contained.
 ### Prototype
 ```c
@@ -2495,10 +2534,11 @@ end
 
 Remove an object from a hash table.
 
-### Parameters
+# Arguments
+* `hash`:\\[in,out\\] Valid hash table.
 * `v`:\\[in\\] The object to be removed.
 * `found`:\\[out\\] If found != NULL, *found is set to the object that is removed if that exists.
-### Returns
+# Returns
 Returns true if object is found, false if is not contained.
 ### Prototype
 ```c
@@ -2512,8 +2552,11 @@ end
 """
     sc_hash_foreach(hash, fn)
 
-Invoke a callback for every member of the hash table. The functions hash\\_fn and equal\\_fn are not called by this function.
+Invoke a callback for every member of the hash table. The hashing and equality functions are not called from within this function.
 
+# Arguments
+* `hash`:\\[in,out\\] Valid hash table.
+* `fn`:\\[in\\] Callback executed on every hash table element.
 ### Prototype
 ```c
 void sc_hash_foreach (sc_hash_t * hash, sc_hash_foreach_t fn);
@@ -2528,6 +2571,10 @@ end
 
 Compute and print statistical information about the occupancy.
 
+# Arguments
+* `package_id`:\\[in\\] Library package id for logging.
+* `log_priority`:\\[in\\] Priority for logging; see sc_log.
+* `hash`:\\[in\\] Valid hash table.
 ### Prototype
 ```c
 void sc_hash_print_statistics (int package_id, int log_priority, sc_hash_t * hash);
@@ -2537,25 +2584,28 @@ function sc_hash_print_statistics(package_id, log_priority, hash)
     @ccall libsc.sc_hash_print_statistics(package_id::Cint, log_priority::Cint, hash::Ptr{sc_hash_t})::Cvoid
 end
 
-struct sc_hash_array_data
-    pa::Ptr{sc_array_t}
-    hash_fn::sc_hash_function_t
-    equal_fn::sc_equal_function_t
-    user_data::Ptr{Cvoid}
-    current_item::Ptr{Cvoid}
-end
+mutable struct sc_hash_array_data end
 
+"""Internal context structure for sc_hash_array."""
 const sc_hash_array_data_t = sc_hash_array_data
 
 """
     sc_hash_array
 
 The [`sc_hash_array`](@ref) implements an array backed up by a hash table. This enables O(1) access for array elements.
+
+| Field           | Note                                   |
+| :-------------- | :------------------------------------- |
+| user\\_data     | Context passed by the user.            |
+| a               | Array storing the elements.            |
+| h               | Hash map pointing into element array.  |
+| internal\\_data | Private context data.                  |
 """
 struct sc_hash_array
+    user_data::Ptr{Cvoid}
     a::sc_array_t
-    internal_data::sc_hash_array_data_t
     h::Ptr{sc_hash_t}
+    internal_data::Ptr{sc_hash_array_data_t}
 end
 
 """The [`sc_hash_array`](@ref) implements an array backed up by a hash table. This enables O(1) access for array elements."""
@@ -2566,9 +2616,9 @@ const sc_hash_array_t = sc_hash_array
 
 Calculate the memory used by a hash array.
 
-### Parameters
+# Arguments
 * `ha`:\\[in\\] The hash array.
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -2584,10 +2634,11 @@ end
 
 Create a new hash array.
 
-### Parameters
+# Arguments
 * `elem_size`:\\[in\\] Size of one array element in bytes.
 * `hash_fn`:\\[in\\] Function to compute the hash value.
 * `equal_fn`:\\[in\\] Function to test two objects for equality.
+* `user_data`:\\[in\\] Anonymous context data stored in the hash array.
 ### Prototype
 ```c
 sc_hash_array_t *sc_hash_array_new (size_t elem_size, sc_hash_function_t hash_fn, sc_equal_function_t equal_fn, void *user_data);
@@ -2602,6 +2653,8 @@ end
 
 Destroy a hash array.
 
+# Arguments
+* `hash_array`:\\[in,out\\] Valid hash array is deallocated.
 ### Prototype
 ```c
 void sc_hash_array_destroy (sc_hash_array_t * hash_array);
@@ -2616,6 +2669,10 @@ end
 
 Check the internal consistency of a hash array.
 
+# Arguments
+* `hash_array`:\\[in\\] Hash array structure is checked for validity.
+# Returns
+True if and only if *hash_array* is valid.
 ### Prototype
 ```c
 int sc_hash_array_is_valid (sc_hash_array_t * hash_array);
@@ -2630,7 +2687,7 @@ end
 
 Remove all elements from the hash array.
 
-### Parameters
+# Arguments
 * `hash_array`:\\[in,out\\] Hash array to truncate.
 ### Prototype
 ```c
@@ -2646,11 +2703,12 @@ end
 
 Check if an object is contained in a hash array.
 
-### Parameters
+# Arguments
+* `hash_array`:\\[in,out\\] Valid hash array.
 * `v`:\\[in\\] A pointer to the object.
 * `position`:\\[out\\] If position != NULL, *position is set to the array position of the already contained object if found.
-### Returns
-Returns true if object is found, false otherwise.
+# Returns
+True if object is found, false otherwise.
 ### Prototype
 ```c
 int sc_hash_array_lookup (sc_hash_array_t * hash_array, void *v, size_t *position);
@@ -2665,10 +2723,11 @@ end
 
 Insert an object into a hash array if it is not contained already. The object is not copied into the array. Use the return value for that. New objects are guaranteed to be added at the end of the array.
 
-### Parameters
+# Arguments
+* `hash_array`:\\[in,out\\] Valid hash array.
 * `v`:\\[in\\] A pointer to the object. Used for search only.
 * `position`:\\[out\\] If position != NULL, *position is set to the array position of the already contained, or if not present, the new object.
-### Returns
+# Returns
 Returns NULL if the object is already contained. Otherwise returns its new address in the array.
 ### Prototype
 ```c
@@ -2680,11 +2739,28 @@ function sc_hash_array_insert_unique(hash_array, v, position)
 end
 
 """
+    sc_hash_array_foreach(hash_array, fn)
+
+Invoke a callback for every member of the hash array.
+
+# Arguments
+* `hash_array`:\\[in,out\\] Valid hash array.
+* `fn`:\\[in\\] Callback executed on every hash array element.
+### Prototype
+```c
+void sc_hash_array_foreach (sc_hash_array_t * hash_array, sc_hash_foreach_t fn);
+```
+"""
+function sc_hash_array_foreach(hash_array, fn)
+    @ccall libsc.sc_hash_array_foreach(hash_array::Ptr{sc_hash_array_t}, fn::sc_hash_foreach_t)::Cvoid
+end
+
+"""
     sc_hash_array_rip(hash_array, rip)
 
 Extract the array data from a hash array and destroy everything else.
 
-### Parameters
+# Arguments
 * `hash_array`:\\[in\\] The hash array is destroyed after extraction.
 * `rip`:\\[in\\] Array structure that will be overwritten. All previous array data (if any) will be leaked. The filled array can be freed with [`sc_array_reset`](@ref).
 ### Prototype
@@ -2702,6 +2778,12 @@ end
 The [`sc_recycle_array`](@ref) object provides an array of slots that can be reused.
 
 It keeps a list of free slots in the array which will be used for insertion while available. Otherwise, the array is grown.
+
+| Field        | Note                         |
+| :----------- | :--------------------------- |
+| elem\\_count | Number of valid entries.     |
+| a            | Array of objects contained.  |
+| f            | Cache of freed objects.      |
 """
 struct sc_recycle_array
     elem_count::Csize_t
@@ -2721,7 +2803,8 @@ const sc_recycle_array_t = sc_recycle_array
 
 Initialize a recycle array.
 
-### Parameters
+# Arguments
+* `rec_array`:\\[out\\] Uninitialized turned into a recycle array.
 * `elem_size`:\\[in\\] Size of the objects to be stored in the array.
 ### Prototype
 ```c
@@ -2753,10 +2836,11 @@ end
 
 Insert an object into the recycle array. The object is not copied into the array. Use the return value for that.
 
-### Parameters
+# Arguments
+* `rec_array`:\\[in,out\\] Valid recycle array.
 * `position`:\\[out\\] If position != NULL, *position is set to the array position of the inserted object.
-### Returns
-Returns the new address of the object in the array.
+# Returns
+The new address of the object in the array.
 ### Prototype
 ```c
 void *sc_recycle_array_insert (sc_recycle_array_t * rec_array, size_t *position);
@@ -2771,9 +2855,10 @@ end
 
 Remove an object from the recycle array. It must be valid.
 
-### Parameters
+# Arguments
+* `rec_array`:\\[in,out\\] Valid recycle array.
 * `position`:\\[in\\] Index into the array for the object to remove.
-### Returns
+# Returns
 The pointer to the removed object. Will be valid as long as no other function is called on this recycle array.
 ### Prototype
 ```c
@@ -2792,12 +2877,13 @@ const t8_linearidx_t = UInt64
 
 Communication tags used internal to t8code.
 
-| Enumerator                      | Note                               |
-| :------------------------------ | :--------------------------------- |
-| T8\\_MPI\\_PARTITION\\_CMESH    | Used for coarse mesh partitioning  |
-| T8\\_MPI\\_PARTITION\\_FOREST   | Used for forest partitioning       |
-| T8\\_MPI\\_GHOST\\_FOREST       | Used for for ghost layer creation  |
-| T8\\_MPI\\_GHOST\\_EXC\\_FOREST | Used for ghost data exchange       |
+| Enumerator                             | Note                                                |
+| :------------------------------------- | :-------------------------------------------------- |
+| T8\\_MPI\\_PARTITION\\_CMESH           | Used for coarse mesh partitioning                   |
+| T8\\_MPI\\_PARTITION\\_FOREST          | Used for forest partitioning                        |
+| T8\\_MPI\\_GHOST\\_FOREST              | Used for for ghost layer creation                   |
+| T8\\_MPI\\_GHOST\\_EXC\\_FOREST        | Used for ghost data exchange                        |
+| T8\\_MPI\\_TEST\\_ELEMENT\\_PACK\\_TAG | Used for testing mpi pack and unpack functionality  |
 """
 @cenum t8_MPI_tag_t::UInt32 begin
     T8_MPI_TAG_FIRST = 214
@@ -2805,7 +2891,8 @@ Communication tags used internal to t8code.
     T8_MPI_PARTITION_FOREST = 296
     T8_MPI_GHOST_FOREST = 297
     T8_MPI_GHOST_EXC_FOREST = 298
-    T8_MPI_TAG_LAST = 299
+    T8_MPI_TEST_ELEMENT_PACK_TAG = 299
+    T8_MPI_TAG_LAST = 300
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
@@ -2886,7 +2973,7 @@ end
 
 Register t8code with libsc and print version and variable information.
 
-### Parameters
+# Arguments
 * `log_threshold`:\\[in\\] Declared in sc.h. `SC_LP_DEFAULT` is fine. You can also choose from log levels SC\\_LP\\_*.
 ### Prototype
 ```c
@@ -2902,9 +2989,9 @@ end
 
 Return a pointer to an array element indexed by a [`t8_locidx_t`](@ref).
 
-### Parameters
+# Arguments
 * `index`:\\[in\\] needs to be in [0]..[elem\\_count-1].
-### Returns
+# Returns
 A void * pointing to entry *it* in *array*.
 ### Prototype
 ```c
@@ -3043,7 +3130,7 @@ const sc_refcount_t = sc_refcount
 
 Initialize a well-defined but unusable reference counter. Specifically, we set its package identifier and reference count to -1. To make this reference counter usable, call sc_refcount_init.
 
-### Parameters
+# Arguments
 * `rc`:\\[out\\] This reference counter is defined as invalid. It will return false on both sc_refcount_is_active and sc_refcount_is_last. It can be made valid by calling sc_refcount_init. No other functions must be called on it.
 ### Prototype
 ```c
@@ -3059,7 +3146,7 @@ end
 
 Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
 
-### Parameters
+# Arguments
 * `rc`:\\[out\\] This reference counter is initialized to one. The object's contents may be undefined on input.
 * `package_id`:\\[in\\] Either -1 or a package registered to libsc.
 ### Prototype
@@ -3076,9 +3163,9 @@ end
 
 Create a new reference counter with count initialized to 1. Equivalent to calling sc_refcount_init on a newly allocated rc object.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Either -1 or a package registered to libsc.
-### Returns
+# Returns
 A reference counter with count one.
 ### Prototype
 ```c
@@ -3094,7 +3181,7 @@ end
 
 Destroy a reference counter. It must have been counted down to zero before, thus reached an inactive state.
 
-### Parameters
+# Arguments
 * `rc`:\\[in,out\\] This reference counter must have reached count zero.
 ### Prototype
 ```c
@@ -3110,7 +3197,7 @@ end
 
 Increase a reference counter. The counter must be active, that is, have a value greater than zero.
 
-### Parameters
+# Arguments
 * `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is increased by one.
 ### Prototype
 ```c
@@ -3126,11 +3213,11 @@ end
 
 Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used further with sc_refcount_ref or
 
-### Parameters
+# Arguments
 * `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is decreased by one.
-### Returns
+# Returns
 True if the count has reached zero, false otherwise.
-### See also
+# See also
 [`sc_refcount_unref`](@ref). It is legal, however, to reactivate it later by calling, [`sc_refcount_init`](@ref).
 
 ### Prototype
@@ -3147,9 +3234,9 @@ end
 
 Check whether a reference counter has a positive value. This means that the reference counter is in use and corresponds to a live object.
 
-### Parameters
+# Arguments
 * `rc`:\\[in\\] A reference counter.
-### Returns
+# Returns
 True if the count is greater zero, false otherwise.
 ### Prototype
 ```c
@@ -3165,9 +3252,9 @@ end
 
 Check whether a reference counter has value one. This means that this counter is the last of its kind, which we may optimize for.
 
-### Parameters
+# Arguments
 * `rc`:\\[in\\] A reference counter.
-### Returns
+# Returns
 True if the count is exactly one.
 ### Prototype
 ```c
@@ -3178,69 +3265,177 @@ function sc_refcount_is_last(rc)
     @ccall libsc.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
 end
 
-mutable struct t8_cmesh end
+mutable struct t8_eclass_scheme end
+
+"""This typedef holds virtual functions for a particular element class."""
+const t8_eclass_scheme_c = t8_eclass_scheme
+
+"""
+    t8_scheme_cxx
+
+The scheme holds implementations for one or more element classes.
+
+| Field            | Note                                                   |
+| :--------------- | :----------------------------------------------------- |
+| rc               | Reference counter for this scheme.                     |
+| eclass\\_schemes | This array holds one virtual table per element class.  |
+"""
+struct t8_scheme_cxx
+    rc::sc_refcount_t
+    eclass_schemes::NTuple{8, Ptr{t8_eclass_scheme_c}}
+end
+
+"""The scheme holds implementations for one or more element classes."""
+const t8_scheme_cxx_t = t8_scheme_cxx
+
+"""We can reuse the reference counter type from libsc."""
+const t8_refcount_t = sc_refcount_t
+
+struct t8_cmesh_trees
+    from_proc::Ptr{sc_array_t}
+    tree_to_proc::Ptr{Cint}
+    ghost_to_proc::Ptr{Cint}
+    ghost_globalid_to_local_id::Ptr{sc_hash_t}
+    global_local_mempool::Ptr{sc_mempool_t}
+end
+
+const t8_cmesh_trees_t = Ptr{t8_cmesh_trees}
+
+mutable struct t8_shmem_array end
+
+const t8_shmem_array_t = Ptr{t8_shmem_array}
+
+mutable struct t8_geometry_handler end
+
+"""This typedef holds virtual functions for the geometry handler. We need it so that we can use [`t8_geometry_handler_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling) TODO: Delete this when the cmesh is a proper cpp class."""
+const t8_geometry_handler_c = t8_geometry_handler
+
+"""
+    t8_stash
+
+The stash data structure is used to store information about the cmesh before it is committed. In particular we store the eclasses of the trees, the face-connections and the tree attributes. Using the stash structure allows us to have a very flexible interface. When constructing a new mesh, the user can specify all these mesh entities in arbitrary order. As soon as the cmesh is committed the information is copied from the stash to the cmesh in an order mannered.
+
+| Field      | Note                                                                    |
+| :--------- | :---------------------------------------------------------------------- |
+| classes    | Stores the eclasses of the trees.  # See also [`t8_stash_class`](@ref)  |
+| joinfaces  | Stores the face-connections.  # See also [`t8_stash_joinface`](@ref)    |
+| attributes | Stores the attributes.  # See also [`t8_stash_attribute`](@ref)         |
+"""
+struct t8_stash
+    classes::sc_array_t
+    joinfaces::sc_array_t
+    attributes::sc_array_t
+end
+
+const t8_stash_t = Ptr{t8_stash}
+
+"""
+    t8_cprofile
+
+This struct is used to profile cmesh algorithms. The cmesh struct stores a pointer to a profile struct, and if it is nonzero, various runtimes and data measurements are stored here.
+
+| Field                             | Note                                                                                                          |
+| :-------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| partition\\_trees\\_shipped       | The number of trees this process has sent to other in the last partition call.                                |
+| partition\\_ghosts\\_shipped      | The number of ghosts this process has sent to other in the last partition call.                               |
+| partition\\_trees\\_recv          | The number of trees this process has received from other in the last partition call.                          |
+| partition\\_ghosts\\_recv         | The number of ghosts this process has received from other in the last partition call.                         |
+| partition\\_bytes\\_sent          | The total number of bytes sent to other processes in the last partition call.                                 |
+| partition\\_procs\\_sent          | The number of different processes this process has send local trees or ghosts to in the last partition call.  |
+| first\\_tree\\_shared             | 1 if this processes' first tree is shared. 0 if not.                                                          |
+| partition\\_runtime               | The runtime of the last call to *t8_cmesh_partition*.                                                         |
+| commit\\_runtime                  | The runtime of the last call to [`t8_cmesh_commit`](@ref).                                                    |
+| geometry\\_evaluate\\_num\\_calls | The number of calls to [`t8_geometry_evaluate`](@ref).                                                        |
+| geometry\\_evaluate\\_runtime     | The accumulated runtime of calls to [`t8_geometry_evaluate`](@ref).                                           |
+# See also
+[`t8_cmesh_set_profiling`](@ref) and, [`t8_cmesh_print_profile`](@ref)
+"""
+struct t8_cprofile
+    partition_trees_shipped::t8_locidx_t
+    partition_ghosts_shipped::t8_locidx_t
+    partition_trees_recv::t8_locidx_t
+    partition_ghosts_recv::t8_locidx_t
+    partition_bytes_sent::Csize_t
+    partition_procs_sent::Cint
+    first_tree_shared::Cint
+    partition_runtime::Cdouble
+    commit_runtime::Cdouble
+    geometry_evaluate_num_calls::Cdouble
+    geometry_evaluate_runtime::Cdouble
+end
+
+"""
+This struct is used to profile cmesh algorithms. The cmesh struct stores a pointer to a profile struct, and if it is nonzero, various runtimes and data measurements are stored here.
+
+# See also
+[`t8_cmesh_set_profiling`](@ref) and, [`t8_cmesh_print_profile`](@ref)
+"""
+const t8_cprofile_t = t8_cprofile
+
+"""
+    t8_cmesh
+
+This structure holds the connectivity data of the coarse mesh. It can either be replicated, then each process stores a copy of the whole mesh, or partitioned. In the latter case, each process only stores a local portion of the mesh plus information about ghost elements.
+
+The coarse mesh is a collection of coarse trees that can be identified along faces. TODO: this description is outdated. rewrite it. The array ctrees stores these coarse trees sorted by their (global) tree\\_id. If the mesh if partitioned it is partitioned according to an (possible only virtually existing) underlying fine mesh. Therefore the ctrees array can store duplicated trees on different processes, if each of these processes owns elements of the same tree in the fine mesh.
+
+Each tree stores information about its face-neighbours in an array of t8_ctree_fneighbor.
+
+If partitioned the ghost trees are stored in a hash table that is backed up by an array. The hash value of a ghost tree is its tree\\_id modulo the number of ghosts on this process.
+
+| Field                              | Note                                                                                                                                                                                                               |
+| :--------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| committed                          | Flag that specifies whether the cmesh is committed or not. t8_cmesh_commit                                                                                                                                         |
+| dimension                          | The dimension of the cmesh. It is set when the first tree is inserted.                                                                                                                                             |
+| set\\_partition                    | If nonzero the cmesh is partitioned. If zero each process has the whole cmesh.                                                                                                                                     |
+| face\\_knowledge                   | If partitioned the level of face knowledge that is expected. t8_mesh_set_partitioned; see t8_cmesh_set_partition.                                                                                                  |
+| set\\_partition\\_scheme           | If the cmesh is to be partitioned according to a uniform level, the scheme that describes the refinement pattern. See t8_cmesh_set_partition.                                                                      |
+| set\\_partition\\_level            | Non-negative if the cmesh should be partitioned from an already existing cmesh with an assumed *level* uniform mesh underneath.                                                                                    |
+| set\\_from                         | If this cmesh shall be derived from an existing cmesh by copy or more elaborate modification, we store a pointer to this other cmesh here.                                                                         |
+| mpirank                            | Number of this MPI process.                                                                                                                                                                                        |
+| mpisize                            | Number of MPI processes.                                                                                                                                                                                           |
+| rc                                 | The reference count of the cmesh.                                                                                                                                                                                  |
+| num\\_trees                        | The global number of trees                                                                                                                                                                                         |
+| num\\_local\\_trees                | If partitioned the number of trees on this process.  Otherwise the global number of trees.                                                                                                                         |
+| num\\_ghosts                       | If partitioned the number of neighbor trees owned by different processes.                                                                                                                                          |
+| num\\_local\\_trees\\_per\\_eclass | After commit the number of local trees for each eclass. Stores the same entries as *num_trees_per_eclass*, if the cmesh is replicated.                                                                             |
+| num\\_trees\\_per\\_eclass         | After commit the number of global trees for each eclass.                                                                                                                                                           |
+| trees                              | structure that holds all local trees and ghosts                                                                                                                                                                    |
+| first\\_tree                       | The global index of the first local tree on this process.  Zero if the cmesh is not partitioned. -1 if this processor is empty. See also https://github.com/DLR-AMR/t8code/wiki/Tree-indexing                      |
+| first\\_tree\\_shared              | If partitioned true if the first tree on this process is also the last tree  on the next process. Always zero if num\\_local\\_trees = 0                                                                           |
+| tree\\_offsets                     | If partitioned for each process the global index of its first local tree or -(first local tree) - 1 if the first tree on that process is shared. Since this is very memory consuming we only fill it when needed.  |
+| geometry\\_handler                 | Handles all geometries that are used by trees in this cmesh.                                                                                                                                                       |
+| stash                              | Used as temporary storage for the trees before commit.                                                                                                                                                             |
+| profile                            | Used to measure runtimes and statistics of the cmesh algorithms.                                                                                                                                                   |
+# See also
+t8\\_ctree\\_fneighbor
+"""
+struct t8_cmesh
+    committed::Cint
+    dimension::Cint
+    set_partition::Cint
+    face_knowledge::Cint
+    set_partition_scheme::Ptr{t8_scheme_cxx_t}
+    set_partition_level::Int8
+    set_from::Ptr{t8_cmesh}
+    mpirank::Cint
+    mpisize::Cint
+    rc::t8_refcount_t
+    num_trees::t8_gloidx_t
+    num_local_trees::t8_locidx_t
+    num_ghosts::t8_locidx_t
+    num_local_trees_per_eclass::NTuple{8, t8_locidx_t}
+    num_trees_per_eclass::NTuple{8, t8_gloidx_t}
+    trees::t8_cmesh_trees_t
+    first_tree::t8_gloidx_t
+    first_tree_shared::Int8
+    tree_offsets::t8_shmem_array_t
+    geometry_handler::Ptr{t8_geometry_handler_c}
+    stash::t8_stash_t
+    profile::Ptr{t8_cprofile_t}
+end
 
 const t8_cmesh_t = Ptr{t8_cmesh}
-
-mutable struct t8_ctree end
-
-const t8_ctree_t = Ptr{t8_ctree}
-
-mutable struct t8_cghost end
-
-const t8_cghost_t = Ptr{t8_cghost}
-
-"""
-    t8_cmesh_init(pcmesh)
-
-Create a new cmesh with reference count one. This cmesh needs to be specialized with the t8\\_cmesh\\_set\\_* calls. Then it needs to be set up with t8_cmesh_commit.
-
-### Parameters
-* `pcmesh`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new cmesh.
-### Prototype
-```c
-void t8_cmesh_init (t8_cmesh_t *pcmesh);
-```
-"""
-function t8_cmesh_init(pcmesh)
-    @ccall libt8.t8_cmesh_init(pcmesh::Ptr{t8_cmesh_t})::Cvoid
-end
-
-"""
-    t8_cmesh_is_initialized(cmesh)
-
-Check whether a cmesh is not NULL, initialized and not committed. In addition, it asserts that the cmesh is consistent as much as possible.
-
-### Parameters
-* `cmesh`:\\[in\\] This cmesh is examined. May be NULL.
-### Returns
-True if cmesh is not NULL, t8_cmesh_init has been called on it, but not t8_cmesh_commit. False otherwise.
-### Prototype
-```c
-int t8_cmesh_is_initialized (t8_cmesh_t cmesh);
-```
-"""
-function t8_cmesh_is_initialized(cmesh)
-    @ccall libt8.t8_cmesh_is_initialized(cmesh::t8_cmesh_t)::Cint
-end
-
-"""
-    t8_cmesh_is_committed(cmesh)
-
-Check whether a cmesh is not NULL, initialized and committed. In addition, it asserts that the cmesh is consistent as much as possible.
-
-### Parameters
-* `cmesh`:\\[in\\] This cmesh is examined. May be NULL.
-### Returns
-True if cmesh is not NULL and t8_cmesh_init has been called on it as well as t8_cmesh_commit. False otherwise.
-### Prototype
-```c
-int t8_cmesh_is_committed (t8_cmesh_t cmesh);
-```
-"""
-function t8_cmesh_is_committed(cmesh)
-    @ccall libt8.t8_cmesh_is_committed(cmesh::t8_cmesh_t)::Cint
-end
 
 """
     t8_eclass
@@ -3278,19 +3473,114 @@ end
 const t8_eclass_t = t8_eclass
 
 """
+    t8_ctree
+
+This structure holds the data of a local tree including the information about face neighbors. For those the tree\\_to\\_face index is computed as follows. Let F be the maximal number of faces of any eclass of the cmesh's dimension, then ttf % F is the face number and ttf / F is the orientation. (t8_eclass_max_num_faces) The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees. We chose a main\\_face from them as follows: Either both trees have the same element class, then the face with the lower face number is the main\\_face or the trees belong to different classes in which case the face belonging to the tree with the lower class according to the ordering triangle < square, hex < tet < prism < pyramid, is the main\\_face. Then face corner 0 of the main\\_face connects to a face corner k in the other face. The face orientation is defined as the number k. If the classes are equal and my\\_face == other\\_face, treating either of both faces as the main\\_face leads to the same result. See https://arxiv.org/pdf/1611.02929.pdf for more details.
+
+| Field            | Note                                                                                        |
+| :--------------- | :------------------------------------------------------------------------------------------ |
+| treeid           | The local number of this tree.                                                              |
+| eclass           | The eclass of this tree.                                                                    |
+| neigh\\_offset   | Adding this offset to the address of the tree yields the array of face\\_neighbor entries   |
+| att\\_offset     | Adding this offset to the address of the tree yields the array of attribute\\_info entries  |
+| num\\_attributes | The number of attributes at this tree                                                       |
+"""
+struct t8_ctree
+    treeid::t8_locidx_t
+    eclass::t8_eclass_t
+    neigh_offset::Csize_t
+    att_offset::Csize_t
+    num_attributes::Cint
+end
+
+const t8_ctree_t = Ptr{t8_ctree}
+
+"""
+    t8_cghost
+
+| Field            | Note                                                                                         |
+| :--------------- | :------------------------------------------------------------------------------------------- |
+| treeid           | The global number of this ghost.                                                             |
+| eclass           | The eclass of this ghost.                                                                    |
+| att\\_offset     | Adding this offset to the address of the ghost yields the array of attribute\\_info entries  |
+| num\\_attributes | The number of attributes at this ghost                                                       |
+"""
+struct t8_cghost
+    treeid::t8_gloidx_t
+    eclass::t8_eclass_t
+    neigh_offset::Csize_t
+    att_offset::Csize_t
+    num_attributes::Cint
+end
+
+const t8_cghost_t = Ptr{t8_cghost}
+
+"""
+    t8_cmesh_init(pcmesh)
+
+Create a new cmesh with reference count one. This cmesh needs to be specialized with the t8\\_cmesh\\_set\\_* calls. Then it needs to be set up with t8_cmesh_commit.
+
+# Arguments
+* `pcmesh`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new cmesh.
+### Prototype
+```c
+void t8_cmesh_init (t8_cmesh_t *pcmesh);
+```
+"""
+function t8_cmesh_init(pcmesh)
+    @ccall libt8.t8_cmesh_init(pcmesh::Ptr{t8_cmesh_t})::Cvoid
+end
+
+"""
+    t8_cmesh_is_initialized(cmesh)
+
+Check whether a cmesh is not NULL, initialized and not committed. In addition, it asserts that the cmesh is consistent as much as possible.
+
+# Arguments
+* `cmesh`:\\[in\\] This cmesh is examined. May be NULL.
+# Returns
+True if cmesh is not NULL, t8_cmesh_init has been called on it, but not t8_cmesh_commit. False otherwise.
+### Prototype
+```c
+int t8_cmesh_is_initialized (t8_cmesh_t cmesh);
+```
+"""
+function t8_cmesh_is_initialized(cmesh)
+    @ccall libt8.t8_cmesh_is_initialized(cmesh::t8_cmesh_t)::Cint
+end
+
+"""
+    t8_cmesh_is_committed(cmesh)
+
+Check whether a cmesh is not NULL, initialized and committed. In addition, it asserts that the cmesh is consistent as much as possible.
+
+# Arguments
+* `cmesh`:\\[in\\] This cmesh is examined. May be NULL.
+# Returns
+True if cmesh is not NULL and t8_cmesh_init has been called on it as well as t8_cmesh_commit. False otherwise.
+### Prototype
+```c
+int t8_cmesh_is_committed (const t8_cmesh_t cmesh);
+```
+"""
+function t8_cmesh_is_committed(cmesh)
+    @ccall libt8.t8_cmesh_is_committed(cmesh::t8_cmesh_t)::Cint
+end
+
+"""
     t8_cmesh_tree_vertices_negative_volume(eclass, vertices, num_vertices)
 
 Given a set of vertex coordinates for a tree of a given eclass. Query whether the geometric volume of the tree with this coordinates would be negative.
 
-### Parameters
+# Arguments
 * `eclass`:\\[in\\] The eclass of a tree.
 * `vertices`:\\[in\\] The coordinates of the tree's vertices.
 * `num_vertices`:\\[in\\] The number of vertices. *vertices* must hold 3 * *num_vertices* many doubles. *num_vertices* must match t8_eclass_num_vertices[*eclass*]
-### Returns
+# Returns
 True if the geometric volume describe by *vertices* is negative. Fals otherwise. Returns true if a tree of the given eclass with the given vertex coordinates does have negative volume.
 ### Prototype
 ```c
-int t8_cmesh_tree_vertices_negative_volume (t8_eclass_t eclass, double *vertices, int num_vertices);
+int t8_cmesh_tree_vertices_negative_volume (const t8_eclass_t eclass, const double *vertices, const int num_vertices);
 ```
 """
 function t8_cmesh_tree_vertices_negative_volume(eclass, vertices, num_vertices)
@@ -3302,7 +3592,7 @@ end
 
 This function sets a cmesh to be derived from. The default is to create a cmesh standalone by specifying all data manually. A coarse mesh can also be constructed by deriving it from an existing one. The derivation from another cmesh may optionally be combined with a repartition or uniform refinement of each tree. This function overrides a previously set cmesh to be derived from.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] Must be initialized, but not committed. May even be NULL to revert to standalone.
 * `set_from`:\\[in,out\\] Reference counter on this cmesh is bumped. It will be unbumped by t8_cmesh_commit, after which *from* is no longer remembered. Other than that the from object is not changed.
 ### Prototype
@@ -3313,10 +3603,6 @@ void t8_cmesh_set_derive (t8_cmesh_t cmesh, t8_cmesh_t set_from);
 function t8_cmesh_set_derive(cmesh, set_from)
     @ccall libt8.t8_cmesh_set_derive(cmesh::t8_cmesh_t, set_from::t8_cmesh_t)::Cvoid
 end
-
-mutable struct t8_shmem_array end
-
-const t8_shmem_array_t = Ptr{t8_shmem_array}
 
 """
     t8_cmesh_alloc_offsets(mpisize, comm)
@@ -3339,11 +3625,12 @@ Declare if the cmesh is understood as a partitioned cmesh and specify the proces
 
     A value of *set_face_knowledge* other than -1 or 3 is not yet supported.
 
-### Parameters
-* `cmesh`:\\[in,out\\] The cmesh to be updated.  [in] set\\_face\\_knowledge Several values are possible that define how much information is required on face connections, specified by t8_cmesh_set_join. 0: Expect face connection of local trees. 1: In addition, expect face connection from ghost trees to local trees. 2: In addition, expect face connection between ghost trees. 3: Expect face connection of local and ghost trees. Consistency of this requirement is checked on t8_cmesh_commit. -1: Co not change the face\\_knowledge level but keep any previously set ones. (Possibly by a previous call to t8_cmesh_set_partition_range)
+# Arguments
+* `cmesh`:\\[in,out\\] The cmesh to be updated.
+* `set_face_knowledge`:\\[in\\] Several values are possible that define how much information is required on face connections, specified by t8_cmesh_set_join. 0: Expect face connection of local trees. 1: In addition, expect face connection from ghost trees to local trees. 2: In addition, expect face connection between ghost trees. 3: Expect face connection of local and ghost trees. Consistency of this requirement is checked on t8_cmesh_commit. -1: Do not change the face\\_knowledge level but keep any previously set ones. (Possibly by a previous call to t8_cmesh_set_partition_range)
 * `first_local_tree`:\\[in\\] The global index ID of the first tree on this process. If this tree is also the last tree on the previous process, then the argument must be -ID - 1.
 * `last_local_tree`:\\[in\\] The global index of the last tree on this process. If this process should be empty then *last_local_tree* must be strictly smaller than *first_local_tree*.
-### See also
+# See also
 t8\\_cmesh\\_set\\_partition\\_offset, [`t8_cmesh_set_partition_uniform`](@ref)
 
 ### Prototype
@@ -3360,7 +3647,7 @@ end
 
 Declare if the cmesh is understood as a partitioned cmesh and specify the first local tree for each process. This call is only valid when the cmesh is not yet committed via a call to t8_cmesh_commit. If instead t8_cmesh_set_partition_range was called and the cmesh is derived then the offset array is constructed during commit.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `tree_offsets`:\\[in\\] An array of global tree\\_id offsets for each process can be specified here. TODO: document flag for shared trees.
 ### Prototype
@@ -3372,35 +3659,12 @@ function t8_cmesh_set_partition_offsets(cmesh, tree_offsets)
     @ccall libt8.t8_cmesh_set_partition_offsets(cmesh::t8_cmesh_t, tree_offsets::t8_shmem_array_t)::Cvoid
 end
 
-mutable struct t8_eclass_scheme end
-
-"""This typedef holds virtual functions for a particular element class."""
-const t8_eclass_scheme_c = t8_eclass_scheme
-
-"""
-    t8_scheme_cxx
-
-The scheme holds implementations for one or more element classes.
-
-| Field            | Note                                                   |
-| :--------------- | :----------------------------------------------------- |
-| rc               | Reference counter for this scheme.                     |
-| eclass\\_schemes | This array holds one virtual table per element class.  |
-"""
-struct t8_scheme_cxx
-    rc::sc_refcount_t
-    eclass_schemes::NTuple{8, Ptr{t8_eclass_scheme_c}}
-end
-
-"""The scheme holds implementations for one or more element classes."""
-const t8_scheme_cxx_t = t8_scheme_cxx
-
 """
     t8_cmesh_set_partition_uniform(cmesh, element_level, ts)
 
 Declare if the cmesh is understood as a partitioned cmesh where the partition table is derived from an assumed uniform refinement of a given level. This call is only valid when the cmesh is not yet committed via a call to t8_cmesh_commit.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `element_level`:\\[in\\] The refinement\\_level.
 * `ts`:\\[in\\] The element scheme describing the refinement pattern. We take ownership. This can be prevented by referencing **ts** before calling this function.
@@ -3432,7 +3696,7 @@ end
 
 Set the dimension of a cmesh. If any tree is inserted to the cmesh via [`t8_cmesh_set_tree_class`](@ref), then the dimension is set automatically to that of the inserted tree. However, if the cmesh is constructed partitioned and the part on this process is empty, it is necessary to set the dimension by hand.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `dim`:\\[in\\] The dimension to be set. Must satisfy 0 <= dim <= 3. The cmesh must not be committed before calling this function.
 ### Prototype
@@ -3449,7 +3713,7 @@ end
 
 Set the class of a tree in the cmesh. It is not allowed to call this function after t8_cmesh_commit. It is not allowed to call this function multiple times for the same tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `tree_id`:\\[in\\] The global number of the tree.
 * `tree_class`:\\[in\\] The element class of this tree.
@@ -3471,7 +3735,7 @@ Store an attribute at a tree in a cmesh. Attributes can be arbitrary data that i
 
     If an attribute with the given package\\_id and key already exists, then it will get overwritten.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `gtree_id`:\\[in\\] The global id of the tree.
 * `package_id`:\\[in\\] Unique identifier of a valid software package.
@@ -3479,7 +3743,7 @@ Store an attribute at a tree in a cmesh. Attributes can be arbitrary data that i
 * `data`:\\[in\\] A pointer to the attribute data.
 * `data_size`:\\[in\\] The number of bytes of the attribute.
 * `data_persists`:\\[in\\] This flag can be used to optimize memory. If true then t8code assumes that the attribute data is present at the memory that *data* points to when t8_cmesh_commit is called (This is more memory efficient). If the flag is false an internal copy of the data is created immediately and this copy is used at commit. In both cases a copy of the data is used by t8\\_code after [`t8_cmesh_commit`](@ref).
-### See also
+# See also
 [`sc_package_register`](@ref)
 
 ### Prototype
@@ -3500,13 +3764,17 @@ Store a string as an attribute at a tree in a cmesh.
 
     You can also use t8_cmesh_set_attribute, but we recommend using this specialized function for strings.
 
-### Parameters
+!!! note
+
+    If an attribute with the given package\\_id and key already exists, then it will get overwritten.
+
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `gtree_id`:\\[in\\] The global id of the tree.
 * `package_id`:\\[in\\] Unique identifier of a valid software package.
 * `key`:\\[in\\] An integer key used to identify this attribute under all attributes with the same package\\_id. *key* must be a unique value for this tree and package\\_id.
 * `string`:\\[in\\] The string to store as attribute.
-### See also
+# See also
 [`sc_package_register`](@ref)
 
 ### Prototype
@@ -3519,11 +3787,48 @@ function t8_cmesh_set_attribute_string(cmesh, gtree_id, package_id, key, string)
 end
 
 """
+    t8_cmesh_set_attribute_gloidx_array(cmesh, gtree_id, package_id, key, data, data_count, data_persists)
+
+Store an array of [`t8_gloidx_t`](@ref) as an attribute at a tree in a cmesh.
+
+!!! note
+
+    You can also use t8_cmesh_set_attribute, but we recommend using this specialized function for arrays.
+
+!!! note
+
+    If an attribute with the given package\\_id and key already exists, then it will get overwritten.
+
+!!! note
+
+    We do not store the number of data entries *data_count* of the attribute array. You can keep track of the data count yourself by using another attribute.
+
+# Arguments
+* `cmesh`:\\[in,out\\] The cmesh to be updated.
+* `gtree_id`:\\[in\\] The global id of the tree.
+* `package_id`:\\[in\\] Unique identifier of a valid software package.
+* `key`:\\[in\\] An integer key used to identify this attribute under all attributes with the same package\\_id. *key* must be a unique value for this tree and package\\_id.
+* `data`:\\[in\\] The array to store as attribute.
+* `data_count`:\\[in\\] The number of entries in *data*.
+* `data_persists`:\\[in\\] This flag can be used to optimize memory. If true then t8code assumes that the attribute data is present at the memory that *data* points to when t8_cmesh_commit is called (This is more memory efficient). If the flag is false an internal copy of the data is created immediately and this copy is used at commit. In both cases a copy of the data is used by t8\\_code after [`t8_cmesh_commit`](@ref).
+# See also
+[`sc_package_register`](@ref)
+
+### Prototype
+```c
+void t8_cmesh_set_attribute_gloidx_array (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, int package_id, int key, const t8_gloidx_t *data, const size_t data_count, int data_persists);
+```
+"""
+function t8_cmesh_set_attribute_gloidx_array(cmesh, gtree_id, package_id, key, data, data_count, data_persists)
+    @ccall libt8.t8_cmesh_set_attribute_gloidx_array(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, package_id::Cint, key::Cint, data::Ptr{t8_gloidx_t}, data_count::Csize_t, data_persists::Cint)::Cvoid
+end
+
+"""
     t8_cmesh_set_join(cmesh, gtree1, gtree2, face1, face2, orientation)
 
 Insert a face-connection between two trees in a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `tree1`:\\[in\\] The tree id of the first of the two trees.
 * `tree2`:\\[in\\] The tree id of the second of the two trees.
@@ -3546,10 +3851,10 @@ Enable or disable profiling for a cmesh. If profiling is enabled, runtimes and s
 
 Profiling is disabled by default. The cmesh must not be committed before calling this function.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] The cmesh to be updated.
 * `set_profiling`:\\[in\\] If true, profiling will be enabled, if false disabled.
-### See also
+# See also
 [`t8_cmesh_print_profile`](@ref)
 
 ### Prototype
@@ -3566,10 +3871,10 @@ end
 
 Check whether two given cmeshes carry the same information.
 
-### Parameters
+# Arguments
 * `cmesh_a`:\\[in\\] The first of the two cmeshes to be checked.
 * `cmesh_b`:\\[in\\] The second of the two cmeshes to be checked.
-### Returns
+# Returns
 True if both cmeshes carry the same information, false otherwise. TODO: define carefully. Orders, sequences, equivalences? This function works on committed and uncommitted cmeshes.
 ### Prototype
 ```c
@@ -3585,9 +3890,9 @@ end
 
 Check whether a cmesh is empty on all processes.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] A committed cmesh.
-### Returns
+# Returns
 True (non-zero) if and only if the cmesh has trees at all.
 ### Prototype
 ```c
@@ -3618,31 +3923,42 @@ const t8_geometry_c = t8_geometry
 """
     t8_cmesh_register_geometry(cmesh, geometry)
 
+Register a geometry in the cmesh. The cmesh takes ownership of the geometry.
+
+If no geometry is registered and cmesh is modified from another cmesh then the other cmesh's geometries are used.
+
+!!! note
+
+    If you need to use t8_cmesh_bcast, then all geometries must be registered *after* the bcast operation, not before.
+
+# Arguments
+* `cmesh`:\\[in,out\\] The cmesh.
+* `geometry`:\\[in\\] The geometry to register.
 ### Prototype
 ```c
-void t8_cmesh_register_geometry (t8_cmesh_t cmesh, const t8_geometry_c *geometry);
+void t8_cmesh_register_geometry (t8_cmesh_t cmesh, t8_geometry_c **geometry);
 ```
 """
 function t8_cmesh_register_geometry(cmesh, geometry)
-    @ccall libt8.t8_cmesh_register_geometry(cmesh::t8_cmesh_t, geometry::Ptr{t8_geometry_c})::Cvoid
+    @ccall libt8.t8_cmesh_register_geometry(cmesh::t8_cmesh_t, geometry::Ptr{Ptr{t8_geometry_c}})::Cvoid
 end
 
 """
-    t8_cmesh_set_tree_geometry(cmesh, gtreeid, geom_name)
+    t8_cmesh_set_tree_geometry(cmesh, gtreeid, geom)
 
 Set the geometry for a tree, thus specify which geometry to use for this tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] A non-committed cmesh.
 * `gtreeid`:\\[in\\] A global tree id in *cmesh*.
-* `geom_name`:\\[in\\] The name of the geometry to use for this tree. See also t8_cmesh_get_tree_geometry
+* `geom`:\\[in\\] The geometry to use for this tree. See also t8_cmesh_get_tree_geometry
 ### Prototype
 ```c
-void t8_cmesh_set_tree_geometry (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const char *geom_name);
+void t8_cmesh_set_tree_geometry (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const t8_geometry_c *geom);
 ```
 """
-function t8_cmesh_set_tree_geometry(cmesh, gtreeid, geom_name)
-    @ccall libt8.t8_cmesh_set_tree_geometry(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, geom_name::Cstring)::Cvoid
+function t8_cmesh_set_tree_geometry(cmesh, gtreeid, geom)
+    @ccall libt8.t8_cmesh_set_tree_geometry(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, geom::Ptr{t8_geometry_c})::Cvoid
 end
 
 """
@@ -3686,12 +4002,12 @@ end
 
 This enumeration contains all modes in which we can open a saved cmesh. The cmesh can be loaded with more processes than it was saved and the mode controls, which of the processes open files and distribute the data.
 
-| Enumerator         | Note                                                                                                                                                                                                                        |
-| :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T8\\_LOAD\\_SIMPLE | In simple mode, the first n processes load the file                                                                                                                                                                         |
-| T8\\_LOAD\\_BGQ    | In BGQ mode, the file is loaded on n nodes and from one process of each node. This needs MPI Version 3.1 or higher.                                                                                                         |
-| T8\\_LOAD\\_STRIDE | Every n-th process loads a file. Handle with care, we introduce it, since on Juqueen MPI-3 was not available. The parameter n has to be passed as an extra parameter.  ### See also [`t8_cmesh_load_and_distribute`](@ref)  |
-| T8\\_LOAD\\_COUNT  |                                                                                                                                                                                                                             |
+| Enumerator         | Note                                                                                                                                                                                                                      |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T8\\_LOAD\\_SIMPLE | In simple mode, the first n processes load the file                                                                                                                                                                       |
+| T8\\_LOAD\\_BGQ    | In BGQ mode, the file is loaded on n nodes and from one process of each node. This needs MPI Version 3.1 or higher.                                                                                                       |
+| T8\\_LOAD\\_STRIDE | Every n-th process loads a file. Handle with care, we introduce it, since on Juqueen MPI-3 was not available. The parameter n has to be passed as an extra parameter.  # See also [`t8_cmesh_load_and_distribute`](@ref)  |
+| T8\\_LOAD\\_COUNT  |                                                                                                                                                                                                                           |
 """
 @cenum t8_load_mode::UInt32 begin
     T8_LOAD_FIRST = 0
@@ -3733,9 +4049,9 @@ end
 
 Query whether a committed cmesh is partitioned or replicated.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] A committed cmesh.
-### Returns
+# Returns
 True if *cmesh* is partitioned. False otherwise. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3751,9 +4067,9 @@ end
 
 Return the global number of trees in a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
-### Returns
+# Returns
 The number of trees associated to *cmesh*. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3769,9 +4085,9 @@ end
 
 Return the number of local trees of a cmesh. If the cmesh is not partitioned this is equivalent to t8_cmesh_get_num_trees.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
-### Returns
+# Returns
 The number of local trees of the cmesh. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3787,9 +4103,9 @@ end
 
 Return the number of ghost trees of a cmesh. If the cmesh is not partitioned this is equivalent to t8_cmesh_get_num_trees.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
-### Returns
+# Returns
 The number of ghost trees of the cmesh. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3805,9 +4121,9 @@ end
 
 Return the global index of the first local tree of a cmesh. If the cmesh is not partitioned this is always 0.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
-### Returns
+# Returns
 The global id of the first local tree in cmesh. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3821,6 +4137,13 @@ end
 """
     t8_cmesh_get_tree_geometry(cmesh, gtreeid)
 
+Get the geometry of a tree.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `gtreeid`:\\[in\\] The global tree id of the tree for which the geometry should be returned.
+# Returns
+The geometry of the tree.
 ### Prototype
 ```c
 const t8_geometry_c * t8_cmesh_get_tree_geometry (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
@@ -3835,10 +4158,10 @@ end
 
 Query whether a given [`t8_locidx_t`](@ref) belongs to a local tree of a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltreeid`:\\[in\\] An (possible) tree index.
-### Returns
+# Returns
 True if *ltreeid* matches the range of local trees of *cmesh*. False if not. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3854,10 +4177,10 @@ end
 
 Query whether a given [`t8_locidx_t`](@ref) belongs to a ghost of a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltreeid`:\\[in\\] An (possible) ghost index.
-### Returns
+# Returns
 True if *ltreeid* matches the range of ghost trees of *cmesh*. False if not. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3873,10 +4196,10 @@ end
 
 Given a local tree id that belongs to a ghost, return the index of the ghost.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltreeid`:\\[in\\] The local id of a ghost, satisfying t8_cmesh_treeid_is_ghost, thus num\\_trees <= *ltreeid* < num\\_trees + num\\_ghosts
-### Returns
+# Returns
 The index of the ghost within all ghosts, thus an index 0 <= index < num\\_ghosts *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3892,9 +4215,9 @@ end
 
 Return a pointer to the first local tree in a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be queried.
-### Returns
+# Returns
 A pointer to the first local tree in *cmesh*. If *cmesh* has no local trees, NULL is returned. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3910,10 +4233,10 @@ end
 
 Given a local tree in a cmesh return a pointer to the next local tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be queried.
 * `tree`:\\[in\\] A local tree in *cmesh*.
-### Returns
+# Returns
 A pointer to the next local tree in *cmesh* after *tree*. If no such tree exists, NULL is returned. * *cmesh* must be committed before calling this function. TODO: If we run over tree numbers only, don't use ctree\\_t in API if possible.
 ### Prototype
 ```c
@@ -3929,10 +4252,10 @@ end
 
 Return a pointer to a given local tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be queried.
 * `ltree_id`:\\[in\\] The local id of the tree that is asked for.
-### Returns
+# Returns
 A pointer to tree in *cmesh* with local id *ltree_id*. The cmesh must have at least *ltree_id* + 1 local trees when calling this function. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3948,10 +4271,10 @@ end
 
 Return the eclass of a given local tree. TODO: Should we refer to indices or consequently use ctree\\_t?
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `tree_id`:\\[in\\] The local id of the tree whose eclass will be returned.
-### Returns
+# Returns
 The eclass of the given tree. TODO: Call tree ids ltree\\_id or gtree\\_id etc. instead of tree\\_id. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3967,11 +4290,11 @@ end
 
 Query whether a face of a local tree or ghost is at the domain boundary.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltree_id`:\\[in\\] The local id of a tree.
 * `face`:\\[in\\] The number of a face of the tree.
-### Returns
+# Returns
 True if the face is at the domain boundary. False otherwise. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -3987,10 +4310,10 @@ end
 
 Return the eclass of a given local ghost. TODO: Should we refer to indices or consequently use cghost\\_t?
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ghost_id`:\\[in\\] The local id of the ghost whose eclass will be returned. 0 <= *tree_id* < cmesh.num\\_ghosts.
-### Returns
+# Returns
 The eclass of the given ghost. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -4006,12 +4329,12 @@ end
 
 Return the global id of a given local tree or ghost.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `local_id`:\\[in\\] The local id of a tree or a ghost. If *local_id* < cmesh.num\\_local\\_trees then it is a tree, otherwise a ghost.
-### Returns
+# Returns
 The global id of the tree/ghost.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -4028,12 +4351,12 @@ end
 
 Return the local id of a give global tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh.
 * `global_id`:\\[in\\] A global tree id.
-### Returns
+# Returns
 Either a value l 0 <= *l* < num\\_local\\_trees if *global_id* corresponds to a local tree, or num\\_local\\_trees <= *l* < num\\_local\\_trees + num\\_ghosts if *global_id* corresponds to a ghost trees, or negative if *global_id* neither matches a local nor a ghost tree.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -4054,15 +4377,15 @@ Given a local tree id and a face number, get information about the face neighbor
 
     If *ltreeid* is a ghost and it has a neighbor which is neither a local tree or ghost, then the return value will be negative. Thus, a negative return value does not necessarily mean that this is a domain boundary. To find out whether a tree is a domain boundary or not
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `ltreeid`:\\[in\\] The local id of a tree or a ghost.
 * `face`:\\[in\\] A face number of the tree/ghost.
 * `dual_face`:\\[out\\] If not NULL, the face number of the neighbor tree at this connection.
 * `orientation`:\\[out\\] If not NULL, the face orientation of the connection.
-### Returns
+# Returns
 If non-negative: The local id of the neighbor tree or ghost. If negative: There is no neighbor across this face. *dual_face* and *orientation* remain unchanged.
-### See also
+# See also
 [`t8_cmesh_tree_face_is_boundary`](@ref).
 
 ### Prototype
@@ -4081,9 +4404,9 @@ Print the collected statistics from a cmesh profile.
 
 *cmesh* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh.
-### See also
+# See also
 [`t8_cmesh_set_profiling`](@ref)
 
 ### Prototype
@@ -4100,10 +4423,10 @@ end
 
 Return a pointer to the vertex coordinates of a tree.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh.
 * `ltreeid`:\\[in\\] The id of a local tree.
-### Returns
+# Returns
 If stored, a pointer to the vertex coordinates of *tree*. If no coordinates for this tree are found, NULL.
 ### Prototype
 ```c
@@ -4119,20 +4442,23 @@ end
 
 Return the attribute pointer of a tree.
 
-### Parameters
+!!! note
+
+    *cmesh* must be committed before calling this function.
+
+# Arguments
 * `cmesh`:\\[in\\] The cmesh.
 * `package_id`:\\[in\\] The identifier of a valid software package.
 * `key`:\\[in\\] A key used to identify the attribute under all attributes of this tree with the same *package_id*.
 * `tree_id`:\\[in\\] The local number of the tree.
-* `data_size`:\\[out\\] The size of the attribute in bytes.
-### Returns
-The attribute pointer of the tree *ltree_id* or NULL if the attribute is not found. *cmesh* must be committed before calling this function.
-### See also
+# Returns
+The attribute pointer of the tree *ltree_id* or NULL if the attribute is not found.
+# See also
 [`sc_package_register`](@ref), [`t8_cmesh_set_attribute`](@ref)
 
 ### Prototype
 ```c
-void * t8_cmesh_get_attribute (t8_cmesh_t cmesh, int package_id, int key, t8_locidx_t ltree_id);
+void * t8_cmesh_get_attribute (const t8_cmesh_t cmesh, const int package_id, const int key, const t8_locidx_t ltree_id);
 ```
 """
 function t8_cmesh_get_attribute(cmesh, package_id, key, ltree_id)
@@ -4140,13 +4466,46 @@ function t8_cmesh_get_attribute(cmesh, package_id, key, ltree_id)
 end
 
 """
+    t8_cmesh_get_attribute_gloidx_array(cmesh, package_id, key, ltree_id, data_count)
+
+Return the attribute pointer of a tree for a gloidx\\_t array.
+
+!!! note
+
+    *cmesh* must be committed before calling this function.
+
+!!! note
+
+    No check is performed whether the attribute actually stored *data_count* many entries since we do not store the number of data entries of the attribute array. You can keep track of the data count yourself by using another attribute.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `package_id`:\\[in\\] The identifier of a valid software package.
+* `key`:\\[in\\] A key used to identify the attribute under all attributes of this tree with the same *package_id*.
+* `ltree_id`:\\[in\\] The local number of the tree.
+* `data_count`:\\[in\\] The number of entries in the array that are requested.  This must be smaller or equal to the *data_count* parameter of the corresponding call to t8_cmesh_set_attribute_gloidx_array
+# Returns
+The attribute pointer of the tree *ltree_id* or NULL if the attribute is not found.
+# See also
+[`sc_package_register`](@ref), [`t8_cmesh_set_attribute_gloidx_array`](@ref)
+
+### Prototype
+```c
+t8_gloidx_t * t8_cmesh_get_attribute_gloidx_array (const t8_cmesh_t cmesh, const int package_id, const int key, const t8_locidx_t ltree_id, const size_t data_count);
+```
+"""
+function t8_cmesh_get_attribute_gloidx_array(cmesh, package_id, key, ltree_id, data_count)
+    @ccall libt8.t8_cmesh_get_attribute_gloidx_array(cmesh::t8_cmesh_t, package_id::Cint, key::Cint, ltree_id::t8_locidx_t, data_count::Csize_t)::Ptr{t8_gloidx_t}
+end
+
+"""
     t8_cmesh_get_partition_table(cmesh)
 
 Return the shared memory array storing the partition table of a partitioned cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh.
-### Returns
+# Returns
 The partition array. NULL if the cmesh is not partitioned or the partition array is not stored in *cmesh*. *cmesh* must be committed before calling this function.
 ### Prototype
 ```c
@@ -4162,7 +4521,7 @@ end
 
 Calculate the section of a uniform forest for the current rank.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
 * `level`:\\[in\\] The uniform refinement level to be created.
 * `ts`:\\[in\\] The element scheme for which to compute the bounds.
@@ -4185,7 +4544,7 @@ end
 
 Increase the reference counter of a cmesh.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] On input, this cmesh must exist with positive reference count. It may be in any state.
 ### Prototype
 ```c
@@ -4201,7 +4560,7 @@ end
 
 Decrease the reference counter of a cmesh. If the counter reaches zero, this cmesh is destroyed. See also t8_cmesh_destroy, which is to be preferred when it is known that the last reference to a cmesh is deleted.
 
-### Parameters
+# Arguments
 * `pcmesh`:\\[in,out\\] On input, the cmesh pointed to must exist with positive reference count. It may be in any state. If the reference count reaches zero, the cmesh is destroyed and this pointer set to NULL. Otherwise, the pointer is not changed and the cmesh is not modified in other ways.
 ### Prototype
 ```c
@@ -4217,7 +4576,7 @@ end
 
 Verify that a coarse mesh has only one reference left and destroy it. This function is preferred over t8_cmesh_unref when it is known that the last reference is to be deleted.
 
-### Parameters
+# Arguments
 * `pcmesh`:\\[in,out\\] This cmesh must have a reference count of one. It can be in any state (committed or not). Then it effectively calls t8_cmesh_unref.
 * `comm`:\\[in\\] A mpi communicator that is valid with *cmesh*.
 ### Prototype
@@ -4246,7 +4605,7 @@ end
 
 Compute y = ax + b on an array of doubles, interpreting each 3 as one vector x
 
-### Parameters
+# Arguments
 * `coords_in`:\\[in\\] The incoming coordinates of the vectors
 * `coords_out`:\\[out\\] The computed coordinates of the vectors
 * `num_vertices`:\\[in\\] The number of vertices/vectors
@@ -4266,7 +4625,7 @@ end
 
 Compute y = x + translate on an array of doubles, interpreting  each 3 as one vector x
 
-### Parameters
+# Arguments
 * `coords_in`:\\[in\\] The incoming coordinates of the vectors
 * `coords_out`:\\[out\\] The computed coordinates of the vectors
 * `num_vertices`:\\[in\\] The number of vertices/vectors
@@ -4362,15 +4721,15 @@ struct t8_msh_file_node_parametric_t
 end
 
 """
-    t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_occ_geometry)
+    t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_cad_geometry)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_from_msh_file (const char *fileprefix, int partition, sc_MPI_Comm comm, int dim, int master, int use_occ_geometry);
+t8_cmesh_t t8_cmesh_from_msh_file (const char *fileprefix, int partition, sc_MPI_Comm comm, int dim, int master, int use_cad_geometry);
 ```
 """
-function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_occ_geometry)
-    @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_occ_geometry::Cint)::t8_cmesh_t
+function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_cad_geometry)
+    @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
 end
 
 struct sc_stats
@@ -4430,7 +4789,7 @@ const sc_flopinfo_t = sc_flopinfo
 
 Call [`sc_flops_count`](@ref) (fi) and copies fi into snapshot.
 
-### Parameters
+# Arguments
 * `fi`:\\[in,out\\] Members will be updated.
 * `snapshot`:\\[out\\] On output is a copy of fi.
 ### Prototype
@@ -4447,7 +4806,7 @@ end
 
 Call [`sc_flops_count`](@ref) (fi) and override snapshot interval timings with the differences since the previous call to [`sc_flops_snap`](@ref). The interval mflop rate is computed by iflpops / 1e6 / irtime. The cumulative timings in snapshot are copied form fi.
 
-### Parameters
+# Arguments
 * `fi`:\\[in,out\\] Members will be updated.
 * `snapshot`:\\[in,out\\] Interval timings measured since [`sc_flops_snap`](@ref).
 ### Prototype
@@ -4492,7 +4851,7 @@ end
 
 Prepare [`sc_flopinfo_t`](@ref) structure and start flop counters. Must only be called once during the program run. This function calls [`sc_flops_papi`](@ref).
 
-### Parameters
+# Arguments
 * `fi`:\\[out\\] Members will be initialized.
 ### Prototype
 ```c
@@ -4508,7 +4867,7 @@ end
 
 Prepare [`sc_flopinfo_t`](@ref) structure and ignore the flop counters. This [`sc_flopinfo_t`](@ref) does not call PAPI\\_flops() in this function or in [`sc_flops_count`](@ref)().
 
-### Parameters
+# Arguments
 * `fi`:\\[out\\] Members will be initialized.
 ### Prototype
 ```c
@@ -4524,7 +4883,7 @@ end
 
 Update [`sc_flopinfo_t`](@ref) structure with current measurement. Must only be called after [`sc_flops_start`](@ref). Can be called any number of times. This function calls [`sc_flops_papi`](@ref).
 
-### Parameters
+# Arguments
 * `fi`:\\[in,out\\] Members will be updated.
 ### Prototype
 ```c
@@ -4565,13 +4924,13 @@ mutable struct sc_keyvalue end
 
 """The key-value container is an opaque structure."""
 
-# no prototype is found for this function at sc_keyvalue.h:52:21, please use with caution
+# no prototype is found for this function at sc_keyvalue.h:54:21, please use with caution
 """
     sc_keyvalue_new()
 
 Create a new key-value container.
 
-### Returns
+# Returns
 The container is ready to use.
 ### Prototype
 ```c
@@ -4589,7 +4948,7 @@ end
 
 Free a key-value container and all internal memory for key storage.
 
-### Parameters
+# Arguments
 * `kv`:\\[in,out\\] The key-value container is invalidated by this call.
 ### Prototype
 ```c
@@ -4603,10 +4962,10 @@ end
 
 Routine to check existence of an entry.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key to query.
-### Returns
+# Returns
 The entry's type if found and SC\\_KEYVALUE\\_ENTRY\\_NONE otherwise.
 ### Prototype
 ```c
@@ -4620,10 +4979,10 @@ end
 
 Routine to remove an entry.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key to remove if it exists.
-### Returns
+# Returns
 The entry's type if found and removed, SC\\_KEYVALUE\\_ENTRY\\_NONE otherwise.
 ### Prototype
 ```c
@@ -4637,11 +4996,11 @@ end
 
 Routines to retrieve an integer value by its key. This function asserts that the key, if existing, points to the correct type.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key, may or may not exist.
 * `dvalue`:\\[in\\] Default value returned if key is not found.
-### Returns
+# Returns
 If key is not present then **dvalue** is returned, otherwise the value stored under **key**.
 ### Prototype
 ```c
@@ -4655,11 +5014,11 @@ end
 
 Retrieve a double value by its key. This function asserts that the key, if existing, points to the correct type.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key, may or may not exist.
 * `dvalue`:\\[in\\] Default value returned if key is not found.
-### Returns
+# Returns
 If key is not present then **dvalue** is returned, otherwise the value stored under **key**.
 ### Prototype
 ```c
@@ -4673,11 +5032,11 @@ end
 
 Retrieve a string value by its key. This function asserts that the key, if existing, points to the correct type.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key, may or may not exist.
 * `dvalue`:\\[in\\] Default value returned if key is not found.
-### Returns
+# Returns
 If key is not present then **dvalue** is returned, otherwise the value stored under **key**.
 ### Prototype
 ```c
@@ -4691,11 +5050,11 @@ end
 
 Retrieve a pointer value by its key. This function asserts that the key, if existing, points to the correct type.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `key`:\\[in\\] Lookup key, may or may not exist.
 * `dvalue`:\\[in\\] Default value returned if key is not found.
-### Returns
+# Returns
 If key is not present then **dvalue** is returned, otherwise the value stored under **key**.
 ### Prototype
 ```c
@@ -4709,11 +5068,11 @@ end
 
 Query an integer key with error checking. We check whether the key is not found or it is of the wrong type. A default value to be returned on error can be passed in as *status. If status is NULL, then the result on error is undefined.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value table.
 * `key`:\\[in\\] Non-NULL key string.
 * `status`:\\[in,out\\] If not NULL, set to 0 if there is no error, 1 if the key is not found, 2 if a value is found but its type is not integer, and return the input value *status on error.
-### Returns
+# Returns
 On error we return *status if status is not NULL, and else an undefined value backed by an assertion. Without error, return the result of the lookup.
 ### Prototype
 ```c
@@ -4727,7 +5086,7 @@ end
 
 Routine to set an integer value for a given key.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value table.
 * `key`:\\[in\\] Non-NULL key to insert or replace. If it already exists, it must be of type integer.
 * `newvalue`:\\[in\\] New value will be stored under key.
@@ -4743,7 +5102,7 @@ end
 
 Routine to set a double value for a given key.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value table.
 * `key`:\\[in\\] Non-NULL key to insert or replace. If it already exists, it must be of type double.
 * `newvalue`:\\[in\\] New value will be stored under key.
@@ -4759,7 +5118,7 @@ end
 
 Routine to set a string value for a given key.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value table.
 * `key`:\\[in\\] Non-NULL key to insert or replace. If it already exists, it must be of type string.
 * `newvalue`:\\[in\\] New value will be stored under key.
@@ -4775,7 +5134,7 @@ end
 
 Routine to set a pointer value for a given key.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value table.
 * `key`:\\[in\\] Non-NULL key to insert or replace. If it already exists, it must be of type pointer.
 * `newvalue`:\\[in\\] New value will be stored under key.
@@ -4790,12 +5149,12 @@ end
 """
 Function to call on every key value pair
 
-### Parameters
+# Arguments
 * `key`:\\[in\\] The key for this pair
 * `type`:\\[in\\] The type of entry
 * `entry`:\\[in\\] Pointer to the entry
 * `u`:\\[in\\] Arbitrary user data.
-### Returns
+# Returns
 Return true if the traversal should continue, false to stop.
 """
 const sc_keyvalue_foreach_t = Ptr{Cvoid}
@@ -4805,7 +5164,7 @@ const sc_keyvalue_foreach_t = Ptr{Cvoid}
 
 Iterate through all stored key-value pairs.
 
-### Parameters
+# Arguments
 * `kv`:\\[in\\] Valid key-value container.
 * `fn`:\\[in\\] Function to call on each key-value pair.
 * `user_data`:\\[in,out\\] This pointer is passed through to **fn**.
@@ -4862,7 +5221,7 @@ const sc_statinfo_t = sc_statinfo
 
 Populate a [`sc_statinfo_t`](@ref) structure assuming count=1 and mark it dirty. We set sc_stats_group_all and sc_stats_prio_all internally.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Will be filled with count=1 and the value.
 * `value`:\\[in\\] Value used to fill statistics information.
 * `variable`:\\[in\\] String to be reported by sc_stats_print. This string is assigned by pointer, not copied. Thus, it must stay alive while stats is in use.
@@ -4880,7 +5239,7 @@ end
 
 Populate a [`sc_statinfo_t`](@ref) structure assuming count=1 and mark it dirty.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Will be filled with count=1 and the value.
 * `value`:\\[in\\] Value used to fill statistics information.
 * `variable`:\\[in\\] String to be reported by sc_stats_print.
@@ -4901,7 +5260,7 @@ end
 
 Initialize a [`sc_statinfo_t`](@ref) structure assuming count=0 and mark it dirty. This is useful if *stats* will be used to sc_stats_accumulate instances locally before global statistics are computed. We set sc_stats_group_all and sc_stats_prio_all internally.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Will be filled with count 0 and values of 0.
 * `variable`:\\[in\\] String to be reported by sc_stats_print. This string is assigned by pointer, not copied. Thus, it must stay alive while stats is in use.
 ### Prototype
@@ -4918,7 +5277,7 @@ end
 
 Initialize a [`sc_statinfo_t`](@ref) structure assuming count=0 and mark it dirty. This is useful if *stats* will be used to sc_stats_accumulate instances locally before global statistics are computed.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Will be filled with count 0 and values of 0.
 * `variable`:\\[in\\] String to be reported by sc_stats_print.
 * `copy_variable`:\\[in\\] If true, make internal copy of variable. Otherwise just assign the pointer.
@@ -4938,7 +5297,7 @@ end
 
 Reset all values to zero, optionally unassign name, group, and priority.
 
-### Parameters
+# Arguments
 * `stats`:\\[in,out\\] Variables are zeroed. They can be set again by set1 or accumulate.
 * `reset_vgp`:\\[in\\] If true, the variable name string is zeroed and if we did a copy, the copy is freed. If true, group and priority are set to all. If false, we don't touch any of the above.
 ### Prototype
@@ -4955,7 +5314,7 @@ end
 
 Set/update the group and priority information for a stats item.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Only group and stats entries are updated.
 * `stats_group`:\\[in\\] Non-negative number or sc_stats_group_all.
 * `stats_prio`:\\[in\\] Non-negative number or sc_stats_prio_all. Values increase by importance.
@@ -4973,7 +5332,7 @@ end
 
 Add an instance of the random variable. The counter of the variable is increased by one. The value is added into the present values of the variable.
 
-### Parameters
+# Arguments
 * `stats`:\\[out\\] Must be dirty. We bump count and values.
 * `value`:\\[in\\] Value used to update statistics information.
 ### Prototype
@@ -5014,7 +5373,7 @@ end
 
 Print measured statistics. This function uses the `SC_LC_GLOBAL` log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler. All groups and priorities are printed.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `log_priority`:\\[in\\] Log priority for output according to sc.h.
 * `nvars`:\\[in\\] Number of stats items in input array.
@@ -5035,7 +5394,7 @@ end
 
 Print measured statistics, filter by group and/or priority. This function uses the `SC_LC_GLOBAL` log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `log_priority`:\\[in\\] Log priority for output according to sc.h.
 * `nvars`:\\[in\\] Number of stats items in input array.
@@ -5070,7 +5429,7 @@ end
 
 Destroy a statistics structure.
 
-### Parameters
+# Arguments
 * `stats`:\\[in,out\\] Valid object is invalidated.
 ### Prototype
 ```c
@@ -5146,11 +5505,11 @@ const sc_options_t = sc_options
 """
 This callback can be invoked with sc_options_parse.
 
-### Parameters
+# Arguments
 * `opt`:\\[in\\] Valid options data structure. This is passed as a matter of principle.
 * `opt_arg`:\\[in\\] The option argument or NULL if there is none. This variable is internal. Do not store pointer.
 * `data`:\\[in\\] User-defined data passed to [`sc_options_add_callback`](@ref).
-### Returns
+# Returns
 Return 0 if successful, -1 to indicate a parse error.
 """
 const sc_options_callback_t = Ptr{Cvoid}
@@ -5160,9 +5519,9 @@ const sc_options_callback_t = Ptr{Cvoid}
 
 Create an empty options structure.
 
-### Parameters
+# Arguments
 * `program_path`:\\[in\\] Name or path name of the program to display. Usually argv[0] is fine.
-### Returns
+# Returns
 A valid and empty options structure.
 ### Prototype
 ```c
@@ -5178,9 +5537,11 @@ end
 
 Destroy the options structure and all allocated structures contained. The keyvalue structure passed into sc\\_keyvalue\\_add is destroyed.
 
-\\deprecated This function is kept for backwards compatibility. It is best to destroy any key-value container outside of the lifetime of the options object.
+!!! compat "Deprecated"
 
-### Parameters
+    This function is kept for backwards compatibility. It is best to destroy any key-value container outside of the lifetime of the options object.
+
+# Arguments
 * `opt`:\\[in,out\\] This options structure is deallocated, including all key-value containers referenced.
 ### Prototype
 ```c
@@ -5196,7 +5557,7 @@ end
 
 Destroy the options structure. Whatever has been passed into sc\\_keyvalue\\_add is left alone.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] This options structure is deallocated.
 ### Prototype
 ```c
@@ -5212,7 +5573,7 @@ end
 
 Set the spacing for sc_options_print_summary. There are two values to be set: the spacing from the beginning of the printed line to the type of the option variable, and from the beginning of the printed line to the help string.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] Valid options structure.
 * `space_type`:\\[in\\] Number of spaces to the type display, for example <INT>, <STRING>, etc. Setting this negative sets the default 20.
 * `space_help`:\\[in\\] Number of space to the help string. Setting this negative sets the default 32.
@@ -5230,7 +5591,7 @@ end
 
 Add a switch option. This option is used without option arguments. Every use increments the variable by one. Its initial value is 0. Either opt\\_char or opt\\_name must be valid, that is, not '\\0'/NULL.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5250,7 +5611,7 @@ end
 
 Add a boolean option. It can be initialized to true or false in the C sense. Specifying it on the command line without argument sets the option to true. The argument 0/f/F/n/N sets it to false (0). The argument 1/t/T/y/Y sets it to true (nonzero).
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5271,7 +5632,7 @@ end
 
 Add an option that takes an integer argument.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5292,7 +5653,7 @@ end
 
 Add an option that takes a size\\_t argument. The value of the size\\_t variable must not be greater than LLONG\\_MAX.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5313,7 +5674,7 @@ end
 
 Add an option that takes a double argument. The double must be in the legal range. "inf" and "nan" are legal too.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5334,7 +5695,7 @@ end
 
 Add a string option.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5355,7 +5716,7 @@ end
 
 Add an option to read in a file in `.ini` format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5376,7 +5737,7 @@ Add an option to read in a file in JSON format. The argument to this option must
 
 This functionality is only active when sc_have_json returns true, equivalent to the define SC\\_HAVE\\_JSON existing, and ignored otherwise.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5395,7 +5756,7 @@ end
 
 Add an option that calls a user-defined function when parsed. The callback function should be implemented to allow multiple calls. The callback may be used to set multiple option variables in bulk that would otherwise require an inconvenient number of individual options. This option is not loaded from or saved to files.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A valid options structure.
 * `opt_char`:\\[in\\] Short option character, may be '\\0'.
 * `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
@@ -5417,7 +5778,7 @@ end
 
 Add an option that takes string keys into a lookup table of integers. On calling this function, it must be certain that the initial value exists.
 
-### Parameters
+# Arguments
 * `opt`:\\[in\\] Initialized options structure.
 * `opt_char`:\\[in\\] Option character for command line, or 0.
 * `opt_name`:\\[in\\] Name of the long option, or NULL.
@@ -5437,7 +5798,7 @@ end
 
 Copy one set of options to another as a subset, with a prefix. The variables referenced by the options and the suboptions are the same.
 
-### Parameters
+# Arguments
 * `opt`:\\[in,out\\] A set of options.
 * `subopt`:\\[in\\] Another set of options to be copied.
 * `prefix`:\\[in\\] The prefix to add to option names as they are copied. If an option has a long name "name" in subopt, its name in opt is "prefix:name"; if an option only has a character 'c' in subopt, its name in opt is "prefix:-c".
@@ -5455,7 +5816,7 @@ end
 
 Print a usage message. This function uses the `SC_LC_GLOBAL` log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `log_priority`:\\[in\\] Priority for output according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
@@ -5474,7 +5835,7 @@ end
 
 Print a summary of all option values. Prints the title "Options:" and a line for every option, then the title "Arguments:" and a line for every argument. This function uses the `SC_LC_GLOBAL` log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `log_priority`:\\[in\\] Priority for output according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
@@ -5492,12 +5853,12 @@ end
 
 Load a file in the default format and update option values. The default is a file in the `.ini` format; see sc_options_load_ini.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `file`:\\[in\\] Filename of the file to load.
-### Returns
+# Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
@@ -5513,13 +5874,13 @@ end
 
 Load a file in `.ini` format and update entries found under [Options]. An option whose name contains a colon such as "prefix:basename" will be updated by a "basename =" entry in a [prefix] section.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `inifile`:\\[in\\] Filename of the ini file to load.
 * `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
-### Returns
+# Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
@@ -5535,13 +5896,13 @@ end
 
 Load a file in JSON format and update entries from object "Options". An option whose name contains a colon such as "Prefix:basename" will be updated by a "basename :" entry in a "Prefix" nested object.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `jsonfile`:\\[in\\] Filename of the JSON file to load.
 * `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
-### Returns
+# Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
@@ -5557,12 +5918,12 @@ end
 
 Save all options and arguments to a file in `.ini` format. This function must only be called after successful option parsing. This function should only be called on rank 0. This function will log errors with category `SC_LC_GLOBAL`. An options whose name contains a colon such as "Prefix:basename" will be written in a section titled [Prefix] as "basename =".
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `inifile`:\\[in\\] Filename of the ini file to save.
-### Returns
+# Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
@@ -5578,12 +5939,12 @@ end
 
 Load a file in `.ini` format and update entries found under [Arguments]. There needs to be a key Arguments.count specifying the number. Then as many integer keys starting with 0 need to be present.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The args are stored in this option structure.
 * `inifile`:\\[in\\] Filename of the ini file to load.
-### Returns
+# Returns
 Returns 0 on success, -1 on failure.
 ### Prototype
 ```c
@@ -5599,13 +5960,13 @@ end
 
 Parse command line options.
 
-### Parameters
+# Arguments
 * `package_id`:\\[in\\] Registered package id or -1.
 * `err_priority`:\\[in\\] Error priority according to sc_logprios.
 * `opt`:\\[in\\] The option structure.
 * `argc`:\\[in\\] Length of argument list.
 * `argv`:\\[in,out\\] Argument list may be permuted.
-### Returns
+# Returns
 Returns -1 on an invalid option, otherwise the position of the first non-option argument.
 ### Prototype
 ```c
@@ -5653,15 +6014,15 @@ function t8_cmesh_from_triangle_file(fileprefix, partition, comm, do_dup)
 end
 
 """
-    t8_cmesh_vtk_write_file(cmesh, fileprefix, scale)
+    t8_cmesh_vtk_write_file(cmesh, fileprefix)
 
 ### Prototype
 ```c
-int t8_cmesh_vtk_write_file (t8_cmesh_t cmesh, const char *fileprefix, double scale);
+int t8_cmesh_vtk_write_file (t8_cmesh_t cmesh, const char *fileprefix);
 ```
 """
-function t8_cmesh_vtk_write_file(cmesh, fileprefix, scale)
-    @ccall libt8.t8_cmesh_vtk_write_file(cmesh::t8_cmesh_t, fileprefix::Cstring, scale::Cdouble)::Cint
+function t8_cmesh_vtk_write_file(cmesh, fileprefix)
+    @ccall libt8.t8_cmesh_vtk_write_file(cmesh::t8_cmesh_t, fileprefix::Cstring)::Cint
 end
 
 """
@@ -5669,11 +6030,11 @@ end
 
 Query the element class and count of boundary points.
 
-### Parameters
+# Arguments
 * `theclass`:\\[in\\] We query a point of this element class.
 * `min_dim`:\\[in\\] Ignore boundary points of lesser dimension. The ignored points get a count value of 0.
 * `per_eclass`:\\[out\\] Array of length T8\\_ECLASS\\_COUNT to be filled with the count of the boundary objects, counted per each of the element classes.
-### Returns
+# Returns
 The count over all boundary points.
 ### Prototype
 ```c
@@ -5689,10 +6050,10 @@ end
 
 Compare two eclasses of the same dimension as necessary for face neighbor orientation. The implemented order is Triangle < Square in 2D and Tet < Hex < Prism < Pyramid in 3D.
 
-### Parameters
+# Arguments
 * `eclass1`:\\[in\\] The first eclass to compare.
 * `eclass2`:\\[in\\] The second eclass to compare.
-### Returns
+# Returns
 0 if the eclasses are equal, 1 if eclass1 > eclass2 and -1 if eclass1 < eclass2
 ### Prototype
 ```c
@@ -5708,9 +6069,9 @@ end
 
 Check whether a class is a valid class. Returns non-zero if it is a valid class, returns zero, if the class is equal to T8\\_ECLASS\\_INVALID.
 
-### Parameters
+# Arguments
 * `eclass`:\\[in\\] The eclass to check.
-### Returns
+# Returns
 Non-zero if *eclass* is valid, zero otherwise.
 ### Prototype
 ```c
@@ -5731,7 +6092,7 @@ const t8_element_t = t8_element
 
 Increase the reference counter of a scheme.
 
-### Parameters
+# Arguments
 * `scheme`:\\[in,out\\] On input, this scheme must be alive, that is, exist with positive reference count.
 ### Prototype
 ```c
@@ -5747,7 +6108,7 @@ end
 
 Decrease the reference counter of a scheme. If the counter reaches zero, this scheme is destroyed.
 
-### Parameters
+# Arguments
 * `pscheme`:\\[in,out\\] On input, the scheme pointed to must exist with positive reference count. If the reference count reaches zero, the scheme is destroyed and this pointer set to NULL. Otherwise, the pointer is not changed and the scheme is not modified in other ways.
 ### Prototype
 ```c
@@ -5775,7 +6136,7 @@ end
 
 Return the size of any element of a given class.
 
-### Returns
+# Returns
 The size of an element of class **ts**. We provide a default implementation of this routine that should suffice for most use cases.
 ### Prototype
 ```c
@@ -5805,9 +6166,9 @@ end
 
 Return the maximum allowed level for any element of a given class.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
-### Returns
+# Returns
 The maximum allowed level for elements of class **ts**.
 ### Prototype
 ```c
@@ -5819,34 +6180,8 @@ function t8_element_maxlevel(ts)
 end
 
 """
-    t8_element_child_eclass(ts, childid)
-
-Return the type of each child in the ordering of the implementation.
-
-### Parameters
-* `ts`:\\[in\\] Implementation of a class scheme.
-* `childid`:\\[in\\] Must be between 0 and the number of children (exclusive). The number of children is defined in [`t8_element_num_children`](@ref).
-### Returns
-The type for the given child.
-### Prototype
-```c
-t8_eclass_t t8_element_child_eclass (const t8_eclass_scheme_c *ts, int childid);
-```
-"""
-function t8_element_child_eclass(ts, childid)
-    @ccall libt8.t8_element_child_eclass(ts::Ptr{t8_eclass_scheme_c}, childid::Cint)::t8_eclass_t
-end
-
-"""
     t8_element_level(ts, elem)
 
-Return the level of a particular element.
-
-### Parameters
-* `ts`:\\[in\\] Implementation of a class scheme.
-* `elem`:\\[in\\] The element whose level should be returned.
-### Returns
-The level of **elem**.
 ### Prototype
 ```c
 int t8_element_level (const t8_eclass_scheme_c *ts, const t8_element_t *elem);
@@ -5865,7 +6200,7 @@ Copy all entries of **source** to **dest**. **dest** must be an existing element
 
     *source* and *dest* may point to the same element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `source`:\\[in\\] The element whose entries will be copied to **dest**.
 * `dest`:\\[in,out\\] This element's entries will be overwritten with the entries of **source**.
@@ -5883,11 +6218,11 @@ end
 
 Compare two elements with respect to the scheme.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The first element.
 * `elem2`:\\[in\\] The second element.
-### Returns
+# Returns
 negative if elem1 < elem2, zero if elem1 equals elem2 and positive if elem1 > elem2. If elem2 is a copy of elem1 then the elements are equal.
 ### Prototype
 ```c
@@ -5903,11 +6238,11 @@ end
 
 Check if two elements are equal.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The first element.
 * `elem2`:\\[in\\] The second element.
-### Returns
+# Returns
 1 if the elements are equal, 0 if they are not equal
 ### Prototype
 ```c
@@ -5923,7 +6258,7 @@ end
 
 Compute the parent of a given element **elem** and store it in **parent**. **parent** needs to be an existing element. No memory is allocated by this function. **elem** and **parent** can point to the same element, then the entries of **elem** are overwritten by the ones of its parent.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element whose parent will be computed.
 * `parent`:\\[in,out\\] This element's entries will be overwritten by those of **elem**'s parent. The storage for this element must exist and match the element class of the parent.
@@ -5941,10 +6276,10 @@ end
 
 Compute the number of siblings of an element. That is the number of  Children of its parent.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
-### Returns
+# Returns
 The number of siblings of *element*. Note that this number is >= 1, since we count the element itself as a sibling.
 ### Prototype
 ```c
@@ -5960,7 +6295,7 @@ end
 
 Compute a specific sibling of a given element **elem** and store it in **sibling**. **sibling** needs to be an existing element. No memory is allocated by this function. **elem** and **sibling** can point to the same element, then the entries of **elem** are overwritten by the ones of its i-th sibling.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element whose sibling will be computed.
 * `sibid`:\\[in\\] The id of the sibling computed.
@@ -5979,10 +6314,10 @@ end
 
 Compute the number of corners of an element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
-### Returns
+# Returns
 The number of corners of *element*.
 ### Prototype
 ```c
@@ -5998,10 +6333,10 @@ end
 
 Compute the number of faces of an element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
-### Returns
+# Returns
 The number of faces of *element*.
 ### Prototype
 ```c
@@ -6017,10 +6352,10 @@ end
 
 Compute the maximum number of faces of a given element and all of its descendants.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
-### Returns
+# Returns
 The number of faces of *element*.
 ### Prototype
 ```c
@@ -6036,10 +6371,10 @@ end
 
 Compute the number of children of an element when it is refined.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
-### Returns
+# Returns
 The number of children of *element*.
 ### Prototype
 ```c
@@ -6055,11 +6390,11 @@ end
 
 Compute the number of children of an element's face when the element is refined.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] A face of *elem*.
-### Returns
+# Returns
 The number of children of *face* if *elem* is to be refined.
 ### Prototype
 ```c
@@ -6077,12 +6412,12 @@ Return the corner number of an element's face corner. Example quad: 2 x --- x 3 
 
 The order in which the corners must be given is determined by the eclass of *element*: LINE/QUAD/TRIANGLE: No specific order. HEX : In Z-order of the face starting with the lowest corner number. TET : Starting with the lowest corner number counterclockwise as seen from 'outside' of the element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `element`:\\[in\\] The element.
 * `face`:\\[in\\] A face index for *element*.
 * `corner`:\\[in\\] A corner index for the face 0 <= *corner* < num\\_face\\_corners.
-### Returns
+# Returns
 The corner number of the *corner*-th vertex of *face*.
 ### Prototype
 ```c
@@ -6098,12 +6433,12 @@ end
 
 Compute the face numbers of the faces sharing an element's corner. Example quad: 2 x --- x 3 | | | | face 1 0 x --- x 1 face 2 Thus for corner = 1 the output is: face=0 : 2, face=1: 1
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `element`:\\[in\\] The element.
 * `corner`:\\[in\\] A corner index for the face.
 * `face`:\\[in\\] A face index for *corner*.
-### Returns
+# Returns
 The face number of the *face*-th face at *corner*.
 ### Prototype
 ```c
@@ -6119,14 +6454,11 @@ end
 
 Construct the child element of a given number.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] This must be a valid element, bigger than maxlevel.
 * `childid`:\\[in\\] The number of the child to construct.
-* `child`:\\[in,out\\] The storage for this element must exist and match the element class of the child. For a pyramid, for example, it may be either a tetrahedron or a pyramid depending on *childid*. This can be checked by [`t8_element_child_eclass`](@ref). On output, a valid element. It is valid to call this function with elem = child.
-### See also
-[`t8_element_child_eclass`](@ref)
-
+* `child`:\\[in,out\\] The storage for this element must exist. On output, a valid element. It is valid to call this function with elem = child.
 ### Prototype
 ```c
 void t8_element_child (const t8_eclass_scheme_c *ts, const t8_element_t *elem, int childid, t8_element_t *child);
@@ -6141,13 +6473,13 @@ end
 
 Construct all children of a given element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] This must be a valid element, bigger than maxlevel.
 * `length`:\\[in\\] The length of the output array *c* must match the number of children.
 * `c`:\\[in,out\\] The storage for these *length* elements must exist and match the element class in the children's ordering. On output, all children are valid. It is valid to call this function with elem = c[0].
-### See also
-[`t8_element_num_children`](@ref), [`t8_element_child_eclass`](@ref)
+# See also
+[`t8_element_num_children`](@ref)
 
 ### Prototype
 ```c
@@ -6163,10 +6495,10 @@ end
 
 Compute the child id of an element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] This must be a valid element.
-### Returns
+# Returns
 The child id of elem.
 ### Prototype
 ```c
@@ -6182,11 +6514,11 @@ end
 
 Compute the ancestor id of an element, that is the child id at a given level.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] This must be a valid element.
 * `level`:\\[in\\] A refinement level. Must satisfy *level* < elem.level
-### Returns
+# Returns
 The child\\_id of *elem* in regard to its *level* ancestor.
 ### Prototype
 ```c
@@ -6202,14 +6534,14 @@ end
 
 Query whether a given set of elements is a family or not.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `fam`:\\[in\\] An array of as many elements as an element of class **ts** has children.
-### Returns
+# Returns
 Zero if **fam** is not a family, nonzero if it is.
 ### Prototype
 ```c
-int t8_element_is_family (const t8_eclass_scheme_c *ts, t8_element_t **fam);
+int t8_element_is_family (const t8_eclass_scheme_c *ts, t8_element_t *const *fam);
 ```
 """
 function t8_element_is_family(ts, fam)
@@ -6221,7 +6553,7 @@ end
 
 Compute the nearest common ancestor of two elements. That is, the element with highest level that still has both given elements as descendants.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The first of the two input elements.
 * `elem2`:\\[in\\] The second of the two input elements.
@@ -6243,11 +6575,11 @@ const t8_element_shape_t = t8_eclass_t
 
 Compute the shape of the face of an element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] A face of *elem*.
-### Returns
+# Returns
 The element shape of the face. I.e. T8\\_ECLASS\\_LINE for quads, T8\\_ECLASS\\_TRIANGLE for tets and depending on the face number either T8\\_ECLASS\\_QUAD or T8\\_ECLASS\\_TRIANGLE for prisms.
 ### Prototype
 ```c
@@ -6263,7 +6595,7 @@ end
 
 Given an element and a face of the element, compute all children of the element that touch the face.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] A face of *elem*.
@@ -6293,12 +6625,12 @@ Given a face of an element and a child number of a child of that face, return th
    elem    face  face_child    Returns the face number f
 ```
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] Then number of the face.
 * `face_child`:\\[in\\] A number 0 <= *face_child* < num\\_face\\_children, specifying a child of *elem* that shares a face with *face*. These children are counted in linear order. This coincides with the order of children from a call to t8_element_children_at_face.
-### Returns
+# Returns
 The face number of the face of a child of *elem* that coincides with *face_child*.
 ### Prototype
 ```c
@@ -6318,11 +6650,11 @@ Given a face of an element return the face number of the parent of the element t
 
     For the root element this function always returns *face*.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] Then number of the face.
-### Returns
+# Returns
 If *face* of *elem* is also a face of *elem*'s parent, the face number of this face. Otherwise -1.
 ### Prototype
 ```c
@@ -6338,11 +6670,11 @@ end
 
 Given an element and a face of this element. If the face lies on the tree boundary, return the face number of the tree face. If not the return value is arbitrary.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element.
 * `face`:\\[in\\] The index of a face of *elem*.
-### Returns
+# Returns
 The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary integer if *is* not at a tree boundary.
 ### Prototype
 ```c
@@ -6362,14 +6694,14 @@ Suppose we have two trees that share a common face f. Given an element e that is
 
     *elem1* and *elem2* may point to the same element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The face element.
 * `elem2`:\\[in,out\\] On return the face element *elem1* with respect to the coordinate system of the other tree.
 * `orientation`:\\[in\\] The orientation of the tree-tree connection.
 * `sign`:\\[in\\] Depending on the topological orientation of the two tree faces, either 0 (both faces have opposite orientation) or 1 (both faces have the same top. orientattion). t8_eclass_face_orientation
 * `is_smaller_face`:\\[in\\] Flag to declare whether *elem1* belongs to the smaller face. A face f of tree T is smaller than f' of T' if either the eclass of T is smaller or if the classes are equal and f<f'. The orientation is defined in relation to the smaller face.
-### See also
+# See also
 [`t8_cmesh_set_join`](@ref)
 
 ### Prototype
@@ -6386,13 +6718,13 @@ end
 
 Given a boundary face inside a root tree's face construct the element inside the root tree that has the given face as a face.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `face`:\\[in\\] A face element.
 * `face_scheme`:\\[in\\] The scheme for the face element.
 * `elem`:\\[in,out\\] An allocated element. The entries will be filled with the data of the element that has *face* as a face and lies within the root tree.
 * `root_face`:\\[in\\] The index of the face of the root tree in which *face* lies.
-### Returns
+# Returns
 The face number of the face of *elem* that coincides with *face*.
 ### Prototype
 ```c
@@ -6408,7 +6740,7 @@ end
 
 Construct the boundary element at a specific face.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The input element.
 * `face`:\\[in\\] The index of the face of which to construct the boundary element.
@@ -6428,7 +6760,7 @@ end
 
 Construct the first descendant of an element at a given level that touches a given face.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The input element.
 * `face`:\\[in\\] A face of *elem*.
@@ -6448,7 +6780,7 @@ end
 
 Construct the last descendant of an element at a given level that touches a given face.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The input element.
 * `face`:\\[in\\] A face of *elem*.
@@ -6468,11 +6800,11 @@ end
 
 Compute whether a given element shares a given face with its root tree.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The input element.
 * `face`:\\[in\\] A face of *elem*.
-### Returns
+# Returns
 True if *face* is a subface of the element's root element.
 ### Prototype
 ```c
@@ -6488,13 +6820,13 @@ end
 
 Construct the face neighbor of a given element if this face neighbor is inside the root tree. Return 0 otherwise.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element to be considered.
 * `neigh`:\\[in,out\\] If the face neighbor of *elem* along *face* is inside the root tree, this element's data is filled with the data of the face neighbor. Otherwise the data can be modified arbitrarily.
 * `face`:\\[in\\] The number of the face along which the neighbor should be constructed.
 * `neigh_face`:\\[out\\] The number of *face* as viewed from *neigh*. An arbitrary value, if the neighbor is not inside the root tree.
-### Returns
+# Returns
 True if *neigh* is inside the root tree. False if not. In this case *neigh*'s data can be arbitrary on output.
 ### Prototype
 ```c
@@ -6510,10 +6842,10 @@ end
 
 Return the shape of an allocated element according its type. For example, a child of an element can be an element of a different shape and has to be handled differently - according to its shape.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element to be considered
-### Returns
+# Returns
 The shape of the element as an eclass
 ### Prototype
 ```c
@@ -6529,11 +6861,11 @@ end
 
 Initialize the entries of an allocated element according to a given linear id in a uniform refinement.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in,out\\] The element whose entries will be set.
 * `level`:\\[in\\] The level of the uniform refinement to consider.
-* `id`:\\[in\\] The linear id. id must fulfil 0 <= id < 'number of leafs in the uniform refinement'
+* `id`:\\[in\\] The linear id. id must fulfil 0 <= id < 'number of leaves in the uniform refinement'
 ### Prototype
 ```c
 void t8_element_set_linear_id (const t8_eclass_scheme_c *ts, t8_element_t *elem, int level, t8_linearidx_t id);
@@ -6548,11 +6880,11 @@ end
 
 Compute the linear id of a given element in a hypothetical uniform refinement of a given level.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element whose id we compute.
 * `level`:\\[in\\] The level of the uniform refinement to consider.
-### Returns
+# Returns
 The linear id of the element.
 ### Prototype
 ```c
@@ -6568,7 +6900,7 @@ end
 
 Compute the first descendant of a given element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element whose descendant is computed.
 * `desc`:\\[out\\] The first element in a uniform refinement of *elem* of the maximum possible level.
@@ -6586,7 +6918,7 @@ end
 
 Compute the last descendant of a given element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem`:\\[in\\] The element whose descendant is computed.
 * `desc`:\\[out\\] The last element in a uniform refinement of *elem* of the maximum possible level.
@@ -6600,22 +6932,22 @@ function t8_element_last_descendant(ts, elem, desc, level)
 end
 
 """
-    t8_element_successor(ts, elem1, elem2, level)
+    t8_element_successor(ts, elem1, elem2)
 
 Construct the successor in a uniform refinement of a given element.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `elem1`:\\[in\\] The element whose successor should be constructed.
 * `elem2`:\\[in,out\\] The element whose entries will be set.
 * `level`:\\[in\\] The level of the uniform refinement to consider.
 ### Prototype
 ```c
-void t8_element_successor (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2, int level);
+void t8_element_successor (const t8_eclass_scheme_c *ts, const t8_element_t *elem1, t8_element_t *elem2);
 ```
 """
-function t8_element_successor(ts, elem1, elem2, level)
-    @ccall libt8.t8_element_successor(ts::Ptr{t8_eclass_scheme_c}, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t}, level::Cint)::Cvoid
+function t8_element_successor(ts, elem1, elem2)
+    @ccall libt8.t8_element_successor(ts::Ptr{t8_eclass_scheme_c}, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -6623,8 +6955,11 @@ end
 
 Compute the coordinates of a given element vertex inside a reference tree that is embedded into [0,1]^d (d = dimension).
 
-### Parameters
-* `ts`:\\[in\\] Implementation of a class scheme.
+!!! warning
+
+    coords should be zero-initialized, as only the first d coords will be set, but when used elsewhere all coords might be used.
+
+# Arguments
 * `t`:\\[in\\] The element to be considered.
 * `vertex`:\\[in\\] The id of the vertex whose coordinates shall be computed.
 * `coords`:\\[out\\] An array of at least as many doubles as the element's dimension whose entries will be filled with the coordinates of *vertex*.
@@ -6638,65 +6973,46 @@ function t8_element_vertex_reference_coords(ts, t, vertex, coords)
 end
 
 """
-    t8_element_count_leafs(ts, t, level)
+    t8_element_count_leaves(ts, t, level)
 
 Count how many leaf descendants of a given uniform level an element would produce.
 
 Example: If *t* is a line element that refines into 2 line elements on each level, then the return value is max(0, 2^{*level* - level(*t*)}). Thus, if *t*'s level is 0, and *level* = 3, the return value is 2^3 = 8.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `t`:\\[in\\] The element to be checked.
 * `level`:\\[in\\] A refinement level.
-### Returns
+# Returns
 Suppose *t* is uniformly refined up to level *level*. The return value is the resulting number of elements (of the given level). If *level* < [`t8_element_level`](@ref)(t), the return value should be 0.
 ### Prototype
 ```c
-t8_gloidx_t t8_element_count_leafs (const t8_eclass_scheme_c *ts, const t8_element_t *t, int level);
+t8_gloidx_t t8_element_count_leaves (const t8_eclass_scheme_c *ts, const t8_element_t *t, int level);
 ```
 """
-function t8_element_count_leafs(ts, t, level)
-    @ccall libt8.t8_element_count_leafs(ts::Ptr{t8_eclass_scheme_c}, t::Ptr{t8_element_t}, level::Cint)::t8_gloidx_t
+function t8_element_count_leaves(ts, t, level)
+    @ccall libt8.t8_element_count_leaves(ts::Ptr{t8_eclass_scheme_c}, t::Ptr{t8_element_t}, level::Cint)::t8_gloidx_t
 end
 
 """
-    t8_element_count_leafs_from_root(ts, level)
+    t8_element_count_leaves_from_root(ts, level)
 
 Count how many leaf descendants of a given uniform level the root element will produce.
 
-This is a convenience function, and can be implemented via t8_element_count_leafs.
+This is a convenience function, and can be implemented via t8_element_count_leaves.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `level`:\\[in\\] A refinement level.
-### Returns
-The value of t8_element_count_leafs if the input element is the root (level 0) element.
+# Returns
+The value of t8_element_count_leaves if the input element is the root (level 0) element.
 ### Prototype
 ```c
-t8_gloidx_t t8_element_count_leafs_from_root (const t8_eclass_scheme_c *ts, int level);
+t8_gloidx_t t8_element_count_leaves_from_root (const t8_eclass_scheme_c *ts, int level);
 ```
 """
-function t8_element_count_leafs_from_root(ts, level)
-    @ccall libt8.t8_element_count_leafs_from_root(ts::Ptr{t8_eclass_scheme_c}, level::Cint)::t8_gloidx_t
-end
-
-"""
-    t8_element_general_function(ts, elem, indata, outdata)
-
-This function has no defined effect but each implementation is free to provide its own meaning of it. Thus this function can be used to compute or lookup very scheme implementation specific data.
-
-### Parameters
-* `ts`:\\[in\\] Implementation of a class scheme.
-* `elem`:\\[in\\] An valid element
-* `indata`:\\[in\\] Pointer to input data
-* `outdata`:\\[out\\] Pointer to output data. For the correct usage of *indata* and *outdata* see the specific implementations of the scheme. For example the default scheme triangle and tetrahedron implementations use  this function to return the type of a tri/tet to the caller.
-### Prototype
-```c
-void t8_element_general_function (const t8_eclass_scheme_c *ts, const t8_element_t *elem, const void *indata, void *outdata);
-```
-"""
-function t8_element_general_function(ts, elem, indata, outdata)
-    @ccall libt8.t8_element_general_function(ts::Ptr{t8_eclass_scheme_c}, elem::Ptr{t8_element_t}, indata::Ptr{Cvoid}, outdata::Ptr{Cvoid})::Cvoid
+function t8_element_count_leaves_from_root(ts, level)
+    @ccall libt8.t8_element_count_leaves_from_root(ts::Ptr{t8_eclass_scheme_c}, level::Cint)::t8_gloidx_t
 end
 
 """
@@ -6716,11 +7032,11 @@ Allocate memory for an array of elements of a given class and initialize them.
 
     If an element was created by t8_element_new then t8_element_init may not be called for it. Thus, t8_element_new should initialize an element in the same way as a call to t8_element_init would.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `length`:\\[in\\] The number of elements to be allocated.
 * `elems`:\\[in,out\\] On input an array of **length** many unallocated element pointers. On output all these pointers will point to an allocated and initialized element.
-### See also
+# See also
 t8\\_element\\_init, t8\\_element\\_is\\_valid
 
 ### Prototype
@@ -6737,7 +7053,7 @@ end
 
 Deallocate an array of elements.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] Implementation of a class scheme.
 * `length`:\\[in\\] The number of elements in the array.
 * `elems`:\\[in,out\\] On input an array of **length** many allocated element pointers. On output all these pointers will be freed. **elem** itself will not be freed by this function.
@@ -6748,6 +7064,59 @@ void t8_element_destroy (const t8_eclass_scheme_c *ts, int length, t8_element_t 
 """
 function t8_element_destroy(ts, length, elems)
     @ccall libt8.t8_element_destroy(ts::Ptr{t8_eclass_scheme_c}, length::Cint, elems::Ptr{Ptr{t8_element_t}})::Cvoid
+end
+
+"""
+    t8_element_root(ts, elem)
+
+Fills an element with the root element.
+
+# Arguments
+* `ts`:\\[in\\] Implementation of a class scheme.
+* `elem`:\\[in,out\\] The element to be filled with root.
+### Prototype
+```c
+void t8_element_root (const t8_eclass_scheme_c *ts, t8_element_t *elem);
+```
+"""
+function t8_element_root(ts, elem)
+    @ccall libt8.t8_element_root(ts::Ptr{t8_eclass_scheme_c}, elem::Ptr{t8_element_t})::Cvoid
+end
+
+"""
+    t8_element_MPI_Pack(ts, elements, count, send_buffer, buffer_size, position, comm)
+
+### Prototype
+```c
+void t8_element_MPI_Pack (const t8_eclass_scheme_c *ts, t8_element_t **const elements, const unsigned int count, void *send_buffer, const int buffer_size, int *position, sc_MPI_Comm comm);
+```
+"""
+function t8_element_MPI_Pack(ts, elements, count, send_buffer, buffer_size, position, comm)
+    @ccall libt8.t8_element_MPI_Pack(ts::Ptr{t8_eclass_scheme_c}, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_element_MPI_Pack_size(ts, count, comm, pack_size)
+
+### Prototype
+```c
+void t8_element_MPI_Pack_size (const t8_eclass_scheme_c *ts, const unsigned int count, sc_MPI_Comm comm, int *pack_size);
+```
+"""
+function t8_element_MPI_Pack_size(ts, count, comm, pack_size)
+    @ccall libt8.t8_element_MPI_Pack_size(ts::Ptr{t8_eclass_scheme_c}, count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_element_MPI_Unpack(ts, recvbuf, buffer_size, position, elements, count, comm)
+
+### Prototype
+```c
+void t8_element_MPI_Unpack (const t8_eclass_scheme_c *ts, void *recvbuf, const int buffer_size, int *position, t8_element_t **elements, const unsigned int count, sc_MPI_Comm comm);
+```
+"""
+function t8_element_MPI_Unpack(ts, recvbuf, buffer_size, position, elements, count, comm)
+    @ccall libt8.t8_element_MPI_Unpack(ts::Ptr{t8_eclass_scheme_c}, recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -6839,10 +7208,10 @@ end
 
 Compare two element\\_shapees of the same dimension as necessary for face neighbor orientation. The implemented order is Triangle < Square in 2D and Tet < Hex < Prism < Pyramid in 3D.
 
-### Parameters
+# Arguments
 * `element_shape1`:\\[in\\] The first element\\_shape to compare.
 * `element_shape2`:\\[in\\] The second element\\_shape to compare.
-### Returns
+# Returns
 0 if the element\\_shapees are equal, 1 if element\\_shape1 > element\\_shape2 and -1 if element\\_shape1 < element\\_shape2
 ### Prototype
 ```c
@@ -6904,7 +7273,7 @@ const t8_forest_t = Ptr{t8_forest}
 
 Query whether a given element is within a prescribed distance to the zero level-set of a level-set function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] A local tree in *forest*.
 * `element`:\\[in\\] An element of tree *ltreeid* in *forest*.
@@ -6913,7 +7282,7 @@ Query whether a given element is within a prescribed distance to the zero level-
 * `band_width`:\\[in\\] Check whether the element is within a band of *band_width* many elements of its size.
 * `t`:\\[in\\] Time value passed to *levelset*.
 * `udata`:\\[in\\] User data passed to *levelset*.
-### Returns
+# Returns
 True if the absolute value of *levelset* at *element*'s midpoint is smaller than *band_width* * *element*'s diameter. False otherwise. If *band_width* = 0 then the return value is true if and only if the zero level-set passes through *element*.
 ### Prototype
 ```c
@@ -6967,7 +7336,7 @@ end
 
 Distance to a sphere with given midpoint and radius. data is interpreted as [`t8_levelset_sphere_data_t`](@ref).
 
-### Returns
+# Returns
 dist (x,data->M) - data->radius
 ### Prototype
 ```c
@@ -6983,7 +7352,7 @@ end
 
 Returns always 1.
 
-### Returns
+# Returns
 1
 ### Prototype
 ```c
@@ -6999,7 +7368,7 @@ end
 
 Returns always 0.
 
-### Returns
+# Returns
 0
 ### Prototype
 ```c
@@ -7015,7 +7384,7 @@ end
 
 Return the x-coordinate of the input.
 
-### Returns
+# Returns
 x[0]
 ### Prototype
 ```c
@@ -7073,7 +7442,7 @@ end
 
 Sinus of 2pi x\\_0
 
-### Returns
+# Returns
 sin (2pi x[0])
 ### Prototype
 ```c
@@ -7089,7 +7458,7 @@ end
 
 Sinus of x times cosinus of y
 
-### Returns
+# Returns
 sin (2pi x[0]) * cos (2pi x[1])
 ### Prototype
 ```c
@@ -7105,7 +7474,7 @@ end
 
 Sinus of 10 * x times cosinus of y times z
 
-### Returns
+# Returns
 10 * sin (2pi x[0]) * cos (2pi x[1]) * x[3]
 ### Prototype
 ```c
@@ -7121,7 +7490,7 @@ end
 
 Sinus of t
 
-### Returns
+# Returns
 sin (2pi t)
 ### Prototype
 ```c
@@ -7137,7 +7506,7 @@ end
 
 Level-set function of a sphere around origin with radius 0.75
 
-### Returns
+# Returns
 |x| - 0.75
 ### Prototype
 ```c
@@ -7153,7 +7522,7 @@ end
 
 Level-set function of a sphere around M = (0.5,0.5,0.5) with radius 0.375
 
-### Returns
+# Returns
 |x - M| - 0.375
 ### Prototype
 ```c
@@ -7169,7 +7538,7 @@ end
 
 Level-set function of a sphere around M = (0.3,0.3,0.3) with radius 0.25
 
-### Returns
+# Returns
 |x - M| - 0.25
 ### Prototype
 ```c
@@ -7185,7 +7554,7 @@ end
 
 Level-set function of a sphere around M = (0.5,0.5,0) with radius 0.375
 
-### Returns
+# Returns
 |x - M| - 0.375
 ### Prototype
 ```c
@@ -7354,6 +7723,93 @@ function t8_forest_write_netcdf_ext(forest, file_prefix, file_title, dim, num_ex
     @ccall libt8.t8_forest_write_netcdf_ext(forest::t8_forest_t, file_prefix::Cstring, file_title::Cstring, dim::Cint, num_extern_netcdf_vars::Cint, ext_variables::Ptr{Ptr{t8_netcdf_variable_t}}, comm::MPI_Comm, netcdf_var_storage_mode::Cint, netcdf_var_mpi_access::Cint)::Cvoid
 end
 
+"""
+    t8_mat_init_xrot(mat, angle)
+
+Initialize given 3x3 matrix as rotation matrix around the x-axis with given angle.
+
+# Arguments
+* `mat`:\\[in,out\\] 3x3-matrix.
+* `angle`:\\[in\\] Rotation angle in radians.
+### Prototype
+```c
+static inline void t8_mat_init_xrot (double mat[3][3], const double angle);
+```
+"""
+function t8_mat_init_xrot(mat, angle)
+    @ccall libt8.t8_mat_init_xrot(mat::Ptr{NTuple{3, Cdouble}}, angle::Cdouble)::Cvoid
+end
+
+"""
+    t8_mat_init_yrot(mat, angle)
+
+Initialize given 3x3 matrix as rotation matrix around the y-axis with given angle.
+
+# Arguments
+* `mat`:\\[in,out\\] 3x3-matrix.
+* `angle`:\\[in\\] Rotation angle in radians.
+### Prototype
+```c
+static inline void t8_mat_init_yrot (double mat[3][3], const double angle);
+```
+"""
+function t8_mat_init_yrot(mat, angle)
+    @ccall libt8.t8_mat_init_yrot(mat::Ptr{NTuple{3, Cdouble}}, angle::Cdouble)::Cvoid
+end
+
+"""
+    t8_mat_init_zrot(mat, angle)
+
+Initialize given 3x3 matrix as rotation matrix around the z-axis with given angle.
+
+# Arguments
+* `mat`:\\[in,out\\] 3x3-matrix.
+* `angle`:\\[in\\] Rotation angle in radians.
+### Prototype
+```c
+static inline void t8_mat_init_zrot (double mat[3][3], const double angle);
+```
+"""
+function t8_mat_init_zrot(mat, angle)
+    @ccall libt8.t8_mat_init_zrot(mat::Ptr{NTuple{3, Cdouble}}, angle::Cdouble)::Cvoid
+end
+
+"""
+    t8_mat_mult_vec(mat, a, b)
+
+Apply matrix-matrix multiplication: b = M*a.
+
+# Arguments
+* `mat`:\\[in\\] 3x3-matrix.
+* `a`:\\[in\\] 3-vector.
+* `b`:\\[in,out\\] 3-vector.
+### Prototype
+```c
+static inline void t8_mat_mult_vec (const double mat[3][3], const double a[3], double b[3]);
+```
+"""
+function t8_mat_mult_vec(mat, a, b)
+    @ccall libt8.t8_mat_mult_vec(mat::Ptr{NTuple{3, Cdouble}}, a::Ptr{Cdouble}, b::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_mat_mult_mat(A, B, C)
+
+Apply matrix-matrix multiplication: C = A*B.
+
+# Arguments
+* `A`:\\[in\\] 3x3-matrix.
+* `B`:\\[in\\] 3x3-matrix.
+* `C`:\\[in\\] 3x3-matrix.
+### Prototype
+```c
+static inline void t8_mat_mult_mat (const double A[3][3], const double B[3][3], double C[3][3]);
+```
+"""
+function t8_mat_mult_mat(A, B, C)
+    @ccall libt8.t8_mat_mult_mat(A::Ptr{NTuple{3, Cdouble}}, B::Ptr{NTuple{3, Cdouble}}, C::Ptr{NTuple{3, Cdouble}})::Cvoid
+end
+
 mutable struct t8_mesh end
 
 const t8_mesh_t = t8_mesh
@@ -7501,7 +7957,7 @@ end
 """
     t8_mesh_get_element_class(mesh, locid)
 
-### Parameters
+# Arguments
 * `locid`:\\[in\\] The local number can specify a point of any dimension that is locally relevant. The points are ordered in reverse to the element classes in t8_eclass_t. The local index is cumulative in this order.
 ### Prototype
 ```c
@@ -7577,7 +8033,7 @@ end
 """
     t8_mesh_get_element_support(mesh, locid, length_support, elemid, orientation)
 
-### Parameters
+# Arguments
 * `length_support`:\\[in,out\\]
 ### Prototype
 ```c
@@ -7611,7 +8067,7 @@ const t8_nc_int32_t = Int32
 
 Create an extern double variable which additionally should be put out to the NetCDF File
 
-### Parameters
+# Arguments
 * `var_type`:\\[in\\] Defines the datatype of the variable, either T8\\_NETCDF\\_INT, T8\\_NETCDF\\_INT64 or T8\\_NETCDF\\_DOUBLE.
 * `var_name`:\\[in\\] A String which will be the name of the created variable.
 * `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
@@ -7632,7 +8088,7 @@ end
 
 Create an extern integer variable which additionally should be put out to the NetCDF File (The distinction if it will be a NC\\_INT or NC\\_INT64 variable is based on the elementsize of the given [`sc_array_t`](@ref))
 
-### Parameters
+# Arguments
 * `var_name`:\\[in\\] A String which will be the name of the created variable.
 * `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
 * `var_unit`:\\[in\\] The units in which the data is provided.
@@ -7652,7 +8108,7 @@ end
 
 Create an extern double variable which additionally should be put out to the NetCDF File
 
-### Parameters
+# Arguments
 * `var_name`:\\[in\\] A String which will be the name of the created variable.
 * `var_long_name`:\\[in\\] A string describing the variable a bit more and what it is about.
 * `var_unit`:\\[in\\] The units in which the data is provided.
@@ -7672,7 +8128,7 @@ end
 
 Free the allocated memory of the a [`t8_netcdf_variable_t`](@ref)
 
-### Parameters
+# Arguments
 * `var_destroy`:\\[in\\] A t8\\_netcdf\\_t variable whose allocated memory should be freed.
 ### Prototype
 ```c
@@ -7683,15 +8139,12 @@ function t8_netcdf_variable_destroy(var_destroy)
     @ccall libt8.t8_netcdf_variable_destroy(var_destroy::Ptr{t8_netcdf_variable_t})::Cvoid
 end
 
-"""We can reuse the reference counter type from libsc."""
-const t8_refcount_t = sc_refcount_t
-
 """
     t8_refcount_init(rc)
 
 Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
 
-### Parameters
+# Arguments
 * `rc`:\\[out\\] The reference counter is set to one by this call.
 ### Prototype
 ```c
@@ -7707,7 +8160,7 @@ end
 
 Create a new reference counter with count initialized to 1. Equivalent to calling [`t8_refcount_init`](@ref) on a newly allocated refcount\\_t. It is mandatory to free this with t8_refcount_destroy.
 
-### Returns
+# Returns
 An allocated reference counter whose count has been set to one.
 ### Prototype
 ```c
@@ -7723,7 +8176,7 @@ end
 
 Destroy a reference counter that we allocated with t8_refcount_new. Its reference count must have decreased to zero.
 
-### Parameters
+# Arguments
 * `rc`:\\[in,out\\] Allocated, formerly valid reference counter.
 ### Prototype
 ```c
@@ -7773,9 +8226,9 @@ end
 
 Adapt a forest according to our [`t8_step3_adapt_callback`](@ref) function. Thus, the input forest will get refined inside a sphere  of radius 0.2 around (0.5, 0.5, 0.5) and coarsened outside of radius 0.4.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] A committed forest.
-### Returns
+# Returns
 A new forest that arises from the input *forest* via adaptation.
 ### Prototype
 ```c
@@ -7873,9 +8326,9 @@ end
 
 Vector norm.
 
-### Parameters
+# Arguments
 * `vec`:\\[in\\] A 3D vector.
-### Returns
+# Returns
 The norm of *vec*.
 ### Prototype
 ```c
@@ -7891,7 +8344,7 @@ end
 
 Normalize a vector.
 
-### Parameters
+# Arguments
 * `vec`:\\[in,out\\] A 3D vector.
 ### Prototype
 ```c
@@ -7903,14 +8356,31 @@ function t8_vec_normalize(vec)
 end
 
 """
+    t8_vec_copy(vec_in, vec_out)
+
+Make a copy of a vector.
+
+# Arguments
+* `vec_in`:\\[in\\]
+* `vec_out`:\\[out\\]
+### Prototype
+```c
+static inline void t8_vec_copy (const double vec_in[3], double vec_out[3]);
+```
+"""
+function t8_vec_copy(vec_in, vec_out)
+    @ccall libt8.t8_vec_copy(vec_in::Ptr{Cdouble}, vec_out::Ptr{Cdouble})::Cvoid
+end
+
+"""
     t8_vec_dist(vec_x, vec_y)
 
 Euclidean distance of X and Y.
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in\\] A 3D vector.
-### Returns
+# Returns
 The euclidean distance. Equivalent to norm (X-Y).
 ### Prototype
 ```c
@@ -7926,7 +8396,7 @@ end
 
 Compute X = alpha * X
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in,out\\] A 3D vector. On output set to *alpha* * *vec_x*.
 * `alpha`:\\[in\\] A factor.
 ### Prototype
@@ -7943,7 +8413,7 @@ end
 
 Compute Y = alpha * X
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_z`:\\[out\\] On output set to *alpha* * *vec_x*.
 * `alpha`:\\[in\\] A factor.
@@ -7965,7 +8435,7 @@ Y = alpha * X + b
 
     It is possible that vec\\_x = vec\\_y on input to overwrite x
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[out\\] On input, a 3D vector. On output set to *alpha* * *vec_x* + *b*.
 * `alpha`:\\[in\\] A factor.
@@ -7984,7 +8454,7 @@ end
 
 Y = Y + alpha * X
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in,out\\] On input, a 3D vector. On output set *to* vec\\_y + *alpha* * *vec_x*
 * `alpha`:\\[in\\] A factor.
@@ -8002,7 +8472,7 @@ end
 
 Z = Y + alpha * X
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in\\] A 3D vector.
 * `vec_z`:\\[out\\] On output set *to* vec\\_y + *alpha* * *vec_x*
@@ -8020,10 +8490,10 @@ end
 
 Dot product of X and Y.
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in\\] A 3D vector.
-### Returns
+# Returns
 The dot product *vec_x* * *vec_y*
 ### Prototype
 ```c
@@ -8039,7 +8509,7 @@ end
 
 Cross product of X and Y
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in\\] A 3D vector.
 * `cross`:\\[out\\] On output, the cross product of *vec_x* and *vec_y*.
@@ -8057,7 +8527,7 @@ end
 
 Compute the difference of two vectors.
 
-### Parameters
+# Arguments
 * `vec_x`:\\[in\\] A 3D vector.
 * `vec_y`:\\[in\\] A 3D vector.
 * `diff`:\\[out\\] On output, the difference of *vec_x* and *vec_y*.
@@ -8070,13 +8540,86 @@ function t8_vec_diff(vec_x, vec_y, diff)
     @ccall libt8.t8_vec_diff(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, diff::Ptr{Cdouble})::Cvoid
 end
 
-# no prototype is found for this function at t8_version.h:68:1, please use with caution
+"""
+    t8_vec_eq(vec_x, vec_y, tol)
+
+Check the equality of two vectors elementwise
+
+# Arguments
+* `vec_x`:\\[in\\]
+* `vec_y`:\\[in\\]
+* `tol`:\\[in\\]
+# Returns
+true, if the vectors are equal up to *tol*
+### Prototype
+```c
+static inline int t8_vec_eq (const double vec_x[3], const double vec_y[3], const double tol);
+```
+"""
+function t8_vec_eq(vec_x, vec_y, tol)
+    @ccall libt8.t8_vec_eq(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, tol::Cdouble)::Cint
+end
+
+"""
+    t8_vec_rescale(vec, new_length)
+
+Rescale a vector to a new length.
+
+# Arguments
+* `vec`:\\[in,out\\] A 3D vector.
+* `new_length`:\\[in\\] New length of the vector.
+### Prototype
+```c
+static inline void t8_vec_rescale (double vec[3], const double new_length);
+```
+"""
+function t8_vec_rescale(vec, new_length)
+    @ccall libt8.t8_vec_rescale(vec::Ptr{Cdouble}, new_length::Cdouble)::Cvoid
+end
+
+"""
+    t8_vec_tri_normal(p1, p2, p3, normal)
+
+Compute the normal of a triangle given by its three vertices.
+
+# Arguments
+* `p1`:\\[in\\] A 3D vector.
+* `p2`:\\[in\\] A 3D vector.
+* `p3`:\\[in\\] A 3D vector.
+* `Normal`:\\[out\\] vector of the triangle. (Not necessarily of length 1!)
+### Prototype
+```c
+static inline void t8_vec_tri_normal (const double p1[3], const double p2[3], const double p3[3], double normal[3]);
+```
+"""
+function t8_vec_tri_normal(p1, p2, p3, normal)
+    @ccall libt8.t8_vec_tri_normal(p1::Ptr{Cdouble}, p2::Ptr{Cdouble}, p3::Ptr{Cdouble}, normal::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_vec_swap(p1, p2)
+
+Swap the components of two vectors.
+
+# Arguments
+* `p1`:\\[in,out\\] A 3D vector.
+* `p2`:\\[in,out\\] A 3D vector.
+### Prototype
+```c
+static inline void t8_vec_swap (double p1[3], double p2[3]);
+```
+"""
+function t8_vec_swap(p1, p2)
+    @ccall libt8.t8_vec_swap(p1::Ptr{Cdouble}, p2::Ptr{Cdouble})::Cvoid
+end
+
+# no prototype is found for this function at t8_version.h:70:1, please use with caution
 """
     t8_get_package_string()
 
 Return the package string of t8code. This string has the format "t8 version\\_number".
 
-### Returns
+# Returns
 The version string of t8code.
 ### Prototype
 ```c
@@ -8087,13 +8630,13 @@ function t8_get_package_string()
     @ccall libt8.t8_get_package_string()::Cstring
 end
 
-# no prototype is found for this function at t8_version.h:74:1, please use with caution
+# no prototype is found for this function at t8_version.h:76:1, please use with caution
 """
     t8_get_version_number()
 
 Return the version number of t8code as a string.
 
-### Returns
+# Returns
 The version number of t8code as a string.
 ### Prototype
 ```c
@@ -8104,13 +8647,13 @@ function t8_get_version_number()
     @ccall libt8.t8_get_version_number()::Cstring
 end
 
-# no prototype is found for this function at t8_version.h:80:1, please use with caution
+# no prototype is found for this function at t8_version.h:82:1, please use with caution
 """
     t8_get_version_point_string()
 
 Return the version point string.
 
-### Returns
+# Returns
 The version point point string.
 ### Prototype
 ```c
@@ -8121,13 +8664,13 @@ function t8_get_version_point_string()
     @ccall libt8.t8_get_version_point_string()::Cstring
 end
 
-# no prototype is found for this function at t8_version.h:86:1, please use with caution
+# no prototype is found for this function at t8_version.h:88:1, please use with caution
 """
     t8_get_version_major()
 
 Return the major version number of t8code.
 
-### Returns
+# Returns
 The major version number of t8code.
 ### Prototype
 ```c
@@ -8138,13 +8681,13 @@ function t8_get_version_major()
     @ccall libt8.t8_get_version_major()::Cint
 end
 
-# no prototype is found for this function at t8_version.h:92:1, please use with caution
+# no prototype is found for this function at t8_version.h:94:1, please use with caution
 """
     t8_get_version_minor()
 
 Return the minor version number of t8code.
 
-### Returns
+# Returns
 The minor version number of t8code.
 ### Prototype
 ```c
@@ -8155,7 +8698,7 @@ function t8_get_version_minor()
     @ccall libt8.t8_get_version_minor()::Cint
 end
 
-# no prototype is found for this function at t8_version.h:102:1, please use with caution
+# no prototype is found for this function at t8_version.h:104:1, please use with caution
 """
     t8_get_version_patch()
 
@@ -8164,7 +8707,7 @@ Return the patch version number of t8code.
 !!! note
 
 
-### Returns
+# Returns
 The patch version unmber of t8code. negative on error.
 ### Prototype
 ```c
@@ -8262,6 +8805,8 @@ end
 """
     sc_io_mode_t
 
+The I/O mode for writing using sc_io_sink.
+
 | Enumerator              | Note                         |
 | :---------------------- | :--------------------------- |
 | SC\\_IO\\_MODE\\_WRITE  | Semantics as "w" in fopen.   |
@@ -8277,8 +8822,11 @@ end
 """
     sc_io_encode_t
 
+Enum to specify encoding for sc_io_sink and sc_io_source.
+
 | Enumerator              | Note                         |
 | :---------------------- | :--------------------------- |
+| SC\\_IO\\_ENCODE\\_NONE | No encoding                  |
 | SC\\_IO\\_ENCODE\\_LAST | Invalid entry to close list  |
 """
 @cenum sc_io_encode_t::UInt32 begin
@@ -8289,9 +8837,14 @@ end
 """
     sc_io_type_t
 
-| Enumerator            | Note                         |
-| :-------------------- | :--------------------------- |
-| SC\\_IO\\_TYPE\\_LAST | Invalid entry to close list  |
+The type of I/O operation sc_io_sink and sc_io_source.
+
+| Enumerator                | Note                             |
+| :------------------------ | :------------------------------- |
+| SC\\_IO\\_TYPE\\_BUFFER   | Write to a buffer                |
+| SC\\_IO\\_TYPE\\_FILENAME | Write to a file to be opened     |
+| SC\\_IO\\_TYPE\\_FILEFILE | Write to an already opened file  |
+| SC\\_IO\\_TYPE\\_LAST     | Invalid entry to close list      |
 """
 @cenum sc_io_type_t::UInt32 begin
     SC_IO_TYPE_BUFFER = 0
@@ -8303,9 +8856,19 @@ end
 """
     sc_io_sink
 
-| Field          | Note                          |
-| :------------- | :---------------------------- |
-| buffer\\_bytes | distinguish from array elems  |
+A generic data sink.
+
+| Field          | Note                                                  |
+| :------------- | :---------------------------------------------------- |
+| iotype         | type of the I/O operation                             |
+| mode           | write semantics                                       |
+| encode         | encoding of data                                      |
+| buffer         | buffer for the iotype SC_IO_TYPE_BUFFER               |
+| buffer\\_bytes | distinguish from array elements                       |
+| file           | file pointer for iotype unequal to SC_IO_TYPE_BUFFER  |
+| bytes\\_in     | input bytes count                                     |
+| bytes\\_out    | written bytes count                                   |
+| is\\_eof       | Have we reached the end of file?                      |
 """
 struct sc_io_sink
     iotype::sc_io_type_t
@@ -8316,16 +8879,29 @@ struct sc_io_sink
     file::Ptr{Libc.FILE}
     bytes_in::Csize_t
     bytes_out::Csize_t
+    is_eof::Cint
 end
 
+"""A generic data sink."""
 const sc_io_sink_t = sc_io_sink
 
 """
     sc_io_source
 
-| Field          | Note                          |
-| :------------- | :---------------------------- |
-| buffer\\_bytes | distinguish from array elems  |
+A generic data source.
+
+| Field           | Note                                                  |
+| :-------------- | :---------------------------------------------------- |
+| iotype          | type of the I/O operation                             |
+| encode          | encoding of data                                      |
+| buffer          | buffer for the iotype SC_IO_TYPE_BUFFER               |
+| buffer\\_bytes  | distinguish from array elements                       |
+| file            | file pointer for iotype unequal to SC_IO_TYPE_BUFFER  |
+| bytes\\_in      | input bytes count                                     |
+| bytes\\_out     | read bytes count                                      |
+| is\\_eof        | Have we reached the end of file?                      |
+| mirror          | if activated, a sink to store the data                |
+| mirror\\_buffer | if activated, the buffer for the mirror               |
 """
 struct sc_io_source
     iotype::sc_io_type_t
@@ -8335,10 +8911,12 @@ struct sc_io_source
     file::Ptr{Libc.FILE}
     bytes_in::Csize_t
     bytes_out::Csize_t
+    is_eof::Cint
     mirror::Ptr{sc_io_sink_t}
     mirror_buffer::Ptr{sc_array_t}
 end
 
+"""A generic data source."""
 const sc_io_source_t = sc_io_source
 
 """
@@ -8346,11 +8924,11 @@ const sc_io_source_t = sc_io_source
 
 Open modes for sc_io_open
 
-| Enumerator               | Note                                                                              |
-| :----------------------- | :-------------------------------------------------------------------------------- |
-| SC\\_IO\\_READ           | open a file in read-only mode                                                     |
-| SC\\_IO\\_WRITE\\_CREATE | open a file in write-only mode; if the file exists, the file will be overwritten  |
-| SC\\_IO\\_WRITE\\_APPEND | append to an already existing file                                                |
+| Enumerator               | Note                                                                                                                |
+| :----------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| SC\\_IO\\_READ           | open a file in read-only mode                                                                                       |
+| SC\\_IO\\_WRITE\\_CREATE | open a file in write-only mode; if the file exists, the file will be truncated to length zero and then overwritten  |
+| SC\\_IO\\_WRITE\\_APPEND | append to an already existing file                                                                                  |
 """
 @cenum sc_io_open_mode_t::UInt32 begin
     SC_IO_READ = 0
@@ -8368,9 +8946,9 @@ end
 
 Free data sink. Calls [`sc_io_sink_complete`](@ref) and discards the final counts. Errors from complete lead to SC\\_IO\\_ERROR\\_FATAL returned from this function. Call [`sc_io_sink_complete`](@ref) yourself if bytes\\_out is of interest.
 
-### Parameters
+# Arguments
 * `sink`:\\[in,out\\] The sink object to complete and free.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8382,15 +8960,33 @@ function sc_io_sink_destroy(sink)
 end
 
 """
+    sc_io_sink_destroy_null(sink)
+
+Free data sink and NULL the pointer to it. Except for the handling of the pointer argument, the behavior is the same as for sc_io_sink_destroy.
+
+# Arguments
+* `sink`:\\[in,out\\] Non-NULL pointer to sink pointer. The sink pointer may be NULL, in which case this function does nothing successfully, or a valid sc_io_sink, which is passed to sc_io_sink_destroy, and the sink pointer is set to NULL afterwards.
+# Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_sink_destroy_null (sc_io_sink_t ** sink);
+```
+"""
+function sc_io_sink_destroy_null(sink)
+    @ccall libsc.sc_io_sink_destroy_null(sink::Ptr{Ptr{sc_io_sink_t}})::Cint
+end
+
+"""
     sc_io_sink_write(sink, data, bytes_avail)
 
 Write data to a sink. Data may be buffered and sunk in a later call. The internal counters sink->bytes\\_in and sink->bytes\\_out are updated.
 
-### Parameters
+# Arguments
 * `sink`:\\[in,out\\] The sink object to write to.
-* `data`:\\[in\\] Data passed into sink.
+* `data`:\\[in\\] Data passed into sink must be non-NULL.
 * `bytes_avail`:\\[in\\] Number of data bytes passed in.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8406,11 +9002,11 @@ end
 
 Flush all buffered output data to sink. This function may return SC\\_IO\\_ERROR\\_AGAIN if another write is required. Currently this may happen if BUFFER requires an integer multiple of bytes. If successful, the updated value of bytes read and written is returned in bytes\\_in/out, and the sink status is reset as if the sink had just been created. In particular, the bytes counters are reset to zero. The internal state of the sink is not changed otherwise. It is legal to continue writing to the sink hereafter. The sink actions taken depend on its type. BUFFER, FILEFILE: none. FILENAME: call fclose on sink->file.
 
-### Parameters
+# Arguments
 * `sink`:\\[in,out\\] The sink object to write to.
 * `bytes_in`:\\[in,out\\] Bytes received since the last new or complete call. May be NULL.
 * `bytes_out`:\\[in,out\\] Bytes written since the last new or complete call. May be NULL.
-### Returns
+# Returns
 0 if completed, nonzero on error.
 ### Prototype
 ```c
@@ -8426,10 +9022,10 @@ end
 
 Align sink to a byte boundary by writing zeros.
 
-### Parameters
+# Arguments
 * `sink`:\\[in,out\\] The sink object to align.
 * `bytes_align`:\\[in\\] Byte boundary.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8450,9 +9046,9 @@ end
 
 Free data source. Calls [`sc_io_source_complete`](@ref) and requires it to return no error. This is to avoid discarding buffered data that has not been passed to read.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to free.
-### Returns
+# Returns
 0 on success. Nonzero if an error is encountered or is\\_complete returns one.
 ### Prototype
 ```c
@@ -8464,16 +9060,34 @@ function sc_io_source_destroy(source)
 end
 
 """
+    sc_io_source_destroy_null(source)
+
+Free data source and NULL the pointer to it. Except for the handling of the pointer argument, the behavior is the same as for sc_io_source_destroy.
+
+# Arguments
+* `source`:\\[in,out\\] Non-NULL pointer to source pointer. The source pointer may be NULL, in which case this function does nothing successfully, or a valid sc_io_source, which is passed to sc_io_source_destroy, and the source pointer is set to NULL afterwards.
+# Returns
+0 on success, nonzero on error.
+### Prototype
+```c
+int sc_io_source_destroy_null (sc_io_source_t ** source);
+```
+"""
+function sc_io_source_destroy_null(source)
+    @ccall libsc.sc_io_source_destroy_null(source::Ptr{Ptr{sc_io_source_t}})::Cint
+end
+
+"""
     sc_io_source_read(source, data, bytes_avail, bytes_out)
 
 Read data from a source. The internal counters source->bytes\\_in and source->bytes\\_out are updated. Data is read until the data buffer has not enough room anymore, or source becomes empty. It is possible that data already read internally remains in the source object for the next call. Call [`sc_io_source_complete`](@ref) and check its return value to find out. Returns an error if bytes\\_out is NULL and less than bytes\\_avail are read.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to read from.
-* `data`:\\[in\\] Data buffer for reading from sink. If NULL the output data will be thrown away.
+* `data`:\\[in\\] Data buffer for reading from source. If NULL the output data will be ignored and we seek forward in the input.
 * `bytes_avail`:\\[in\\] Number of bytes available in data buffer.
-* `bytes_out`:\\[in,out\\] If not NULL, byte count read into data buffer. Otherwise, requires to read exactly bytes\\_avail.
-### Returns
+* `bytes_out`:\\[in,out\\] If not NULL, byte count read into data buffer. Otherwise, requires to read exactly bytes\\_avail. If this condition is not met, return an error.
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8489,11 +9103,11 @@ end
 
 Determine whether all data buffered from source has been returned by read. If it returns SC\\_IO\\_ERROR\\_AGAIN, another [`sc_io_source_read`](@ref) is required. If the call returns no error, the internal counters source->bytes\\_in and source->bytes\\_out are returned to the caller if requested, and reset to 0. The internal state of the source is not changed otherwise. It is legal to continue reading from the source hereafter.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to read from.
 * `bytes_in`:\\[in,out\\] If not NULL and true is returned, the total size of the data sourced.
 * `bytes_out`:\\[in,out\\] If not NULL and true is returned, total bytes passed out by source\\_read.
-### Returns
+# Returns
 SC\\_IO\\_ERROR\\_AGAIN if buffered data remaining. Otherwise return ERROR\\_NONE and reset counters.
 ### Prototype
 ```c
@@ -8509,10 +9123,10 @@ end
 
 Align source to a byte boundary by skipping.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to align.
 * `bytes_align`:\\[in\\] Byte boundary.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8528,9 +9142,9 @@ end
 
 Activate a buffer that mirrors (i.e., stores) the data that was read.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to activate mirror in.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8546,9 +9160,12 @@ end
 
 Read data from the source's mirror. Same behaviour as [`sc_io_source_read`](@ref).
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The source object to read mirror data from.
-### Returns
+* `data`:\\[in\\] Data buffer for reading from source's mirror. If NULL the output data will be thrown away.
+* `bytes_avail`:\\[in\\] Number of bytes available in data buffer.
+* `bytes_out`:\\[in,out\\] If not NULL, byte count read into data buffer. Otherwise, requires to read exactly bytes\\_avail.
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -8560,6 +9177,44 @@ function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
 end
 
 """
+    sc_io_file_save(filename, buffer)
+
+Save a buffer to a file in one call. This function performs error checking and always returns cleanly.
+
+# Arguments
+* `filename`:\\[in\\] Name of the file to save.
+* `buffer`:\\[in\\] An array of element size 1 and arbitrary contents, which are written to the file.
+# Returns
+0 on success, -1 on error.
+### Prototype
+```c
+int sc_io_file_save (const char *filename, sc_array_t * buffer);
+```
+"""
+function sc_io_file_save(filename, buffer)
+    @ccall libsc.sc_io_file_save(filename::Cstring, buffer::Ptr{sc_array_t})::Cint
+end
+
+"""
+    sc_io_file_load(filename, buffer)
+
+Read a file into a buffer in one call. This function performs error checking and always returns cleanly.
+
+# Arguments
+* `filename`:\\[in\\] Name of the file to load.
+* `buffer`:\\[in,out\\] On input, an array (not a view) of element size 1 and arbitrary contents. On output and success, the complete file contents. On error, contents are undefined.
+# Returns
+0 on success, -1 on error.
+### Prototype
+```c
+int sc_io_file_load (const char *filename, sc_array_t * buffer);
+```
+"""
+function sc_io_file_load(filename, buffer)
+    @ccall libsc.sc_io_file_load(filename::Cstring, buffer::Ptr{sc_array_t})::Cint
+end
+
+"""
     sc_io_encode(data, out)
 
 Encode a block of arbitrary data with the default sc\\_io format. The corresponding decoder function is sc_io_decode. This function cannot crash unless out of memory.
@@ -8568,7 +9223,7 @@ Currently this function calls sc_io_encode_zlib with compression level Z\\_BEST\
 
 The encoding method and input data size can be retrieved, optionally, from the encoded data by sc_io_decode_info. This function decodes the method as a character, which is 'z' for sc_io_encode_zlib. We reserve the characters A-C, d-z indefinitely.
 
-### Parameters
+# Arguments
 * `data`:\\[in,out\\] If *out* is NULL, we work in place. In this case, the array must on input have an element size of 1 byte, which is preserved. After reading all data from this array, it assumes the identity of the *out* argument below. Otherwise, this is a read-only argument that may have arbitrary element size. On input, all data in the array is used.
 * `out`:\\[in,out\\] If not NULL, a valid array of element size 1. It must be resizable (not a view). We resize the array to the output data, which always includes a final terminating zero.
 ### Prototype
@@ -8591,7 +9246,7 @@ Secondly, we process the input data size as an 8-byte big-endian number, then th
 
 This routine can work in place or write to an output array. The corresponding decoder function is sc_io_decode. This function cannot crash unless out of memory.
 
-### Parameters
+# Arguments
 * `data`:\\[in,out\\] If *out* is NULL, we work in place. In this case, the array must on input have an element size of 1 byte, which is preserved. After reading all data from this array, it assumes the identity of the *out* argument below. Otherwise, this is a read-only argument that may have arbitrary element size. On input, all data in the array is used.
 * `out`:\\[in,out\\] If not NULL, a valid array of element size 1. It must be resizable (not a view). We resize the array to the output data, which always includes a final terminating zero.
 * `zlib_compression_level`:\\[in\\] Compression level between 0 (no compression) and 9 (best compression). The value -1 indicates some default level.
@@ -8614,12 +9269,12 @@ This function does not require zlib. It works with any well-defined data.
 
 Note that this function is not required before sc_io_decode. Calling this function on any result produced by sc_io_encode will succeed and report a legal format. This function cannot crash.
 
-### Parameters
+# Arguments
 * `data`:\\[in\\] This must be an array with element size 1. If it contains less than 12 code bytes we error out. It its first 12 bytes do not base 64 decode to 9 bytes we error out. We generally ignore the remaining data.
 * `original_size`:\\[out\\] If not NULL and we do not error out, set to the original size as encoded in the data.
 * `format_char`:\\[out\\] If not NULL and we do not error out, the ninth character of decoded data indicating the format.
 * `re`:\\[in,out\\] Provided for error reporting, presently must be NULL.
-### Returns
+# Returns
 0 on success, negative value on error.
 ### Prototype
 ```c
@@ -8647,12 +9302,12 @@ We also error out if the data requires a compression dictionary, which would be 
 
 The corresponding encode function is sc_io_encode. When passing an array as output, we resize it properly. This function cannot crash unless out of memory.
 
-### Parameters
+# Arguments
 * `data`:\\[in,out\\] If *out* is NULL, we work in place. In that case, output is written into this array after a suitable resize. Either way, we expect a NUL-terminated base 64 encoded string on input that has in turn been obtained by zlib compression. It must be in the exact format produced by sc_io_encode; please see documentation. The element size of the input array must be 1.
 * `out`:\\[in,out\\] If not NULL, a valid array (may be a view). If NULL, the input array becomes the output. If the output array is a view and the output data larger than its view size, we error out. We expect commensurable element and data size and resize the output to fit exactly, which restores the original input passed to encoding. An output view array of matching size may be constructed using sc_io_decode_info.
 * `max_original_size`:\\[in\\] If nonzero, this is the maximal data size that we will accept after uncompression. If exceeded, return a negative value.
 * `re`:\\[in,out\\] Provided for error reporting, presently must be NULL.
-### Returns
+# Returns
 0 on success, negative on malformed input data or insufficient output space.
 ### Prototype
 ```c
@@ -8668,11 +9323,11 @@ end
 
 This function writes numeric binary data in VTK base64 encoding.
 
-### Parameters
+# Arguments
 * `vtkfile`: Stream opened for writing.
 * `numeric_data`: A pointer to a numeric data array.
 * `byte_length`: The length of the data array in bytes.
-### Returns
+# Returns
 Returns 0 on success, -1 on file error.
 ### Prototype
 ```c
@@ -8688,11 +9343,11 @@ end
 
 This function writes numeric binary data in VTK compressed format.
 
-### Parameters
+# Arguments
 * `vtkfile`: Stream opened for writing.
 * `numeric_data`: A pointer to a numeric data array.
 * `byte_length`: The length of the data array in bytes.
-### Returns
+# Returns
 Returns 0 on success, -1 on file error.
 ### Prototype
 ```c
@@ -8726,7 +9381,7 @@ Write memory content to a file.
 
     This function aborts on file errors.
 
-### Parameters
+# Arguments
 * `ptr`:\\[in\\] Data array to write to disk.
 * `size`:\\[in\\] Size of one array member.
 * `nmemb`:\\[in\\] Number of array members.
@@ -8750,7 +9405,7 @@ Read file content into memory.
 
     This function aborts on file errors.
 
-### Parameters
+# Arguments
 * `ptr`:\\[out\\] Data array to read from disk.
 * `size`:\\[in\\] Size of one array member.
 * `nmemb`:\\[in\\] Number of array members.
@@ -8770,7 +9425,7 @@ end
 
 Best effort to flush a file's data to disc and close it.
 
-### Parameters
+# Arguments
 * `file`:\\[in,out\\] File open for writing.
 ### Prototype
 ```c
@@ -8794,75 +9449,51 @@ function sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
 end
 
 """
-    sc_io_read_at(mpifile, offset, ptr, zcount, t, ocount)
+    sc_io_read_at(mpifile, offset, ptr, count, t, ocount)
 
 ### Prototype
 ```c
-int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
+int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int count, sc_MPI_Datatype t, int *ocount);
 ```
 """
-function sc_io_read_at(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+function sc_io_read_at(mpifile, offset, ptr, count, t, ocount)
+    @ccall libsc.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
-    sc_io_read_at_all(mpifile, offset, ptr, zcount, t, ocount)
+    sc_io_read_at_all(mpifile, offset, ptr, count, t, ocount)
 
 ### Prototype
 ```c
-int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
+int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int count, sc_MPI_Datatype t, int *ocount);
 ```
 """
-function sc_io_read_at_all(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+function sc_io_read_at_all(mpifile, offset, ptr, count, t, ocount)
+    @ccall libsc.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
-    sc_io_read_all(mpifile, ptr, zcount, t, ocount)
+    sc_io_write_at(mpifile, offset, ptr, count, t, ocount)
 
 ### Prototype
 ```c
-int sc_io_read_all (sc_MPI_File mpifile, void *ptr, int zcount, sc_MPI_Datatype t, int *ocount);
+int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, int count, sc_MPI_Datatype t, int *ocount);
 ```
 """
-function sc_io_read_all(mpifile, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_read_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+function sc_io_write_at(mpifile, offset, ptr, count, t, ocount)
+    @ccall libsc.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
-    sc_io_write_at(mpifile, offset, ptr, zcount, t, ocount)
+    sc_io_write_at_all(mpifile, offset, ptr, count, t, ocount)
 
 ### Prototype
 ```c
-int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
+int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, int count, sc_MPI_Datatype t, int *ocount);
 ```
 """
-function sc_io_write_at(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
-end
-
-"""
-    sc_io_write_at_all(mpifile, offset, ptr, zcount, t, ocount)
-
-### Prototype
-```c
-int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
-```
-"""
-function sc_io_write_at_all(mpifile, offset, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
-end
-
-"""
-    sc_io_write_all(mpifile, ptr, zcount, t, ocount)
-
-### Prototype
-```c
-int sc_io_write_all (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, int *ocount);
-```
-"""
-function sc_io_write_all(mpifile, ptr, zcount, t, ocount)
-    @ccall libsc.sc_io_write_all(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
+function sc_io_write_at_all(mpifile, offset, ptr, count, t, ocount)
+    @ccall libsc.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::MPI_Datatype, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -8959,7 +9590,7 @@ Return whether p4est has been initialized or not. Keep in mind that p4est_init i
 
 Currently there is no inverse to p4est_init, and no way to deinit it. This is ok since initialization generally does no harm. Just do not call libsc's finalize function while p4est is still in use.
 
-### Returns
+# Returns
 True if p4est has been initialized with a call to p4est_init and false otherwise.
 ### Prototype
 ```c
@@ -8971,11 +9602,27 @@ function p4est_is_initialized()
 end
 
 """
+    p4est_have_zlib()
+
+Check for a sufficiently recent zlib installation.
+
+# Returns
+True if zlib is detected in both sc and p4est.
+### Prototype
+```c
+int p4est_have_zlib (void);
+```
+"""
+function p4est_have_zlib()
+    @ccall libp4est.p4est_have_zlib()::Cint
+end
+
+"""
     p4est_get_package_id()
 
 Query the package identity as registered in libsc.
 
-### Returns
+# Returns
 This is -1 before p4est_init has been called and a proper package identifier (>= 0) afterwards.
 ### Prototype
 ```c
@@ -9075,7 +9722,7 @@ end
 
 Return the full version of p4est.
 
-### Returns
+# Returns
 Return the version of p4est using the format `VERSION\\_MAJOR.VERSION\\_MINOR.VERSION\\_POINT`, where `VERSION_POINT` can contain dots and characters, e.g. to indicate the additional number of commits and a git commit hash.
 ### Prototype
 ```c
@@ -9091,7 +9738,7 @@ end
 
 Return the major version of p4est.
 
-### Returns
+# Returns
 Return the major version of p4est.
 ### Prototype
 ```c
@@ -9107,7 +9754,7 @@ end
 
 Return the minor version of p4est.
 
-### Returns
+# Returns
 Return the minor version of p4est.
 ### Prototype
 ```c
@@ -9124,10 +9771,19 @@ end
 Characterize a type of adjacency.
 
 Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner. [`p4est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
+
+| Enumerator               | Note                               |
+| :----------------------- | :--------------------------------- |
+| P4EST\\_CONNECT\\_SELF   | No balance whatsoever.             |
+| P4EST\\_CONNECT\\_FACE   | Balance across faces only.         |
+| P4EST\\_CONNECT\\_ALMOST | = CORNER - 1.                      |
+| P4EST\\_CONNECT\\_CORNER | Balance across faces and corners.  |
+| P4EST\\_CONNECT\\_FULL   | = CORNER.                          |
 """
 @cenum p4est_connect_type_t::UInt32 begin
     P4EST_CONNECT_SELF = 20
     P4EST_CONNECT_FACE = 21
+    P4EST_CONNECT_ALMOST = 21
     P4EST_CONNECT_CORNER = 22
     P4EST_CONNECT_FULL = 22
 end
@@ -9151,9 +9807,9 @@ end
 
 Convert the [`p4est_connect_type_t`](@ref) into a number.
 
-### Parameters
+# Arguments
 * `btype`:\\[in\\] The balance type to convert.
-### Returns
+# Returns
 Returns 1 or 2.
 ### Prototype
 ```c
@@ -9169,9 +9825,9 @@ end
 
 Convert the [`p4est_connect_type_t`](@ref) into a const string.
 
-### Parameters
+# Arguments
 * `btype`:\\[in\\] The balance type to convert.
-### Returns
+# Returns
 Returns a pointer to a constant string.
 ### Prototype
 ```c
@@ -9187,17 +9843,21 @@ end
 
 This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
 
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is given by the normal directions -x +x -y +y. Each face has a natural direction by increasing face corner number. Face connections are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3]. If a face is on the physical boundary it must connect to itself.
 
-The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
+The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for faces that are mutually direction-aligned and 1 for faces that are running in opposite directions.
 
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2]. Vertex coordinates are optional and not used for inferring topology.
 
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+The corners are stored when they connect trees that are not already face neighbors at that specific corner. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
 
 The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
 
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user. We do not interpret them.
+
+!!! note
+
+    If a connectivity implies natural connections between trees that are corner neighbors without being face neighbors, these corners shall be encoded explicitly in the connectivity.
 
 | Field                | Note                                                                                 |
 | :------------------- | :----------------------------------------------------------------------------------- |
@@ -9234,17 +9894,21 @@ end
 """
 This structure holds the 2D inter-tree connectivity information. Identification of arbitrary faces and corners is possible.
 
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is -x +x -y +y. They are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3].
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. yx is 00 01 10 11. For faces the order is given by the normal directions -x +x -y +y. Each face has a natural direction by increasing face corner number. Face connections are allocated [0][0]..[0][3]..[num\\_trees-1][0]..[num\\_trees-1][3]. If a face is on the physical boundary it must connect to itself.
 
-The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for edges that are aligned in z-order, and 1 for edges that are running opposite in z-order.
+The values for tree\\_to\\_face are 0..7 where ttf % 4 gives the face number and ttf / 4 the face orientation code. The orientation is 0 for faces that are mutually direction-aligned and 1 for faces that are running in opposite directions.
 
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2]. Vertex coordinates are optional and not used for inferring topology.
 
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+The corners are stored when they connect trees that are not already face neighbors at that specific corner. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
 
 The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
 
-The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+The *\\_to\\_attr arrays may have arbitrary contents defined by the user. We do not interpret them.
+
+!!! note
+
+    If a connectivity implies natural connections between trees that are corner neighbors without being face neighbors, these corners shall be encoded explicitly in the connectivity.
 """
 const p4est_connectivity_t = p4est_connectivity
 
@@ -9253,9 +9917,9 @@ const p4est_connectivity_t = p4est_connectivity
 
 Calculate memory usage of a connectivity structure.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] Connectivity structure.
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -9266,11 +9930,31 @@ function p4est_connectivity_memory_used(conn)
     @ccall libp4est.p4est_connectivity_memory_used(conn::Ptr{p4est_connectivity_t})::Csize_t
 end
 
+"""
+    p4est_corner_transform_t
+
+Generic interface for transformations between a tree and any of its corner
+
+| Field   | Note                      |
+| :------ | :------------------------ |
+| ntree   | The number of the tree    |
+| ncorner | The number of the corner  |
+"""
 struct p4est_corner_transform_t
     ntree::p4est_topidx_t
     ncorner::Int8
 end
 
+"""
+    p4est_corner_info_t
+
+Information about the neighbors of a corner
+
+| Field               | Note                                              |
+| :------------------ | :------------------------------------------------ |
+| icorner             | The number of the originating corner              |
+| corner\\_transforms | The array of neighbors of the originating corner  |
+"""
 struct p4est_corner_info_t
     icorner::p4est_topidx_t
     corner_transforms::sc_array_t
@@ -9289,7 +9973,8 @@ Generic interface for transformations between a tree and any of its neighbors
 | index\\_neighbor  | index of interface from neighbor's perspective                              |
 | perm              | permutation of dimensions when transforming self coords to neighbor coords  |
 | sign              | sign changes when transforming self coords to neighbor coords               |
-| origin\\_neighbor | point on the interface from self's perspective                              |
+| origin\\_self     | point on the interface from self's perspective                              |
+| origin\\_neighbor | point on the interface from neighbor's perspective                          |
 """
 struct p4est_neighbor_transform_t
     neighbor_type::p4est_connect_type_t
@@ -9307,7 +9992,7 @@ end
 
 Transform from self's coordinate system to neighbor's coordinate system.
 
-### Parameters
+# Arguments
 * `nt`:\\[in\\] A neighbor transform.
 * `self_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
 * `neigh_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
@@ -9325,7 +10010,7 @@ end
 
 Transform from neighbor's coordinate system to self's coordinate system.
 
-### Parameters
+# Arguments
 * `nt`:\\[in\\] A neighbor transform.
 * `neigh_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
 * `self_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
@@ -9341,6 +10026,14 @@ end
 """
     p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
 
+Fill an array with the neighbor transforms based on a specific boundary type. This function generalizes all other inter-tree transformation objects
+
+# Arguments
+* `conn`:\\[in\\] Connectivity structure.
+* `tree_id`:\\[in\\] The number of the tree.
+* `boundary_type`:\\[in\\] The type of the boundary connection (self, face, corner).
+* `boundary_index`:\\[in\\] The index of the boundary.
+* `neighbor_transform_array`:\\[in,out\\] Array of the neighbor transforms.
 ### Prototype
 ```c
 void p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t *conn, p4est_topidx_t tree_id, p4est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
@@ -9355,12 +10048,12 @@ end
 
 Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `fc`:\\[in\\] A face corner number in 0..1.
 * `f`:\\[in\\] A face that the face corner number *fc* is relative to.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The face corner number relative to the neighbor's face.
 ### Prototype
 ```c
@@ -9376,12 +10069,12 @@ end
 
 Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `c`:\\[in\\] A corner number in 0..3.
 * `f`:\\[in\\] A face number that touches the corner *c*.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The number of the corner seen from the neighbor tree.
 ### Prototype
 ```c
@@ -9397,12 +10090,12 @@ end
 
 Allocate a connectivity structure. The attribute fields are initialized to NULL.
 
-### Parameters
+# Arguments
 * `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
 * `num_trees`:\\[in\\] Number of trees in the forest.
 * `num_corners`:\\[in\\] Number of tree-connecting corners.
 * `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
-### Returns
+# Returns
 A connectivity structure with allocated arrays.
 ### Prototype
 ```c
@@ -9418,12 +10111,19 @@ end
 
 Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
 
-### Parameters
+# Arguments
 * `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
 * `num_trees`:\\[in\\] Number of trees in the forest.
 * `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `vertices`:\\[in\\] Coordinates of the vertices of the trees.
+* `ttv`:\\[in\\] The tree-to-vertex array.
+* `ttt`:\\[in\\] The tree-to-tree array.
+* `ttf`:\\[in\\] The tree-to-face array (int8\\_t).
+* `ttc`:\\[in\\] The tree-to-corner array.
 * `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
-### Returns
+* `ctt`:\\[in\\] The corner-to-tree array.
+* `ctc`:\\[in\\] The corner-to-corner array.
+# Returns
 The connectivity is checked for validity.
 ### Prototype
 ```c
@@ -9465,7 +10165,7 @@ end
 
 Allocate or free the attribute fields in a connectivity.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
 * `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
 ### Prototype
@@ -9482,7 +10182,7 @@ end
 
 Examine a connectivity structure.
 
-### Returns
+# Returns
 Returns true if structure is valid, false otherwise.
 ### Prototype
 ```c
@@ -9498,7 +10198,7 @@ end
 
 Check two connectivity structures for equality.
 
-### Returns
+# Returns
 Returns true if structures are equal, false otherwise.
 ### Prototype
 ```c
@@ -9514,10 +10214,10 @@ end
 
 Write connectivity to a sink object.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] The connectivity to be written.
 * `sink`:\\[in,out\\] The connectivity is written into this sink.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -9533,10 +10233,10 @@ end
 
 Allocate memory and store the connectivity information there.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] The connectivity structure to be exported to memory.
 * `code`:\\[in\\] Encoding and compression method for serialization.
-### Returns
+# Returns
 Newly created array that contains the information.
 ### Prototype
 ```c
@@ -9552,10 +10252,10 @@ end
 
 Save a connectivity structure to disk.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] Name of the file to write.
 * `connectivity`:\\[in\\] Valid connectivity structure.
-### Returns
+# Returns
 Returns 0 on success, nonzero on file error.
 ### Prototype
 ```c
@@ -9571,9 +10271,9 @@ end
 
 Read connectivity from a source object.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The connectivity is read from this source.
-### Returns
+# Returns
 The newly created connectivity, or NULL on error.
 ### Prototype
 ```c
@@ -9589,9 +10289,9 @@ end
 
 Create new connectivity from a memory buffer. This function aborts on malloc errors.
 
-### Parameters
+# Arguments
 * `buffer`:\\[in\\] The connectivity is created from this memory buffer.
-### Returns
+# Returns
 The newly created connectivity, or NULL on format error of the buffered connectivity data.
 ### Prototype
 ```c
@@ -9607,10 +10307,10 @@ end
 
 Load a connectivity structure from disk.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] Name of the file to read.
 * `bytes`:\\[in,out\\] Size in bytes of connectivity on disk or NULL.
-### Returns
+# Returns
 Returns valid connectivity, or NULL on file error.
 ### Prototype
 ```c
@@ -9664,11 +10364,39 @@ function p4est_connectivity_new_rotwrap()
 end
 
 """
+    p4est_connectivity_new_circle()
+
+Create a connectivity structure for an donut-like circle. The circle consists of 6 trees connecting each other by their faces. The trees are laid out as a hexagon between [-2, 2] in the y direction and [-sqrt(3), sqrt(3)] in the x direction. The hexagon has flat sides along the y direction and pointy ends in x.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_circle (void);
+```
+"""
+function p4est_connectivity_new_circle()
+    @ccall libp4est.p4est_connectivity_new_circle()::Ptr{p4est_connectivity_t}
+end
+
+"""
+    p4est_connectivity_new_drop()
+
+Create a connectivity structure for a five-trees geometry with a hole. The geometry covers the square [0, 3]**2, where the hole is [1, 2]**2.
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_drop (void);
+```
+"""
+function p4est_connectivity_new_drop()
+    @ccall libp4est.p4est_connectivity_new_drop()::Ptr{p4est_connectivity_t}
+end
+
+"""
     p4est_connectivity_new_twotrees(l_face, r_face, orientation)
 
 Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way
 
-### Parameters
+# Arguments
 * `l_face`:\\[in\\] index of left face
 * `r_face`:\\[in\\] index of right face
 * `orientation`:\\[in\\] orientation of trees w.r.t. each other
@@ -9740,7 +10468,11 @@ end
 """
     p4est_connectivity_new_cubed()
 
-Create a connectivity structure for the six sides of a unit cube. The ordering of the trees is as follows: 0 1 2 3 <-- 3: axis-aligned top side 4 5. This choice has been made for maximum symmetry (see tree\\_to\\_* in .c file).
+Create a connectivity structure for the six sides of a unit cube. The ordering of the trees is as follows:
+
+0 1 2 3 <-- 3: axis-aligned top side 4 5
+
+This choice has been made for maximum symmetry (see tree\\_to\\_* in .c file).
 
 ### Prototype
 ```c
@@ -9756,7 +10488,7 @@ end
 
 Create a connectivity structure for a five-tree flat spherical disk. This disk can just as well be used as a square to test non-Cartesian maps. Without any mapping this connectivity covers the square [-3, 3]**2.
 
-### Returns
+# Returns
 Initialized and usable connectivity.
 ### Prototype
 ```c
@@ -9774,18 +10506,20 @@ Create a connectivity structure for a five-tree flat spherical disk. This disk c
 
 !!! note
 
-    The API of this function has changed to accept two arguments. You can query the #define `P4EST_CONN_DISK_PERIODIC` to check whether the new version with the argument is in effect.
+    The API of this function has changed to accept two arguments. You can query the P4EST_CONN_DISK_PERIODIC to check whether the new version with the argument is in effect.
 
-The ordering of the trees is as follows: 4 1 2 3 0.
+The ordering of the trees is as follows:
+
+4 1 2 3 0
 
 The outside x faces may be identified topologically. The outside y faces may be identified topologically. Both identifications may be specified simultaneously. The general shape and periodicity are the same as those obtained with p4est_connectivity_new_brick (1, 1, periodic\\_a, periodic\\_b).
 
 When setting *periodic_a* and *periodic_b* to false, the result is the same as that of p4est_connectivity_new_disk_nonperiodic.
 
-### Parameters
+# Arguments
 * `periodic_a`:\\[in\\] Bool to make disk periodic in x direction.
 * `periodic_b`:\\[in\\] Bool to make disk periodic in y direction.
-### Returns
+# Returns
 Initialized and usable connectivity.
 ### Prototype
 ```c
@@ -9805,7 +10539,7 @@ The regular icosadron is a polyhedron with 20 faces, each of which is an equilat
 
 This connectivity is meant to be used together with p4est_geometry_new_icosahedron to map the sphere.
 
-The flat connectivity looks like that: Vextex numbering:
+The flat connectivity looks like that. Vextex numbering:
 
 A00 A01 A02 A03 A04 / \\ / \\ / \\ / \\ / \\ A05---A06---A07---A08---A09---A10 \\ / \\ / \\ / \\ / \\ / \\ A11---A12---A13---A14---A15---A16 \\ / \\ / \\ / \\ / \\ / A17 A18 A19 A20 A21
 
@@ -9855,6 +10589,24 @@ function p4est_connectivity_new_disk2d()
 end
 
 """
+    p4est_connectivity_new_bowtie()
+
+Create a connectivity structure that maps a 2d bowtie structure.
+
+The 2 trees are connected by a corner connection at node A3 (0, 0). the nodes are given as:
+
+A00 A01 / \\ / \\ A02 A03 A04 \\ / \\ / A05 A06
+
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_new_bowtie (void);
+```
+"""
+function p4est_connectivity_new_bowtie()
+    @ccall libp4est.p4est_connectivity_new_bowtie()::Ptr{p4est_connectivity_t}
+end
+
+"""
     p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
 
 A rectangular m by n array of trees with configurable periodicity. The brick is periodic in x and y if periodic\\_a and periodic\\_b are true, respectively.
@@ -9873,9 +10625,9 @@ end
 
 Create connectivity structure from predefined catalogue.
 
-### Parameters
+# Arguments
 * `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick23 brick (2, 3, 0, 0) corner corner cubed cubed disk disk moebius moebius periodic periodic pillow pillow rotwrap rotwrap star star unit unitsquare
-### Returns
+# Returns
 An initialized connectivity if name is defined, NULL else.
 ### Prototype
 ```c
@@ -9887,22 +10639,22 @@ function p4est_connectivity_new_byname(name)
 end
 
 """
-    p4est_connectivity_refine(conn, num_per_edge)
+    p4est_connectivity_refine(conn, num_per_dim)
 
 Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] A valid connectivity
-* `num_per_edge`:\\[in\\] The number of new trees in each direction. Must use no more than P4EST_OLD_QMAXLEVEL bits.
-### Returns
+* `num_per_dim`:\\[in\\] The number of new trees in each direction. Must use no more than P4EST_OLD_QMAXLEVEL bits.
+# Returns
 a refined connectivity.
 ### Prototype
 ```c
-p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, int num_per_edge);
+p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, int num_per_dim);
 ```
 """
-function p4est_connectivity_refine(conn, num_per_edge)
-    @ccall libp4est.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_edge::Cint)::Ptr{p4est_connectivity_t}
+function p4est_connectivity_refine(conn, num_per_dim)
+    @ccall libp4est.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_dim::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -9910,10 +10662,10 @@ end
 
 Fill an array with the axis combination of a face neighbor transform.
 
-### Parameters
+# Arguments
 * `iface`:\\[in\\] The number of the originating face.
 * `nface`:\\[in\\] Encoded as nface = r * 4 + nf, where nf = 0..3 is the neigbbor's connecting face number and r = 0..1 is the relative orientation to the neighbor's face. This encoding matches [`p4est_connectivity_t`](@ref).
-* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face, the first referring to the tangential and the second to the normal. A permutation of (0, 1). [3,5] The coordinate axis sequence of the target face. [6,8] Edge reversal flag for tangential axis (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q [1,4,7] 0 (unused for compatibility with 3D).
+* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face, the first referring to the tangential and the second to the normal. A permutation of (0, 1). [3,5] The coordinate axis sequence of the target face. [6,8] Face reversal flag for tangential axis (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q [1,4,7] 0 (unused for compatibility with 3D).
 ### Prototype
 ```c
 void p4est_expand_face_transform (int iface, int nface, int ftransform[]);
@@ -9928,12 +10680,16 @@ end
 
 Fill an array with the axis combinations of a tree neighbor transform.
 
-### Parameters
+# Arguments
+* `connectivity`:\\[in\\] Connectivity structure.
 * `itree`:\\[in\\] The number of the originating tree.
 * `iface`:\\[in\\] The number of the originating tree's face.
-* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face. [3,5] The coordinate axis sequence of the target face. [6,8] Edge reverse flag for axis t; face code for axis n. [1,4,7] 0 (unused for compatibility with 3D).
-### Returns
+* `ftransform`:\\[out\\] This array holds 9 integers. [0,2] The coordinate axis sequence of the origin face. [3,5] The coordinate axis sequence of the target face. [6,8] Face reversal flag for axis t; face code for axis n.
+# Returns
 The face neighbor tree if it exists, -1 otherwise.
+# See also
+[`p4est_expand_face_transform`](@ref). [1,4,7] 0 (unused for compatibility with 3D).
+
 ### Prototype
 ```c
 p4est_topidx_t p4est_find_face_transform (p4est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
@@ -9948,7 +10704,8 @@ end
 
 Fills an array with information about corner neighbors.
 
-### Parameters
+# Arguments
+* `connectivity`:\\[in\\] Connectivity structure.
 * `itree`:\\[in\\] The number of the originating tree.
 * `icorner`:\\[in\\] The number of the originating corner.
 * `ci`:\\[in,out\\] A `p4est_corner_info_t` structure with initialized array.
@@ -9966,7 +10723,7 @@ end
 
 Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p4est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The corner fields will be freed and allocated anew.
 ### Prototype
 ```c
@@ -9982,7 +10739,7 @@ end
 
 Removes corner information of a connectivity such that enough information is left to run [`p4est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p4est_connectivity_is_valid`](@ref).
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity to be reduced.
 ### Prototype
 ```c
@@ -9998,7 +10755,7 @@ end
 
 [`p4est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity whose trees are permuted.
 * `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
 * `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
@@ -10016,7 +10773,7 @@ end
 
 [`p4est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] connectivity that will be altered.
 * `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
 * `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
@@ -10037,7 +10794,7 @@ end
 
 [`p4est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
 
-### Parameters
+# Arguments
 * `conn1`:\\[in\\] a valid connectivity
 * `conn2`:\\[out\\] a valid connectivity
 ### Prototype
@@ -10102,13 +10859,13 @@ and in 3D they are given as:
 
 This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
 
-### Parameters
+# Arguments
 * `stream`:\\[in,out\\] file stream to read the connectivity from
 * `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
 * `num_trees`:\\[in,out\\] the number of trees in the connectivity
 * `vertices`:\\[out\\] the list of `vertices` of the connectivity
 * `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
-### Returns
+# Returns
 0 if successful and nonzero if not
 ### Prototype
 ```c
@@ -10160,9 +10917,9 @@ and in 3D they are given as:
 
 This function reads a mesh from *filename* and returns an associated p4est connectivity.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] file to read the connectivity from
-### Returns
+# Returns
 an allocated connectivity associated with the mesh in *filename* or NULL if an error occurred.
 ### Prototype
 ```c
@@ -10179,11 +10936,21 @@ end
 Characterize a type of adjacency.
 
 Several functions involve relationships between neighboring trees and/or quadrants, and their behavior depends on how one defines adjacency: 1) entities are adjacent if they share a face, or 2) entities are adjacent if they share a face or corner, or 3) entities are adjacent if they share a face, corner or edge. [`p8est_connect_type_t`](@ref) is used to choose the desired behavior. This enum must fit into an int8\\_t.
+
+| Enumerator               | Note                             |
+| :----------------------- | :------------------------------- |
+| P8EST\\_CONNECT\\_SELF   | No balance whatsoever.           |
+| P8EST\\_CONNECT\\_FACE   | Balance across faces only.       |
+| P8EST\\_CONNECT\\_EDGE   | Balance across faces and edges.  |
+| P8EST\\_CONNECT\\_ALMOST | = CORNER - 1.                    |
+| P8EST\\_CONNECT\\_CORNER | Balance faces, edges, corners.   |
+| P8EST\\_CONNECT\\_FULL   | = CORNER.                        |
 """
 @cenum p8est_connect_type_t::UInt32 begin
     P8EST_CONNECT_SELF = 30
     P8EST_CONNECT_FACE = 31
     P8EST_CONNECT_EDGE = 32
+    P8EST_CONNECT_ALMOST = 32
     P8EST_CONNECT_CORNER = 33
     P8EST_CONNECT_FULL = 33
 end
@@ -10207,9 +10974,9 @@ end
 
 Convert the [`p8est_connect_type_t`](@ref) into a number.
 
-### Parameters
+# Arguments
 * `btype`:\\[in\\] The balance type to convert.
-### Returns
+# Returns
 Returns 1, 2 or 3.
 ### Prototype
 ```c
@@ -10225,9 +10992,9 @@ end
 
 Convert the [`p8est_connect_type_t`](@ref) into a const string.
 
-### Parameters
+# Arguments
 * `btype`:\\[in\\] The balance type to convert.
-### Returns
+# Returns
 Returns a pointer to a constant string.
 ### Prototype
 ```c
@@ -10243,21 +11010,25 @@ end
 
 This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
 
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge. If a face is on the physical boundary it must connect to itself.
 
 The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
 
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2]. Vertex coordinates are optional and not used for inferring topology.
 
-The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
+The edges are stored when they connect trees that are not already face neighbors at that specific edge. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
 
 The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
 
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+The corners are stored when they connect trees that are not already edge or face neighbors at that specific corner. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
 
 The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
 
 The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+
+!!! note
+
+    If a connectivity implies natural connections between trees that are edge neighbors without being face neighbors, these edges shall be encoded explicitly in the connectivity. If a connectivity implies natural connections between trees that are corner neighbors without being edge or face neighbors, these corners shall be encoded explicitly in the connectivity.
 
 | Field                | Note                                                                                 |
 | :------------------- | :----------------------------------------------------------------------------------- |
@@ -10304,21 +11075,25 @@ end
 """
 This structure holds the 3D inter-tree connectivity information. Identification of arbitrary faces, edges and corners is possible.
 
-The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge.
+The arrays tree\\_to\\_* are stored in z ordering. For corners the order wrt. zyx is 000 001 010 011 100 101 110 111. For faces the order is -x +x -y +y -z +z. They are allocated [0][0]..[0][N-1]..[num\\_trees-1][0]..[num\\_trees-1][N-1]. where N is 6 for tree and face, 8 for corner, 12 for edge. If a face is on the physical boundary it must connect to itself.
 
 The values for tree\\_to\\_face are in 0..23 where ttf % 6 gives the face number and ttf / 6 the face orientation code. The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees in 0..5. Then the first face corner of the lower of my\\_face and other\\_face connects to a face corner numbered 0..3 in the higher of my\\_face and other\\_face. The face orientation is defined as this number. If my\\_face == other\\_face, treating either of both faces as the lower one leads to the same result.
 
-It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2].
+It is valid to specify num\\_vertices as 0. In this case vertices and tree\\_to\\_vertex are set to NULL. Otherwise the vertex coordinates are stored in the array vertices as [0][0]..[0][2]..[num\\_vertices-1][0]..[num\\_vertices-1][2]. Vertex coordinates are optional and not used for inferring topology.
 
-The edges are only stored when they connect trees. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
+The edges are stored when they connect trees that are not already face neighbors at that specific edge. In this case tree\\_to\\_edge indexes into *ett_offset*. Otherwise the tree\\_to\\_edge entry must be -1 and this edge is ignored. If num\\_edges == 0, tree\\_to\\_edge and edge\\_to\\_* arrays are set to NULL.
 
 The arrays edge\\_to\\_* store a variable number of entries per edge. For edge e these are at position [ett\\_offset[e]]..[ett\\_offset[e+1]-1]. Their number for edge e is ett\\_offset[e+1] - ett\\_offset[e]. The entries encode all trees adjacent to edge e. The size of the edge\\_to\\_* arrays is num\\_ett = ett\\_offset[num\\_edges]. The edge\\_to\\_edge array holds values in 0..23, where the lower 12 indicate one edge orientation and the higher 12 the opposite edge orientation.
 
-The corners are only stored when they connect trees. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
+The corners are stored when they connect trees that are not already edge or face neighbors at that specific corner. In this case tree\\_to\\_corner indexes into *ctt_offset*. Otherwise the tree\\_to\\_corner entry must be -1 and this corner is ignored. If num\\_corners == 0, tree\\_to\\_corner and corner\\_to\\_* arrays are set to NULL.
 
 The arrays corner\\_to\\_* store a variable number of entries per corner. For corner c these are at position [ctt\\_offset[c]]..[ctt\\_offset[c+1]-1]. Their number for corner c is ctt\\_offset[c+1] - ctt\\_offset[c]. The entries encode all trees adjacent to corner c. The size of the corner\\_to\\_* arrays is num\\_ctt = ctt\\_offset[num\\_corners].
 
 The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
+
+!!! note
+
+    If a connectivity implies natural connections between trees that are edge neighbors without being face neighbors, these edges shall be encoded explicitly in the connectivity. If a connectivity implies natural connections between trees that are corner neighbors without being edge or face neighbors, these corners shall be encoded explicitly in the connectivity.
 """
 const p8est_connectivity_t = p8est_connectivity
 
@@ -10327,9 +11102,9 @@ const p8est_connectivity_t = p8est_connectivity
 
 Calculate memory usage of a connectivity structure.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] Connectivity structure.
-### Returns
+# Returns
 Memory used in bytes.
 ### Prototype
 ```c
@@ -10340,6 +11115,19 @@ function p8est_connectivity_memory_used(conn)
     @ccall libp4est.p8est_connectivity_memory_used(conn::Ptr{p8est_connectivity_t})::Csize_t
 end
 
+"""
+    p8est_edge_transform_t
+
+Generic interface for transformations between a tree and any of its edge
+
+| Field   | Note                               |
+| :------ | :--------------------------------- |
+| ntree   | The number of the tree             |
+| nedge   | The number of the edge             |
+| naxis   | The 3 edge coordinate axes         |
+| nflip   | The orientation of the edge        |
+| corners | The corners connected to the edge  |
+"""
 struct p8est_edge_transform_t
     ntree::p4est_topidx_t
     nedge::Int8
@@ -10348,16 +11136,46 @@ struct p8est_edge_transform_t
     corners::Int8
 end
 
+"""
+    p8est_edge_info_t
+
+Information about the neighbors of an edge
+
+| Field             | Note                                            |
+| :---------------- | :---------------------------------------------- |
+| iedge             | The information of the edge                     |
+| edge\\_transforms | The array of neighbors of the originating edge  |
+"""
 struct p8est_edge_info_t
     iedge::Int8
     edge_transforms::sc_array_t
 end
 
+"""
+    p8est_corner_transform_t
+
+Generic interface for transformations between a tree and any of its corner
+
+| Field   | Note                      |
+| :------ | :------------------------ |
+| ntree   | The number of the tree    |
+| ncorner | The number of the corner  |
+"""
 struct p8est_corner_transform_t
     ntree::p4est_topidx_t
     ncorner::Int8
 end
 
+"""
+    p8est_corner_info_t
+
+Information about the neighbors of a corner
+
+| Field               | Note                                              |
+| :------------------ | :------------------------------------------------ |
+| icorner             | The number of the originating corner              |
+| corner\\_transforms | The array of neighbors of the originating corner  |
+"""
 struct p8est_corner_info_t
     icorner::p4est_topidx_t
     corner_transforms::sc_array_t
@@ -10376,7 +11194,8 @@ Generic interface for transformations between a tree and any of its neighbors
 | index\\_neighbor  | index of interface from neighbor's perspective                              |
 | perm              | permutation of dimensions when transforming self coords to neighbor coords  |
 | sign              | sign changes when transforming self coords to neighbor coords               |
-| origin\\_neighbor | point on the interface from self's perspective                              |
+| origin\\_self     | point on the interface from self's perspective                              |
+| origin\\_neighbor | point on the interface from neighbor's perspective                          |
 """
 struct p8est_neighbor_transform_t
     neighbor_type::p8est_connect_type_t
@@ -10394,7 +11213,7 @@ end
 
 Transform from self's coordinate system to neighbor's coordinate system.
 
-### Parameters
+# Arguments
 * `nt`:\\[in\\] A neighbor transform.
 * `self_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
 * `neigh_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
@@ -10412,7 +11231,7 @@ end
 
 Transform from neighbor's coordinate system to self's coordinate system.
 
-### Parameters
+# Arguments
 * `nt`:\\[in\\] A neighbor transform.
 * `neigh_coords`:\\[in\\] Input quadrant coordinates in self coordinates.
 * `self_coords`:\\[out\\] Coordinates transformed into neighbor coordinates.
@@ -10428,6 +11247,14 @@ end
 """
     p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
 
+Fill an array with the neighbor transforms based on a specific boundary type. This function generalizes all other inter-tree transformation objects
+
+# Arguments
+* `conn`:\\[in\\] Connectivity structure.
+* `tree_id`:\\[in\\] The number of the tree.
+* `boundary_type`:\\[in\\] Type of boundary connection (self, face, edge, corner).
+* `boundary_index`:\\[in\\] The index of the boundary.
+* `neighbor_transform_array`:\\[in,out\\] Array of the neighbor transforms.
 ### Prototype
 ```c
 void p8est_connectivity_get_neighbor_transforms (p8est_connectivity_t *conn, p4est_topidx_t tree_id, p8est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
@@ -10442,12 +11269,12 @@ end
 
 Transform a corner across one of the adjacent faces into a neighbor tree. It expects a face permutation index that has been precomputed.
 
-### Parameters
+# Arguments
 * `c`:\\[in\\] A corner number in 0..7.
 * `f`:\\[in\\] A face number that touches the corner *c*.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `set`:\\[in\\] A value from *p8est_face_permutation_sets* that is obtained using *f*, *nf*, and a valid orientation: ref = p8est\\_face\\_permutation\\_refs[f][nf]; set = p8est\\_face\\_permutation\\_sets[ref][orientation];
-### Returns
+# Returns
 The corner number in 0..7 seen from the other face.
 ### Prototype
 ```c
@@ -10463,12 +11290,12 @@ end
 
 Transform a face corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `fc`:\\[in\\] A face corner number in 0..3.
 * `f`:\\[in\\] A face that the face corner *fc* is relative to.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The face corner number relative to the neighbor's face.
 ### Prototype
 ```c
@@ -10484,12 +11311,12 @@ end
 
 Transform a corner across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `c`:\\[in\\] A corner number in 0..7.
 * `f`:\\[in\\] A face number that touches the corner *c*.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The number of the corner seen from the neighbor tree.
 ### Prototype
 ```c
@@ -10505,12 +11332,12 @@ end
 
 Transform a face-edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `fe`:\\[in\\] A face edge number in 0..3.
 * `f`:\\[in\\] A face number that touches the edge *e*.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The face edge number seen from the neighbor tree.
 ### Prototype
 ```c
@@ -10526,12 +11353,12 @@ end
 
 Transform an edge across one of the adjacent faces into a neighbor tree. This version expects the neighbor face and orientation separately.
 
-### Parameters
+# Arguments
 * `e`:\\[in\\] A edge number in 0..11.
 * `f`:\\[in\\] A face 0..5 that touches the edge *e*.
 * `nf`:\\[in\\] A neighbor face that is on the other side of *f*.
 * `o`:\\[in\\] The orientation between tree boundary faces *f* and *nf*.
-### Returns
+# Returns
 The edge's number seen from the neighbor.
 ### Prototype
 ```c
@@ -10547,10 +11374,10 @@ end
 
 Transform an edge corner across one of the adjacent edges into a neighbor tree.
 
-### Parameters
+# Arguments
 * `ec`:\\[in\\] An edge corner number in 0..1.
 * `o`:\\[in\\] The orientation of a tree boundary edge connection.
-### Returns
+# Returns
 The edge corner number seen from the other tree.
 ### Prototype
 ```c
@@ -10566,12 +11393,12 @@ end
 
 Transform a corner across one of the adjacent edges into a neighbor tree. This version expects the neighbor edge and orientation separately.
 
-### Parameters
+# Arguments
 * `c`:\\[in\\] A corner number in 0..7.
 * `e`:\\[in\\] An edge 0..11 that touches the corner *c*.
-* `ne`:\\[in\\] A neighbor edge that is on the other side of *.*
+* `ne`:\\[in\\] A neighbor edge that is on the other side of *e*.
 * `o`:\\[in\\] The orientation between tree boundary edges *e* and *ne*.
-### Returns
+# Returns
 Corner number seen from the neighbor.
 ### Prototype
 ```c
@@ -10587,14 +11414,14 @@ end
 
 Allocate a connectivity structure. The attribute fields are initialized to NULL.
 
-### Parameters
+# Arguments
 * `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
 * `num_trees`:\\[in\\] Number of trees in the forest.
 * `num_edges`:\\[in\\] Number of tree-connecting edges.
 * `num_ett`:\\[in\\] Number of total trees in edge\\_to\\_tree array.
 * `num_corners`:\\[in\\] Number of tree-connecting corners.
 * `num_ctt`:\\[in\\] Number of total trees in corner\\_to\\_tree array.
-### Returns
+# Returns
 A connectivity structure with allocated arrays.
 ### Prototype
 ```c
@@ -10610,14 +11437,24 @@ end
 
 Allocate a connectivity structure and populate from constants. The attribute fields are initialized to NULL.
 
-### Parameters
+# Arguments
 * `num_vertices`:\\[in\\] Number of total vertices (i.e. geometric points).
 * `num_trees`:\\[in\\] Number of trees in the forest.
 * `num_edges`:\\[in\\] Number of tree-connecting edges.
 * `num_corners`:\\[in\\] Number of tree-connecting corners.
+* `vertices`:\\[in\\] Coordinates of the vertices of the trees.
+* `ttv`:\\[in\\] The tree-to-vertex array.
+* `ttt`:\\[in\\] The tree-to-tree array.
+* `ttf`:\\[in\\] The tree-to-face array (int8\\_t).
+* `tte`:\\[in\\] The tree-to-edge array.
 * `eoff`:\\[in\\] Edge-to-tree offsets (num\\_edges + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
+* `ett`:\\[in\\] The edge-to-tree array.
+* `ete`:\\[in\\] The edge-to-edge array.
+* `ttc`:\\[in\\] The tree-to-corner array.
 * `coff`:\\[in\\] Corner-to-tree offsets (num\\_corners + 1 values). This must always be non-NULL; in trivial cases it is just a pointer to a p4est\\_topix value of 0.
-### Returns
+* `ctt`:\\[in\\] The corner-to-tree array.
+* `ctc`:\\[in\\] The corner-to-corner array.
+# Returns
 The connectivity is checked for validity.
 ### Prototype
 ```c
@@ -10659,7 +11496,7 @@ end
 
 Allocate or free the attribute fields in a connectivity.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The conn->*\\_to\\_attr fields must either be NULL or previously be allocated by this function.
 * `bytes_per_tree`:\\[in\\] If 0, tree\\_to\\_attr is freed (being NULL is ok). If positive, requested space is allocated.
 ### Prototype
@@ -10676,7 +11513,7 @@ end
 
 Examine a connectivity structure.
 
-### Returns
+# Returns
 Returns true if structure is valid, false otherwise.
 ### Prototype
 ```c
@@ -10692,7 +11529,7 @@ end
 
 Check two connectivity structures for equality.
 
-### Returns
+# Returns
 Returns true if structures are equal, false otherwise.
 ### Prototype
 ```c
@@ -10708,10 +11545,10 @@ end
 
 Write connectivity to a sink object.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] The connectivity to be written.
 * `sink`:\\[in,out\\] The connectivity is written into this sink.
-### Returns
+# Returns
 0 on success, nonzero on error.
 ### Prototype
 ```c
@@ -10727,10 +11564,10 @@ end
 
 Allocate memory and store the connectivity information there.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] The connectivity structure to be exported to memory.
 * `code`:\\[in\\] Encoding and compression method for serialization.
-### Returns
+# Returns
 Newly created array that contains the information.
 ### Prototype
 ```c
@@ -10746,10 +11583,10 @@ end
 
 Save a connectivity structure to disk.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] Name of the file to write.
 * `connectivity`:\\[in\\] Valid connectivity structure.
-### Returns
+# Returns
 Returns 0 on success, nonzero on file error.
 ### Prototype
 ```c
@@ -10765,9 +11602,9 @@ end
 
 Read connectivity from a source object.
 
-### Parameters
+# Arguments
 * `source`:\\[in,out\\] The connectivity is read from this source.
-### Returns
+# Returns
 The newly created connectivity, or NULL on error.
 ### Prototype
 ```c
@@ -10783,9 +11620,9 @@ end
 
 Create new connectivity from a memory buffer. This function aborts on malloc errors.
 
-### Parameters
+# Arguments
 * `buffer`:\\[in\\] The connectivity is created from this memory buffer.
-### Returns
+# Returns
 The newly created connectivity, or NULL on format error of the buffered connectivity data.
 ### Prototype
 ```c
@@ -10801,10 +11638,10 @@ end
 
 Load a connectivity structure from disk.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] Name of the file to read.
 * `bytes`:\\[out\\] Size in bytes of connectivity on disk or NULL.
-### Returns
+# Returns
 Returns valid connectivity, or NULL on file error.
 ### Prototype
 ```c
@@ -10858,6 +11695,20 @@ function p8est_connectivity_new_rotwrap()
 end
 
 """
+    p8est_connectivity_new_drop()
+
+Create a connectivity structure for a five-trees geometry with a hole. The geometry is a 3D extrusion of the two drop example, and covers [0, 3]*[0, 2]*[0, 3]. The additional dimension is Y.
+
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_new_drop (void);
+```
+"""
+function p8est_connectivity_new_drop()
+    @ccall libp4est.p8est_connectivity_new_drop()::Ptr{p8est_connectivity_t}
+end
+
+"""
     p8est_connectivity_new_twocubes()
 
 Create a connectivity structure that contains two cubes.
@@ -10876,7 +11727,7 @@ end
 
 Create a connectivity structure for two trees being rotated w.r.t. each other in a user-defined way.
 
-### Parameters
+# Arguments
 * `l_face`:\\[in\\] index of left face
 * `r_face`:\\[in\\] index of right face
 * `orientation`:\\[in\\] orientation of trees w.r.t. each other
@@ -10970,7 +11821,7 @@ This connectivity reuses ideas from disk2d connectivity. More precisely the toru
 
 This connectivity is meant to be used with p8est_geometry_new_torus
 
-### Parameters
+# Arguments
 * `nSegments`:\\[in\\] number of trees along the great circle
 ### Prototype
 ```c
@@ -10986,9 +11837,9 @@ end
 
 Create connectivity structure from predefined catalogue.
 
-### Parameters
+# Arguments
 * `name`:\\[in\\] Invokes connectivity\\_new\\_* function. brick235 brick (2, 3, 5, 0, 0, 0) periodic periodic rotcubes rotcubes rotwrap rotwrap shell shell sphere sphere twocubes twocubes twowrap twowrap unit unitcube
-### Returns
+# Returns
 An initialized connectivity if name is defined, NULL else.
 ### Prototype
 ```c
@@ -11000,22 +11851,22 @@ function p8est_connectivity_new_byname(name)
 end
 
 """
-    p8est_connectivity_refine(conn, num_per_edge)
+    p8est_connectivity_refine(conn, num_per_dim)
 
 Uniformly refine a connectivity. This is useful if you would like to uniformly refine by something other than a power of 2.
 
-### Parameters
+# Arguments
 * `conn`:\\[in\\] A valid connectivity
-* `num_per_edge`:\\[in\\] The number of new trees in each direction. Must use no more than P8EST_OLD_QMAXLEVEL bits.
-### Returns
+* `num_per_dim`:\\[in\\] The number of new trees in each direction. Must use no more than P8EST_OLD_QMAXLEVEL bits.
+# Returns
 a refined connectivity.
 ### Prototype
 ```c
-p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, int num_per_edge);
+p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, int num_per_dim);
 ```
 """
-function p8est_connectivity_refine(conn, num_per_edge)
-    @ccall libp4est.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_edge::Cint)::Ptr{p8est_connectivity_t}
+function p8est_connectivity_refine(conn, num_per_dim)
+    @ccall libp4est.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_dim::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -11023,7 +11874,7 @@ end
 
 Fill an array with the axis combination of a face neighbor transform.
 
-### Parameters
+# Arguments
 * `iface`:\\[in\\] The number of the originating face.
 * `nface`:\\[in\\] Encoded as nface = r * 6 + nf, where nf = 0..5 is the neigbbor's connecting face number and r = 0..3 is the relative orientation to the neighbor's face. This encoding matches [`p8est_connectivity_t`](@ref).
 * `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face, the first two referring to the tangentials and the third to the normal. A permutation of (0, 1, 2). [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reversal flags for tangential axes (boolean); face code in [0, 3] for the normal coordinate q: 0: q' = -q 1: q' = q + 1 2: q' = q - 1 3: q' = 2 - q
@@ -11041,12 +11892,16 @@ end
 
 Fill an array with the axis combination of a face neighbor transform.
 
-### Parameters
+# Arguments
+* `connectivity`:\\[in\\] Connectivity structure.
 * `itree`:\\[in\\] The number of the originating tree.
 * `iface`:\\[in\\] The number of the originating tree's face.
-* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face. [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reverse flag for axes t1, t2; face code for n.
-### Returns
+* `ftransform`:\\[out\\] This array holds 9 integers. [0]..[2] The coordinate axis sequence of the origin face. [3]..[5] The coordinate axis sequence of the target face. [6]..[8] Edge reversal flag for axes t1, t2; face code for n;
+# Returns
 The face neighbor tree if it exists, -1 otherwise.
+# See also
+[`p8est_expand_face_transform`](@ref).
+
 ### Prototype
 ```c
 p4est_topidx_t p8est_find_face_transform (p8est_connectivity_t * connectivity, p4est_topidx_t itree, int iface, int ftransform[]);
@@ -11061,7 +11916,8 @@ end
 
 Fills an array with information about edge neighbors.
 
-### Parameters
+# Arguments
+* `connectivity`:\\[in\\] Connectivity structure.
 * `itree`:\\[in\\] The number of the originating tree.
 * `iedge`:\\[in\\] The number of the originating edge.
 * `ei`:\\[in,out\\] A `p8est_edge_info_t` structure with initialized array.
@@ -11079,7 +11935,8 @@ end
 
 Fills an array with information about corner neighbors.
 
-### Parameters
+# Arguments
+* `connectivity`:\\[in\\] Connectivity structure.
 * `itree`:\\[in\\] The number of the originating tree.
 * `icorner`:\\[in\\] The number of the originating corner.
 * `ci`:\\[in,out\\] A `p8est_corner_info_t` structure with initialized array.
@@ -11097,7 +11954,7 @@ end
 
 Internally connect a connectivity based on tree\\_to\\_vertex information. Periodicity that is not inherent in the list of vertices will be lost.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity needs to have proper vertices and tree\\_to\\_vertex fields. The tree\\_to\\_tree and tree\\_to\\_face fields must be allocated and satisfy [`p8est_connectivity_is_valid`](@ref) (conn) but will be overwritten. The edge and corner fields will be freed and allocated anew.
 ### Prototype
 ```c
@@ -11113,7 +11970,7 @@ end
 
 Removes corner and edge information of a connectivity such that enough information is left to run [`p8est_connectivity_complete`](@ref) successfully. The reduced connectivity still passes [`p8est_connectivity_is_valid`](@ref).
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity to be reduced.
 ### Prototype
 ```c
@@ -11129,7 +11986,7 @@ end
 
 [`p8est_connectivity_permute`](@ref) Given a permutation *perm* of the trees in a connectivity *conn*, permute the trees of *conn* in place and update *conn* to match.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] The connectivity whose trees are permuted.
 * `perm`:\\[in\\] A permutation array, whose elements are size\\_t's.
 * `is_current_to_new`:\\[in\\] if true, the jth entry of perm is the new index for the entry whose current index is j, otherwise the jth entry of perm is the current index of the tree whose index will be j after the permutation.
@@ -11147,7 +12004,7 @@ end
 
 [`p8est_connectivity_join_faces`](@ref) This function takes an existing valid connectivity *conn* and modifies it by joining two tree faces that are currently boundary faces.
 
-### Parameters
+# Arguments
 * `conn`:\\[in,out\\] connectivity that will be altered.
 * `tree_left`:\\[in\\] tree that will be on the left side of the joined faces.
 * `tree_right`:\\[in\\] tree that will be on the right side of the joined faces.
@@ -11168,7 +12025,7 @@ end
 
 [`p8est_connectivity_is_equivalent`](@ref) This function compares two connectivities for equivalence: it returns *true* if they are the same connectivity, or if they have the same topology. The definition of topological sameness is strict: there is no attempt made to determine whether permutation and/or rotation of the trees makes the connectivities equivalent.
 
-### Parameters
+# Arguments
 * `conn1`:\\[in\\] a valid connectivity
 * `conn2`:\\[out\\] a valid connectivity
 ### Prototype
@@ -11263,13 +12120,13 @@ and in 3D they are given as:
 
 This code can be called two ways. The first, when `vertex`==NULL and `tree_to_vertex`==NULL, is used to count the number of trees and vertices in the connectivity to be generated by the `.inp` mesh in the *stream*. The second, when `vertices`!=NULL and `tree_to_vertex`!=NULL, fill `vertices` and `tree_to_vertex`. In this case `num_vertices` and `num_trees` need to be set to the maximum number of entries allocated in `vertices` and `tree_to_vertex`.
 
-### Parameters
+# Arguments
 * `stream`:\\[in,out\\] file stream to read the connectivity from
 * `num_vertices`:\\[in,out\\] the number of vertices in the connectivity
 * `num_trees`:\\[in,out\\] the number of trees in the connectivity
 * `vertices`:\\[out\\] the list of `vertices` of the connectivity
 * `tree_to_vertex`:\\[out\\] the `tree_to_vertex` map of the connectivity
-### Returns
+# Returns
 0 if successful and nonzero if not
 ### Prototype
 ```c
@@ -11339,9 +12196,9 @@ and in 3D they are given as:
 
 This function reads a mesh from *filename* and returns an associated p4est connectivity.
 
-### Parameters
+# Arguments
 * `filename`:\\[in\\] file to read the connectivity from
-### Returns
+# Returns
 an allocated connectivity associated with the mesh in *filename*
 ### Prototype
 ```c
@@ -11413,15 +12270,15 @@ function t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
 end
 
 """
-    t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z)
+    t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hypercube_pad (const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z);
+t8_cmesh_t t8_cmesh_new_hypercube_pad (const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int use_axis_aligned);
 ```
 """
-function t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z)
-    @ccall libt8.t8_cmesh_new_hypercube_pad(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t)::t8_cmesh_t
+function t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
+    @ccall libt8.t8_cmesh_new_hypercube_pad(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::t8_cmesh_t
 end
 
 """
@@ -11665,46 +12522,118 @@ function t8_cmesh_new_row_of_cubes(num_trees, set_attributes, do_partition, comm
 end
 
 """
-    t8_cmesh_new_squared_disk(radius, comm)
+    t8_cmesh_new_quadrangulated_disk(radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_squared_disk (const double radius, sc_MPI_Comm comm);
+t8_cmesh_t t8_cmesh_new_quadrangulated_disk (const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_squared_disk(radius, comm)
-    @ccall libt8.t8_cmesh_new_squared_disk(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_quadrangulated_disk(radius, comm)
+    @ccall libt8.t8_cmesh_new_quadrangulated_disk(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
-    t8_cmesh_new_triangulated_spherical_surface(radius, comm)
+    t8_cmesh_new_triangulated_spherical_surface_octahedron(radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface (const double radius, sc_MPI_Comm comm);
+t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_octahedron (const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_triangulated_spherical_surface(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_triangulated_spherical_surface_octahedron(radius, comm)
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
-    t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
+    t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius, comm)
 
-Get the name of the geometry stored for a tree in a cmesh.
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_icosahedron (const double radius, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius, comm)
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+end
 
-### Parameters
+"""
+    t8_cmesh_new_quadrangulated_spherical_surface(radius, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_quadrangulated_spherical_surface (const double radius, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_quadrangulated_spherical_surface(radius, comm)
+    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_octahedron (const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_icosahedron (const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_cubed_spherical_shell(inner_radius, shell_thickness, num_levels, num_layers, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_cubed_spherical_shell (const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_cubed_spherical_shell(inner_radius, shell_thickness, num_levels, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_new_cubed_sphere(radius, comm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_cubed_sphere (const double radius, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_cubed_sphere(radius, comm)
+    @ccall libt8.t8_cmesh_new_cubed_sphere(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+end
+
+"""
+    t8_cmesh_get_tree_geom_hash(cmesh, gtreeid)
+
+Get the hash of the geometry stored for a tree in a cmesh.
+
+# Arguments
 * `cmesh`:\\[in\\] A committed cmesh.
 * `gtreeid`:\\[in\\] A global tree in *cmesh*.
-### Returns
-The name of the tree's geometry or NULL if no geometry is set for this tree.
+# Returns
+The hash of the tree's geometry or if only one geometry exists, its hash.
 ### Prototype
 ```c
-const char* t8_cmesh_get_tree_geom_name (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
+size_t t8_cmesh_get_tree_geom_hash (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
 ```
 """
-function t8_cmesh_get_tree_geom_name(cmesh, gtreeid)
-    @ccall libt8.t8_cmesh_get_tree_geom_name(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Cstring
+function t8_cmesh_get_tree_geom_hash(cmesh, gtreeid)
+    @ccall libt8.t8_cmesh_get_tree_geom_hash(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Csize_t
 end
 
 """
@@ -11720,7 +12649,7 @@ Sets the face connectivity information of an un-committed  based on a list of tr
 
     This routine does not detect periodic boundaries.
 
-### Parameters
+# Arguments
 * `cmesh`:\\[in,out\\] Pointer to a t8code cmesh object. If set to NULL this argument is ignored.
 * `ntrees`:\\[in\\] Number of coarse mesh elements resp. trees.
 * `vertices`:\\[in\\] List of per element vertices with dimensions [ntrees,[`T8_ECLASS_MAX_CORNERS`](@ref),[`T8_ECLASS_MAX_DIM`](@ref)].
@@ -11736,337 +12665,448 @@ function t8_cmesh_set_join_by_vertices(cmesh, ntrees, eclasses, vertices, connec
     @ccall libt8.t8_cmesh_set_join_by_vertices(cmesh::t8_cmesh_t, ntrees::Cint, eclasses::Ptr{t8_eclass_t}, vertices::Ptr{Cdouble}, connectivity::Ptr{Ptr{Cint}}, do_both_directions::Cint)::Cvoid
 end
 
-# no prototype is found for this function at t8_cmesh_testcases.h:41:1, please use with caution
 """
-    t8_get_number_of_comm_only_cmesh_testcases()
+    t8_stash_class
 
-The functions t8\\_get\\_*\\_cmesh\\_testcases
+The eclass information that is stored before a cmesh is committed.
 
-### Returns
-the number of testcases for a given cmesh type.  To get all possible inputs, we multiply  the number of different inputs of all variables. The function t8\\_get\\_comm\\_only\\_cmesh\\_testcases() returns the number of testcases for all cmeshes that only take a comm as input all added together.
-### Prototype
-```c
-int t8_get_number_of_comm_only_cmesh_testcases ();
-```
+| Field  | Note                     |
+| :----- | :----------------------- |
+| id     | The global tree id       |
+| eclass | The eclass of that tree  |
 """
-function t8_get_number_of_comm_only_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_comm_only_cmesh_testcases()::Cint
+struct t8_stash_class
+    id::t8_gloidx_t
+    eclass::t8_eclass_t
 end
 
-# no prototype is found for this function at t8_cmesh_testcases.h:46:1, please use with caution
-"""
-    t8_get_number_of_new_hypercube_cmesh_testcases()
+"""The eclass information that is stored before a cmesh is committed."""
+const t8_stash_class_struct_t = t8_stash_class
 
-The function t8\\_get\\_new\\_hypercube\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the hypercube cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_hypercube_cmesh_testcases ();
-```
 """
-function t8_get_number_of_new_hypercube_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_hypercube_cmesh_testcases()::Cint
+    t8_stash_joinface
+
+The face-connection information that is stored before a cmesh is committed.
+
+| Field       | Note                                                                       |
+| :---------- | :------------------------------------------------------------------------- |
+| id1         | The global tree id of the first tree in the connection.                    |
+| id2         | The global tree id of the second tree. We ensure id1<=id2.                 |
+| face1       | The face number of the first of the connected faces.                       |
+| face2       | The face number of the second face.                                        |
+| orientation | The orientation of the face connection.  # See also t8\\_cmesh\\_types.h.  |
+"""
+struct t8_stash_joinface
+    id1::t8_gloidx_t
+    id2::t8_gloidx_t
+    face1::Cint
+    face2::Cint
+    orientation::Cint
 end
 
-# no prototype is found for this function at t8_cmesh_testcases.h:51:1, please use with caution
-"""
-    t8_get_number_of_new_empty_cmesh_testcases()
+"""The face-connection information that is stored before a cmesh is committed."""
+const t8_stash_joinface_struct_t = t8_stash_joinface
 
-The function t8\\_get\\_new\\_empty\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the empty cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_empty_cmesh_testcases ();
-```
 """
-function t8_get_number_of_new_empty_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_empty_cmesh_testcases()::Cint
+    t8_stash_attribute
+
+The attribute information that is stored before a cmesh is committed. The pair (package\\_id, key) serves as a lookup key to identify the data.
+
+| Field        | Note                                                                    |
+| :----------- | :---------------------------------------------------------------------- |
+| id           | The global tree id                                                      |
+| attr\\_size  | The size (in bytes) of this attribute                                   |
+| attr\\_data  | Array of *size* bytes storing the attributes data.                      |
+| is\\_owned   | True if the data was copied, false if the data is still owned by user.  |
+| package\\_id | The id of the package that set this attribute.                          |
+| key          | The key used by the package to identify this attribute.                 |
+"""
+struct t8_stash_attribute
+    id::t8_gloidx_t
+    attr_size::Csize_t
+    attr_data::Ptr{Cvoid}
+    is_owned::Cint
+    package_id::Cint
+    key::Cint
 end
 
-# no prototype is found for this function at t8_cmesh_testcases.h:56:1, please use with caution
+"""The attribute information that is stored before a cmesh is committed. The pair (package\\_id, key) serves as a lookup key to identify the data."""
+const t8_stash_attribute_struct_t = t8_stash_attribute
+
+"""The stash data structure is used to store information about the cmesh before it is committed. In particular we store the eclasses of the trees, the face-connections and the tree attributes. Using the stash structure allows us to have a very flexible interface. When constructing a new mesh, the user can specify all these mesh entities in arbitrary order. As soon as the cmesh is committed the information is copied from the stash to the cmesh in an order mannered."""
+const t8_stash_struct_t = t8_stash
+
 """
-    t8_get_number_of_new_from_class_cmesh_testcases()
+    t8_stash_init(pstash)
 
-The function t8\\_get\\_new\\_from\\_class\\_cmesh\\_testcases()
+Initialize a stash data structure.
 
-### Returns
-the number of testcases for the new\\_from\\_class cmesh.
+# Arguments
+* `pstash`:\\[in,out\\] A pointer to the stash to be initialized.
 ### Prototype
 ```c
-int t8_get_number_of_new_from_class_cmesh_testcases ();
+void t8_stash_init (t8_stash_t *pstash);
 ```
 """
-function t8_get_number_of_new_from_class_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_from_class_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:61:1, please use with caution
-"""
-    t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
-
-The function t8\\_get\\_new\\_hypercube\\_hybrid\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_hypercube\\_hybrid cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_hypercube_hybrid_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_hypercube_hybrid_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:66:1, please use with caution
-"""
-    t8_get_number_of_new_periodic_cmesh_testcases()
-
-The function t8\\_get\\_new\\_periodic\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_periodic cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_periodic_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_periodic_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_periodic_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:71:1, please use with caution
-"""
-    t8_get_number_of_new_bigmesh_cmesh_testcases()
-
-The function t8\\_get\\_new\\_bigmesh\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_bigmesh cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_bigmesh_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_bigmesh_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_bigmesh_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:76:1, please use with caution
-"""
-    t8_get_number_of_new_prism_cake_cmesh_testcases()
-
-The function t8\\_get\\_new\\_prism\\_cake\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_prism\\_cake cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_prism_cake_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_prism_cake_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_prism_cake_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:81:1, please use with caution
-"""
-    t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
-
-The function t8\\_get\\_new\\_disjoint\\_bricks\\_cmesh\\_testcases()
-
-### Returns
-the number of testcases for the new\\_disjoint\\_bricks cmesh.
-### Prototype
-```c
-int t8_get_number_of_new_disjoint_bricks_cmesh_testcases ();
-```
-"""
-function t8_get_number_of_new_disjoint_bricks_cmesh_testcases()
-    @ccall libt8.t8_get_number_of_new_disjoint_bricks_cmesh_testcases()::Cint
-end
-
-# no prototype is found for this function at t8_cmesh_testcases.h:88:1, please use with caution
-"""
-    t8_get_number_of_all_testcases()
-
-The function t8\\_get\\_all\\_testcases()
-
-### Returns
-the number of testcases for all cmesh types.  We need to know this, because test\\_cmesh\\_copy\\_all needs to know how  many ids to check.
-### Prototype
-```c
-int t8_get_number_of_all_testcases ();
-```
-"""
-function t8_get_number_of_all_testcases()
-    @ccall libt8.t8_get_number_of_all_testcases()::Cint
+function t8_stash_init(pstash)
+    @ccall libt8.t8_stash_init(pstash::Ptr{t8_stash_t})::Cvoid
 end
 
 """
-    t8_test_create_comm_only_cmesh(cmesh_id)
+    t8_stash_destroy(pstash)
 
-The function [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The switch inside [`t8_test_create_comm_only_cmesh`](@ref)(int cmesh\\_id) chooses the cmesh-type.
+Free all memory associated in a stash structure.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh which only takes comm as input.
-### Returns
-the wanted cmesh with the wanted comm for the given id.
+# Arguments
+* `pstash`:\\[in,out\\] A pointer to the stash to be destroyed. The pointer is set to NULL after the function call.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_comm_only_cmesh (int cmesh_id);
+void t8_stash_destroy (t8_stash_t *pstash);
 ```
 """
-function t8_test_create_comm_only_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_comm_only_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_destroy(pstash)
+    @ccall libt8.t8_stash_destroy(pstash::Ptr{t8_stash_t})::Cvoid
 end
 
 """
-    t8_test_create_new_hypercube_cmesh(cmesh_id)
+    t8_stash_add_class(stash, id, eclass)
 
-The function [`t8_test_create_new_hypercube_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. It avoids the case (eclass = pyramid & periodic=1) since this is not allowed.
+Set the eclass of a tree.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube cmesh.
-### Returns
-a new hypercube cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in,out\\] The stash to be updated.
+* `id`:\\[in\\] The global id of the tree whose eclass should be set.
+* `eclass`:\\[in\\] The eclass of tree with id *id*.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_hypercube_cmesh (int cmesh_id);
+void t8_stash_add_class (t8_stash_t stash, t8_gloidx_t id, t8_eclass_t eclass);
 ```
 """
-function t8_test_create_new_hypercube_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_hypercube_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_add_class(stash, id, eclass)
+    @ccall libt8.t8_stash_add_class(stash::t8_stash_t, id::t8_gloidx_t, eclass::t8_eclass_t)::Cvoid
 end
 
 """
-    t8_test_create_new_empty_cmesh(cmesh_id)
+    t8_stash_add_facejoin(stash, gid1, gid2, face1, face2, orientation)
 
-The function [`t8_test_create_new_empty_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
+Add a face connection to a stash.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_empty cmesh.
-### Returns
-a new empty cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in,out\\] The stash to be updated.
+* `id1`:\\[in\\] The global id of the first tree.
+* `id2`:\\[in\\] The global id of the second tree,
+* `face1`:\\[in\\] The face number of the face of the first tree.
+* `face2`:\\[in\\] The face number of the face of the second tree.
+* `orientation`:\\[in\\] The orientation of the faces to each other.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_empty_cmesh (int cmesh_id);
+void t8_stash_add_facejoin (t8_stash_t stash, t8_gloidx_t gid1, t8_gloidx_t gid2, int face1, int face2, int orientation);
 ```
 """
-function t8_test_create_new_empty_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_empty_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_add_facejoin(stash, gid1, gid2, face1, face2, orientation)
+    @ccall libt8.t8_stash_add_facejoin(stash::t8_stash_t, gid1::t8_gloidx_t, gid2::t8_gloidx_t, face1::Cint, face2::Cint, orientation::Cint)::Cvoid
 end
 
 """
-    t8_test_create_new_from_class_cmesh(cmesh_id)
+    t8_stash_class_sort(stash)
 
-The function [`t8_test_create_new_from_class_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list.
+Sort the entries in the class array by the order given in the enum definition of [`t8_eclass`](@ref).
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_from\\_class cmesh.
-### Returns
-a new create\\_new\\_from\\_class cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in,out\\] The stash whose class array is sorted.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_from_class_cmesh (int cmesh_id);
+void t8_stash_class_sort (t8_stash_t stash);
 ```
 """
-function t8_test_create_new_from_class_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_from_class_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_class_sort(stash)
+    @ccall libt8.t8_stash_class_sort(stash::t8_stash_t)::Cvoid
 end
 
 """
-    t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
+    t8_stash_class_bsearch(stash, tree_id)
 
-The function [`t8_test_create_new_hypercube_hybrid_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list.
+Search for an entry with a given tree index in the class-stash. The stash must be sorted beforehand.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_hypercube\\_hybrid cmesh.
-### Returns
-a new\\_hypercube\\_hybrid cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in\\] The stash to be searched for.
+* `tree_id`:\\[in\\] The global tree id.
+# Returns
+The index of an element in the classes array of *stash* corresponding to *tree_id*. -1 if not found.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_hypercube_hybrid_cmesh (int cmesh_id);
+ssize_t t8_stash_class_bsearch (t8_stash_t stash, t8_gloidx_t tree_id);
 ```
 """
-function t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_hypercube_hybrid_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_class_bsearch(stash, tree_id)
+    @ccall libt8.t8_stash_class_bsearch(stash::t8_stash_t, tree_id::t8_gloidx_t)::Cssize_t
 end
 
 """
-    t8_test_create_new_periodic_cmesh(cmesh_id)
+    t8_stash_joinface_sort(stash)
 
-The function [`t8_test_create_new_periodic_cmesh`](@ref)(int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal dimension is 1.
+Sort then entries in the facejoin array in order of the first treeid.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_periodic cmesh.
-### Returns
-a new\\_periodic cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in,out\\] The stash whose facejoin array is sorted.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_periodic_cmesh (int cmesh_id);
+void t8_stash_joinface_sort (t8_stash_t stash);
 ```
 """
-function t8_test_create_new_periodic_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_periodic_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_joinface_sort(stash)
+    @ccall libt8.t8_stash_joinface_sort(stash::t8_stash_t)::Cvoid
 end
 
 """
-    t8_test_create_new_bigmesh_cmesh(cmesh_id)
+    t8_stash_add_attribute(stash, id, package_id, key, size, attr, copy)
 
-The function [`t8_test_create_new_bigmesh_cmesh`](@ref)(int cmesh\\_id):  The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 1.
+Add an attribute to a tree.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_bigmesh cmesh.
-### Returns
-a new\\_bigmesh cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in\\] The stash structure to be modified.
+* `id`:\\[in\\] The global index of the tree to which the attribute is added.
+* `package_id`:\\[in\\] The unique id of the current package.
+* `key`:\\[in\\] An integer value used to identify this attribute.
+* `size`:\\[in\\] The size (in bytes) of the attribute.
+* `attr`:\\[in\\] Points to *size* bytes of memory that should be stored as the attribute.
+* `copy`:\\[in\\] If true the attribute data is copied from *attr* to an internal storage. If false only the pointer *attr* is stored and the data is only copied if the cmesh is committed. (More memory efficient).
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_bigmesh_cmesh (int cmesh_id);
+void t8_stash_add_attribute (t8_stash_t stash, t8_gloidx_t id, int package_id, int key, size_t size, void *attr, int copy);
 ```
 """
-function t8_test_create_new_bigmesh_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_bigmesh_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_add_attribute(stash, id, package_id, key, size, attr, copy)
+    @ccall libt8.t8_stash_add_attribute(stash::t8_stash_t, id::t8_gloidx_t, package_id::Cint, key::Cint, size::Csize_t, attr::Ptr{Cvoid}, copy::Cint)::Cvoid
 end
 
 """
-    t8_test_create_new_prism_cake_cmesh(cmesh_id)
+    t8_stash_get_attribute_size(stash, index)
 
-The function [`t8_test_create_new_prism_cake_cmesh`](@ref) (int cmesh\\_id): The comm is taken from the t8\\_comm\\_list. The minimal number of trees is 3.
+Return the size (in bytes) of an attribute in the stash.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique new\\_prism\\_cake cmesh.
-### Returns
-a new\\_prism\\_cake cmesh with a unique input for every given id.
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+The size in bytes of the attribute.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_new_prism_cake_cmesh (int cmesh_id);
+size_t t8_stash_get_attribute_size (t8_stash_t stash, size_t index);
 ```
 """
-function t8_test_create_new_prism_cake_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_new_prism_cake_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_get_attribute_size(stash, index)
+    @ccall libt8.t8_stash_get_attribute_size(stash::t8_stash_t, index::Csize_t)::Csize_t
 end
 
 """
-    t8_test_create_cmesh(cmesh_id)
+    t8_stash_get_attribute(stash, index)
 
-The function [`t8_test_create_cmesh`](@ref) (int cmesh\\_id) combines all t8\\_test\\_create\\_*\\_cmesh functions  so that depending on the range the id is in, we get another cmesh type by calling its  t8\\_test\\_create\\_*\\_cmesh function.
+Return the pointer to an attribute in the stash.
 
-### Parameters
-* `cmesh_id`:\\[in\\] The cmesh\\_id is used to create a unique cmesh.
-### Returns
-A cmesh specified by its cmesh\\_id.
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+A void pointer to the memory region where the attribute is stored.
 ### Prototype
 ```c
-t8_cmesh_t t8_test_create_cmesh (int cmesh_id);
+void * t8_stash_get_attribute (t8_stash_t stash, size_t index);
 ```
 """
-function t8_test_create_cmesh(cmesh_id)
-    @ccall libt8.t8_test_create_cmesh(cmesh_id::Cint)::t8_cmesh_t
+function t8_stash_get_attribute(stash, index)
+    @ccall libt8.t8_stash_get_attribute(stash::t8_stash_t, index::Csize_t)::Ptr{Cvoid}
 end
+
+"""
+    t8_stash_get_attribute_tree_id(stash, index)
+
+Return the id of the tree a given attribute belongs to.
+
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+The tree id.
+### Prototype
+```c
+t8_gloidx_t t8_stash_get_attribute_tree_id (t8_stash_t stash, size_t index);
+```
+"""
+function t8_stash_get_attribute_tree_id(stash, index)
+    @ccall libt8.t8_stash_get_attribute_tree_id(stash::t8_stash_t, index::Csize_t)::t8_gloidx_t
+end
+
+"""
+    t8_stash_get_attribute_key(stash, index)
+
+Return the key of a given attribute.
+
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+The attribute's key.
+### Prototype
+```c
+int t8_stash_get_attribute_key (t8_stash_t stash, size_t index);
+```
+"""
+function t8_stash_get_attribute_key(stash, index)
+    @ccall libt8.t8_stash_get_attribute_key(stash::t8_stash_t, index::Csize_t)::Cint
+end
+
+"""
+    t8_stash_get_attribute_id(stash, index)
+
+Return the package\\_id of a given attribute.
+
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+The attribute's package\\_id.
+### Prototype
+```c
+int t8_stash_get_attribute_id (t8_stash_t stash, size_t index);
+```
+"""
+function t8_stash_get_attribute_id(stash, index)
+    @ccall libt8.t8_stash_get_attribute_id(stash::t8_stash_t, index::Csize_t)::Cint
+end
+
+"""
+    t8_stash_attribute_is_owned(stash, index)
+
+Return true if an attribute in the stash is owned by the stash, that is, it was copied in the call to [`t8_stash_add_attribute`](@ref). Returns false if the attribute is not owned by the stash.
+
+# Arguments
+* `stash`:\\[in\\] The stash to be considered.
+* `index`:\\[in\\] The index of the attribute in the attribute array of *stash*.
+# Returns
+True of false.
+### Prototype
+```c
+int t8_stash_attribute_is_owned (t8_stash_t stash, size_t index);
+```
+"""
+function t8_stash_attribute_is_owned(stash, index)
+    @ccall libt8.t8_stash_attribute_is_owned(stash::t8_stash_t, index::Csize_t)::Cint
+end
+
+"""
+    t8_stash_attribute_sort(stash)
+
+Sort the attributes array of a stash in the order (treeid, packageid, key) *
+
+# Arguments
+* `stash`:\\[in,out\\] The stash to be considered.
+### Prototype
+```c
+void t8_stash_attribute_sort (t8_stash_t stash);
+```
+"""
+function t8_stash_attribute_sort(stash)
+    @ccall libt8.t8_stash_attribute_sort(stash::t8_stash_t)::Cvoid
+end
+
+"""
+    t8_stash_bcast(stash, root, comm, elem_counts)
+
+### Prototype
+```c
+t8_stash_t t8_stash_bcast (t8_stash_t stash, int root, sc_MPI_Comm comm, size_t elem_counts[3]);
+```
+"""
+function t8_stash_bcast(stash, root, comm, elem_counts)
+    @ccall libt8.t8_stash_bcast(stash::t8_stash_t, root::Cint, comm::MPI_Comm, elem_counts::Ptr{Csize_t})::t8_stash_t
+end
+
+"""
+    t8_stash_is_equal(stash_a, stash_b)
+
+Check two stashes for equal content and return true if so.
+
+# Arguments
+* `stash_a`:\\[in\\] The first stash to be considered.
+* `stash_b`:\\[in\\] The first stash to be considered.
+# Returns
+True if both stashes hold copies of the same data. False otherwise.
+### Prototype
+```c
+int t8_stash_is_equal (t8_stash_t stash_a, t8_stash_t stash_b);
+```
+"""
+function t8_stash_is_equal(stash_a, stash_b)
+    @ccall libt8.t8_stash_is_equal(stash_a::t8_stash_t, stash_b::t8_stash_t)::Cint
+end
+
+struct t8_part_tree
+    first_tree::Cstring
+    first_tree_id::t8_locidx_t
+    first_ghost_id::t8_locidx_t
+    num_trees::t8_locidx_t
+    num_ghosts::t8_locidx_t
+end
+
+"""
+` t8_cmesh_types.h`
+
+We define here the datatypes needed for internal cmesh routines.
+"""
+const t8_part_tree_t = Ptr{t8_part_tree}
+
+"""
+This structure holds the connectivity data of the coarse mesh. It can either be replicated, then each process stores a copy of the whole mesh, or partitioned. In the latter case, each process only stores a local portion of the mesh plus information about ghost elements.
+
+The coarse mesh is a collection of coarse trees that can be identified along faces. TODO: this description is outdated. rewrite it. The array ctrees stores these coarse trees sorted by their (global) tree\\_id. If the mesh if partitioned it is partitioned according to an (possible only virtually existing) underlying fine mesh. Therefore the ctrees array can store duplicated trees on different processes, if each of these processes owns elements of the same tree in the fine mesh.
+
+Each tree stores information about its face-neighbours in an array of t8_ctree_fneighbor.
+
+If partitioned the ghost trees are stored in a hash table that is backed up by an array. The hash value of a ghost tree is its tree\\_id modulo the number of ghosts on this process.
+
+# See also
+t8\\_ctree\\_fneighbor
+"""
+const t8_cmesh_struct_t = t8_cmesh
+
+const t8_cghost_struct_t = t8_cghost
+
+"""This structure holds the data of a local tree including the information about face neighbors. For those the tree\\_to\\_face index is computed as follows. Let F be the maximal number of faces of any eclass of the cmesh's dimension, then ttf % F is the face number and ttf / F is the orientation. (t8_eclass_max_num_faces) The orientation is determined as follows. Let my\\_face and other\\_face be the two face numbers of the connecting trees. We chose a main\\_face from them as follows: Either both trees have the same element class, then the face with the lower face number is the main\\_face or the trees belong to different classes in which case the face belonging to the tree with the lower class according to the ordering triangle < square, hex < tet < prism < pyramid, is the main\\_face. Then face corner 0 of the main\\_face connects to a face corner k in the other face. The face orientation is defined as the number k. If the classes are equal and my\\_face == other\\_face, treating either of both faces as the main\\_face leads to the same result. See https://arxiv.org/pdf/1611.02929.pdf for more details."""
+const t8_ctree_struct_t = t8_ctree
+
+"""
+    t8_attribute_info
+
+This structure holds the information associated to an attribute of a tree. The attributes of each are stored in a key-value storage, where the key consists of the two entries (package\\_id,key) both being integers. The package\\_id serves to identify the application layer that added the attribute and the key identifies the attribute within that application layer.
+
+All attribute info objects of one tree are stored in an array and adding a tree's att\\_offset entry to the tree's address yields this array. The attributes themselves are stored in an array directly behind the array of the attribute infos.
+"""
+struct t8_attribute_info
+    package_id::Cint
+    key::Cint
+    attribute_offset::Csize_t
+    attribute_size::Csize_t
+end
+
+"""
+This structure holds the information associated to an attribute of a tree. The attributes of each are stored in a key-value storage, where the key consists of the two entries (package\\_id,key) both being integers. The package\\_id serves to identify the application layer that added the attribute and the key identifies the attribute within that application layer.
+
+All attribute info objects of one tree are stored in an array and adding a tree's att\\_offset entry to the tree's address yields this array. The attributes themselves are stored in an array directly behind the array of the attribute infos.
+"""
+const t8_attribute_info_struct_t = t8_attribute_info
+
+const t8_cmesh_trees_struct_t = t8_cmesh_trees
+
+const t8_part_tree_struct_t = t8_part_tree
+
+"""
+This struct is used to profile cmesh algorithms. The cmesh struct stores a pointer to a profile struct, and if it is nonzero, various runtimes and data measurements are stored here.
+
+# See also
+[`t8_cmesh_set_profiling`](@ref) and, [`t8_cmesh_print_profile`](@ref)
+"""
+const t8_cprofile_struct_t = t8_cprofile
 
 """
     t8_element_array_t
@@ -12088,9 +13128,9 @@ end
 
 Creates a new array structure with 0 elements.
 
-### Parameters
+# Arguments
 * `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
-### Returns
+# Returns
 Return an allocated array of zero length.
 ### Prototype
 ```c
@@ -12106,10 +13146,10 @@ end
 
 Creates a new array structure with a given length (number of elements) and calls t8_element_new for those elements.
 
-### Parameters
+# Arguments
 * `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
 * `num_elements`:\\[in\\] Initial number of array elements.
-### Returns
+# Returns
 Return an allocated array with allocated and initialized elements for which t8_element_new was called.
 ### Prototype
 ```c
@@ -12125,7 +13165,7 @@ end
 
 Initializes an already allocated (or static) array structure.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] Array structure to be initialized.
 * `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
 ### Prototype
@@ -12142,7 +13182,7 @@ end
 
 Initializes an already allocated (or static) array structure and allocates a given number of elements and initializes them with t8_element_init.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] Array structure to be initialized.
 * `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
 * `num_elements`:\\[in\\] Number of initial array elements.
@@ -12160,7 +13200,7 @@ end
 
 Initializes an already allocated (or static) view from existing t8\\_element\\_array. The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
 
-### Parameters
+# Arguments
 * `view`:\\[in,out\\] Array structure to be initialized.
 * `array`:\\[in\\] The array must not be resized while view is alive.
 * `offset`:\\[in\\] The offset of the viewed section in element units. This offset cannot be changed until the view is reset.
@@ -12179,7 +13219,7 @@ end
 
 Initializes an already allocated (or static) view from given plain C data (array of [`t8_element_t`](@ref)). The array view returned does not require [`t8_element_array_reset`](@ref) (doesn't hurt though).
 
-### Parameters
+# Arguments
 * `view`:\\[in,out\\] Array structure to be initialized.
 * `base`:\\[in\\] The data must not be moved while view is alive. Must be an array of [`t8_element_t`](@ref) corresponding to *scheme*.
 * `scheme`:\\[in\\] The eclass scheme of the elements stored in *base*.
@@ -12198,7 +13238,7 @@ end
 
 Initializes an already allocated (or static) array structure and copy an existing array of [`t8_element_t`](@ref) into it.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] Array structure to be initialized.
 * `scheme`:\\[in\\] The eclass scheme of which elements should be stored.
 * `data`:\\[in\\] An array of [`t8_element_t`](@ref) which will be copied into *element_array*. The elements in *data* must belong to *scheme* and must be properly initialized with either t8_element_new or t8_element_init.
@@ -12221,7 +13261,7 @@ Change the number of elements stored in an element array.
 
     If *new_count* is larger than the number of current elements on *element_array*, then t8_element_init is called for the new elements.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] The element array to be modified.
 * `new_count`:\\[in\\] The new element count of the array. If it is zero the effect equals t8_element_array_reset.
 ### Prototype
@@ -12238,7 +13278,7 @@ end
 
 Copy the contents of an array into another. Both arrays must have the same eclass\\_scheme.
 
-### Parameters
+# Arguments
 * `dest`:\\[in\\] Array will be resized and get new data.
 * `src`:\\[in\\] Array used as source of new data, will not be changed.
 ### Prototype
@@ -12255,9 +13295,9 @@ end
 
 Enlarge an array by one element.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure to be modified.
-### Returns
+# Returns
 Returns a pointer to a newly added element for which t8_element_init was called.
 ### Prototype
 ```c
@@ -12273,10 +13313,10 @@ end
 
 Enlarge an array by a number of elements.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure to be modified.
 * `count`:\\[in\\] The number of elements to add.
-### Returns
+# Returns
 Returns a pointer to the newly added elements for which t8_element_init was called.
 ### Prototype
 ```c
@@ -12292,10 +13332,10 @@ end
 
 Return a given element in an array.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array of elements.
 * `index`:\\[in\\] The index of an element within the array.
-### Returns
+# Returns
 A pointer to the element stored at position *index* in *element_array*.
 ### Prototype
 ```c
@@ -12311,10 +13351,10 @@ end
 
 Return a given element in an array.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array of elements.
 * `index`:\\[in\\] The index of an element within the array.
-### Returns
+# Returns
 A pointer to the element stored at position *index* in *element_array*.
 ### Prototype
 ```c
@@ -12330,9 +13370,9 @@ end
 
 Return the eclass scheme associated to a t8\\_element\\_array.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array of elements.
-### Returns
+# Returns
 The eclass scheme stored at *element_array*.
 ### Prototype
 ```c
@@ -12348,13 +13388,13 @@ end
 
 Return the number of elements stored in a [`t8_element_array_t`](@ref).
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure.
-### Returns
+# Returns
 The number of elements stored in *element_array*.
 ### Prototype
 ```c
-size_t t8_element_array_get_count (t8_element_array_t *element_array);
+size_t t8_element_array_get_count (const t8_element_array_t *element_array);
 ```
 """
 function t8_element_array_get_count(element_array)
@@ -12366,9 +13406,9 @@ end
 
 Return the data size of elements stored in a [`t8_element_array_t`](@ref).
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure.
-### Returns
+# Returns
 The size (in bytes) of a single element in *element_array*.
 ### Prototype
 ```c
@@ -12384,9 +13424,9 @@ end
 
 Return a pointer to the real data array stored in a t8\\_element\\_array.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure.
-### Returns
+# Returns
 A pointer to the stored data. If the number of stored elements is 0, then NULL is returned.
 ### Prototype
 ```c
@@ -12402,9 +13442,9 @@ end
 
 Return a pointer to the [`sc_array`](@ref) stored in a t8\\_element\\_array.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in\\] Array structure.
-### Returns
+# Returns
 A pointer to the [`sc_array`](@ref) storing the data.
 ### Prototype
 ```c
@@ -12424,7 +13464,7 @@ Sets the array count to zero and frees all elements.
 
     Calling [`t8_element_array_init`](@ref), then any array operations, then [`t8_element_array_reset`](@ref) is memory neutral.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] Array structure to be reset.
 ### Prototype
 ```c
@@ -12444,7 +13484,7 @@ Sets the array count to zero, but does not free elements.
 
     This is intended to allow an t8\\_element\\_array to be used as a reusable buffer, where the "high water mark" of the buffer is preserved, so that O(log (max n)) reallocs occur over the life of the buffer.
 
-### Parameters
+# Arguments
 * `element_array`:\\[in,out\\] Element array structure to be truncated.
 ### Prototype
 ```c
@@ -12512,9 +13552,9 @@ Enable writing mode for a shmem array. Only some processes may be allowed to wri
 
     This function is MPI collective.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Initialized array. Writing will be enabled on certain processes.
-### Returns
+# Returns
 True if the calling process can write into the array.
 ### Prototype
 ```c
@@ -12534,9 +13574,9 @@ Disable writing mode for a shmem array.
 
     This function is MPI collective.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] Initialized with writing mode enabled.
-### See also
+# See also
 [`t8_shmem_array_start_writing`](@ref).
 
 ### Prototype
@@ -12553,7 +13593,7 @@ end
 
 Set an entry of a t8\\_shmem array that is used to store [`t8_gloidx_t`](@ref). The array must have writing mode enabled t8_shmem_array_start_writing.
 
-### Parameters
+# Arguments
 * `array`:\\[in,out\\] The array to be modified.
 * `index`:\\[in\\] The array entry to be modified.
 * `value`:\\[in\\] The new value to be set.
@@ -12579,7 +13619,7 @@ Copy the contents of one t8\\_shmem array into another.
 
     *dest* must have writing mode disabled.
 
-### Parameters
+# Arguments
 * `dest`:\\[in,out\\] The array in which *source* should be copied.
 * `source`:\\[in\\] The array to copy.
 ### Prototype
@@ -12644,9 +13684,9 @@ end
 
 Get the element size of a [`t8_shmem_array`](@ref)
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array.
-### Returns
+# Returns
 The element size of *array*'s elements.
 ### Prototype
 ```c
@@ -12662,9 +13702,9 @@ end
 
 Get the number of elements of a [`t8_shmem_array`](@ref)
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The array.
-### Returns
+# Returns
 The number of elements in *array*.
 ### Prototype
 ```c
@@ -12684,9 +13724,9 @@ Return a read-only pointer to the data of a shared memory array interpreted as a
 
     Writing mode must be disabled for *array*.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref)
-### Returns
+# Returns
 The data of *array* as [`t8_gloidx_t`](@ref) pointer.
 ### Prototype
 ```c
@@ -12702,9 +13742,9 @@ end
 
 Return a pointer to the data of a shared memory array interpreted as an [`t8_gloidx_t`](@ref) array. The array must have writing enabled t8_shmem_array_start_writing and you should not write into the memory after t8_shmem_array_end_writing was called.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref)
-### Returns
+# Returns
 The data of *array* as [`t8_gloidx_t`](@ref) pointer.
 ### Prototype
 ```c
@@ -12724,10 +13764,10 @@ Return an entry of a shared memory array that stores [`t8_gloidx_t`](@ref).
 
     Writing mode must be disabled for *array*.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref)
 * `index`:\\[in\\] The index of the entry to be queried.
-### Returns
+# Returns
 The *index*-th entry of *array* as [`t8_gloidx_t`](@ref).
 ### Prototype
 ```c
@@ -12747,9 +13787,9 @@ Return a pointer to the data array of a [`t8_shmem_array`](@ref).
 
     Writing mode must be disabled for *array*.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref).
-### Returns
+# Returns
 A pointer to the data array of *array*.
 ### Prototype
 ```c
@@ -12773,10 +13813,10 @@ Return a read-only pointer to an element in a [`t8_shmem_array`](@ref).
 
     Writing mode must be disabled for *array*.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref).
 * `index`:\\[in\\] The index of an element.
-### Returns
+# Returns
 A pointer to the element at *index* in *array*.
 ### Prototype
 ```c
@@ -12800,10 +13840,10 @@ Return a pointer to an element in a [`t8_shmem_array`](@ref) in writing mode.
 
     Writing mode must be enabled for *array*.
 
-### Parameters
+# Arguments
 * `array`:\\[in\\] The [`t8_shmem_array`](@ref).
 * `index`:\\[in\\] The index of an element.
-### Returns
+# Returns
 A pointer to the element at *index* in *array*.
 ### Prototype
 ```c
@@ -12831,7 +13871,7 @@ end
 
 Free all memory associated with a [`t8_shmem_array`](@ref).
 
-### Parameters
+# Arguments
 * `parray`:\\[in,out\\] On input a pointer to a valid [`t8_shmem_array`](@ref). This array is freed and *parray* is set to NULL on return.
 ### Prototype
 ```c
@@ -12881,7 +13921,7 @@ end
 """
 This typedef is needed as a helper construct to  properly be able to define a function that returns a pointer to a void fun(void) function.
 
-### See also
+# See also
 [`t8_forest_get_user_function`](@ref).
 """
 const t8_generic_function_pointer = Ptr{Cvoid}
@@ -12894,7 +13934,7 @@ This is used by the replace routine which can be called after adapt, when the el
 
 If an element is being refined, *refine* and *num_outgoing* will be 1 and  *num_incoming* will be the number of children. If a family is being coarsened, *refine* will be -1, *num_outgoing* will be  the number of family members and *num_incoming* will be 1.  If an element is being removed, *refine* and *num_outgoing* will be 1 and  *num_incoming* will be 0.  Else *refine* will be 0 and *num_outgoing* and *num_incoming* will both be 1.
 
-### Parameters
+# Arguments
 * `forest_old`:\\[in\\] The forest that is adapted
 * `forest_new`:\\[in\\] The forest that is newly constructed from *forest_old*
 * `which_tree`:\\[in\\] The local tree containing *first_outgoing* and *first_incoming*
@@ -12904,7 +13944,7 @@ If an element is being refined, *refine* and *num_outgoing* will be 1 and  *num_
 * `first_outgoing`:\\[in\\] The tree local index of the first outgoing element. 0 <= first\\_outgoing < which\\_tree->num\\_elements
 * `num_incoming`:\\[in\\] The number of incoming elements.
 * `first_incoming`:\\[in\\] The tree local index of the first incoming element. 0 <= first\\_incom < new\\_which\\_tree->num\\_elements
-### See also
+# See also
 [`t8_forest_iterate_replace`](@ref)
 """
 const t8_forest_replace_t = Ptr{Cvoid}
@@ -12913,7 +13953,7 @@ const t8_forest_replace_t = Ptr{Cvoid}
 """
 Callback function prototype to decide for refining and coarsening. If *is_family* equals 1, the first *num_elements* in *elements* form a family and we decide whether this family should be coarsened or only the first element should be refined. Otherwise *is_family* must equal zero and we consider the first entry of the element array for refinement.  Entries of the element array beyond the first *num_elements* are undefined.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] the forest to which the new elements belong
 * `forest_from`:\\[in\\] the forest that is adapted.
 * `which_tree`:\\[in\\] the local tree containing *elements*
@@ -12922,7 +13962,7 @@ Callback function prototype to decide for refining and coarsening. If *is_family
 * `is_family`:\\[in\\] if 1, the first *num_elements* entries in *elements* form a family. If 0, they do not.
 * `num_elements`:\\[in\\] the number of entries in *elements* that are defined
 * `elements`:\\[in\\] Pointers to a family or, if *is_family* is zero, pointer to one element.
-### Returns
+# Returns
 1 if the first entry in *elements* should be refined, -1 if the family *elements* shall be coarsened, -2 if the first entry in *elements* should be removed, 0 else.
 """
 const t8_forest_adapt_t = Ptr{Cvoid}
@@ -12932,7 +13972,7 @@ const t8_forest_adapt_t = Ptr{Cvoid}
 
 Create a new forest with reference count one. This forest needs to be specialized with the t8\\_forest\\_set\\_* calls. Currently it is manatory to either call the functions t8_forest_set_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
 
-### Parameters
+# Arguments
 * `pforest`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new forest.
 ### Prototype
 ```c
@@ -12948,9 +13988,9 @@ end
 
 Check whether a forest is not NULL, initialized and not committed. In addition, it asserts that the forest is consistent as much as possible.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] This forest is examined. May be NULL.
-### Returns
+# Returns
 True if forest is not NULL, t8_forest_init has been called on it, but not t8_forest_commit. False otherwise.
 ### Prototype
 ```c
@@ -12966,9 +14006,9 @@ end
 
 Check whether a forest is not NULL, initialized and committed. In addition, it asserts that the forest is consistent as much as possible.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] This forest is examined. May be NULL.
-### Returns
+# Returns
 True if forest is not NULL and t8_forest_init has been called on it as well as t8_forest_commit. False otherwise.
 ### Prototype
 ```c
@@ -12988,11 +14028,11 @@ Check whether the forest has local overlapping elements.
 
     This function is collective, but only checks local overlapping on each process.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest to consider.
-### Returns
+# Returns
 True if *forest* has no elements which are inside each other.
-### See also
+# See also
 [`t8_forest_partition_test_boundary_element`](@ref) if you also want to test for  global overlap across the process boundaries.
 
 ### Prototype
@@ -13013,10 +14053,10 @@ Check whether two committed forests have the same local elements.
 
     This function is not collective. It only returns the state on the current rank.
 
-### Parameters
+# Arguments
 * `forest_a`:\\[in\\] The first forest.
 * `forest_b`:\\[in\\] The second forest.
-### Returns
+# Returns
 True if *forest_a* and *forest_b* do have the same number of local trees and each local tree has the same elements, that is t8_element_equal returns true for each pair of elements of *forest_a* and *forest_b*.
 ### Prototype
 ```c
@@ -13044,7 +14084,7 @@ end
 
 Set the element scheme associated to a forest. By default, the forest takes ownership of the scheme such that it will be destroyed when the forest is destroyed. To keep ownership of the scheme, call t8_scheme_ref before passing it to t8_forest_set_scheme. This means that it is ILLEGAL to continue using scheme or dereferencing it UNLESS it is referenced directly before passing it into this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest whose scheme variable will be set.
 * `scheme`:\\[in\\] The scheme to be set. We take ownership. This can be prevented by referencing **scheme**.
 ### Prototype
@@ -13065,7 +14105,7 @@ Set the initial refinement level to be used when **forest** is committed.
 
     This setting cannot be combined with any of the derived forest methods (t8_forest_set_copy, t8_forest_set_adapt, t8_forest_set_partition, and t8_forest_set_balance) and overwrites any of these settings. If this function is used, then the forest is created from scratch as a uniform refinement of the specified cmesh (t8_forest_set_cmesh, t8_forest_set_scheme).
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest whose level will be set.
 * `level`:\\[in\\] The initial refinement level of **forest**, when it is committed.
 ### Prototype
@@ -13086,7 +14126,7 @@ Set a forest as source for copying on committing. By default, the forest takes o
 
     This setting cannot be combined with t8_forest_set_adapt, t8_forest_set_partition, or t8_forest_set_balance and overwrites these settings.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest.
 * `from`:\\[in\\] A second forest from which *forest* will be copied in t8_forest_commit.
 ### Prototype
@@ -13111,7 +14151,7 @@ Set a source forest with an adapt function to be adapted on committing. By defau
 
     This setting may not be combined with t8_forest_set_copy and overwrites this setting.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest
 * `set_from`:\\[in\\] The source forest from which **forest** will be adapted. We take ownership. This can be prevented by referencing **set_from**. If NULL, a previously (or later) set forest will be taken (t8_forest_set_partition, t8_forest_set_balance).
 * `adapt_fn`:\\[in\\] The adapt function used on committing.
@@ -13130,10 +14170,10 @@ end
 
 Set the user data of a forest. This can i.e. be used to pass user defined arguments to the adapt routine.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest
 * `data`:\\[in\\] A pointer to user data. t8code will never touch the data. The forest does not need be committed before calling this function.
-### See also
+# See also
 [`t8_forest_get_user_data`](@ref)
 
 ### Prototype
@@ -13150,11 +14190,11 @@ end
 
 Return the user data pointer associated with a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The user data pointer of *forest*. The forest does not need be committed before calling this function.
-### See also
+# See also
 [`t8_forest_set_user_data`](@ref)
 
 ### Prototype
@@ -13175,10 +14215,10 @@ Set the user function pointer of a forest. This can i.e. be used to pass user de
 
     *function* can be an arbitrary function with return value and parameters of your choice. When accessing it with t8_forest_get_user_function you should cast it into the proper type.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest
 * `function`:\\[in\\] A pointer to a user defined function. t8code will never touch the function. The forest does not need be committed before calling this function.
-### See also
+# See also
 [`t8_forest_get_user_function`](@ref)
 
 ### Prototype
@@ -13195,11 +14235,11 @@ end
 
 Return the user function pointer associated with a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The user function pointer of *forest*. The forest does not need be committed before calling this function.
-### See also
+# See also
 [`t8_forest_set_user_function`](@ref)
 
 ### Prototype
@@ -13224,7 +14264,7 @@ Set a source forest to be partitioned during commit. The partitioning is done ac
 
     This setting may not be combined with t8_forest_set_copy and overwrites this setting.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest.
 * `set_from`:\\[in\\] A second forest that should be partitioned. We take ownership. This can be prevented by referencing **set_from**. If NULL, a previously (or later) set forest will be taken (t8_forest_set_adapt, t8_forest_set_balance).
 * `set_for_coarsening`:\\[in\\] CURRENTLY DISABLED. If true, then the partitions are choose such that coarsening an element once is a process local operation.
@@ -13250,7 +14290,7 @@ Set a source forest to be balanced during commit. A forest is said to be balance
 
     This setting may not be combined with t8_forest_set_copy and overwrites this setting.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest.
 * `set_from`:\\[in\\] A second forest that should be balanced. We take ownership. This can be prevented by referencing **set_from**. If NULL, a previously (or later) set forest will be taken (t8_forest_set_adapt, t8_forest_set_partition)
 * `no_repartition`:\\[in\\] Balance constructs several intermediate forest that are refined from each other. In order to maintain a balanced load these forest are repartitioned in each round and the resulting forest is load-balanced per default. If this behaviour is not desired, *no_repartition* should be set to true. If *no_repartition* is false, an additional call of t8_forest_set_partition is not necessary.
@@ -13268,7 +14308,7 @@ end
 
 Enable or disable the creation of a layer of ghost elements. On default no ghosts are created.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `do_ghost`:\\[in\\] If non-zero a ghost layer will be created.
 * `ghost_type`:\\[in\\] Controls which neighbors count as ghost elements, currently only T8\\_GHOST\\_FACES is supported. This value is ignored if *do_ghost* = 0.
@@ -13286,9 +14326,9 @@ end
 
 Like t8_forest_set_ghost but with the additional options to change the ghost algorithm. This is used for debugging and timing the algorithm. An application should almost always use t8_forest_set_ghost.
 
-### Parameters
+# Arguments
 * `ghost_version`:\\[in\\] If 1, the iterative ghost algorithm for balanced forests is used. If 2, the iterative algorithm for unbalanced forests. If 3, the top-down search algorithm for unbalanced forests.
-### See also
+# See also
 [`t8_forest_set_ghost`](@ref)
 
 ### Prototype
@@ -13317,7 +14357,7 @@ end
 
 Compute the global number of elements in a forest as the sum of the local element counts.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 ### Prototype
 ```c
@@ -13333,7 +14373,7 @@ end
 
 After allocating and adding properties to a forest, commit the changes. This call sets up the internal state of the forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] Must be created with t8_forest_init and specialized with t8\\_forest\\_set\\_* calls first.
 ### Prototype
 ```c
@@ -13349,9 +14389,9 @@ end
 
 Return the maximum allowed refinement level for any element in a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] A forest.
-### Returns
+# Returns
 The maximum level of refinement that is allowed for an element in this forest. It is guaranteed that any tree in *forest* can be refined this many times and it is not allowed to refine further. *forest* must be committed before calling this function. For forest with a single element class (non-hybrid) maxlevel is the maximum refinement level of this element class, whilst for hybrid forests the maxlevel is the minimum of all maxlevels of the element classes in this forest.
 ### Prototype
 ```c
@@ -13367,9 +14407,9 @@ end
 
 Return the number of process local elements in the forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] A forest.
-### Returns
+# Returns
 The number of elements on this process in *forest*. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -13385,9 +14425,9 @@ end
 
 Return the number of global elements in the forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] A forest.
-### Returns
+# Returns
 The number of elements (summed over all processes) in *forest*. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -13403,11 +14443,11 @@ end
 
 Return the number of ghost elements of a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The number of ghost elements stored in the ghost structure of *forest*. 0 if no ghosts were constructed.
-### See also
+# See also
 [`t8_forest_set_ghost`](@ref) *forest* must be committed before calling this function.
 
 ### Prototype
@@ -13424,10 +14464,10 @@ end
 
 Return the element class of a forest local tree.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The local id of a tree in *forest*.
-### Returns
+# Returns
 The element class of the tree *ltreeid*. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -13443,12 +14483,12 @@ end
 
 Given a global tree id compute the forest local id of this tree. If the tree is a local tree, then the local id is between 0 and the number of local trees. If the tree is not a local tree, a negative number is returned.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `gtreeid`:\\[in\\] The global id of a tree.
-### Returns
+# Returns
 The tree's local id in *forest*, if it is a local tree. A negative number if not.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -13461,6 +14501,28 @@ function t8_forest_get_local_id(forest, gtreeid)
 end
 
 """
+    t8_forest_get_local_or_ghost_id(forest, gtreeid)
+
+Given a global tree id compute the forest local id of this tree. If the tree is a local tree, then the local id is between 0 and the number of local trees. If the tree is a ghost, then the local id is between num\\_local\\_trees and num\\_local\\_trees + num\\_ghost\\_trees. If the tree is neither a local tree nor a ghost tree, a negative number is returned.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+* `gtreeid`:\\[in\\] The global id of a tree.
+# Returns
+The tree's local id in *forest*, if it is a local tree. num\\_local\\_trees + the ghosts id, if it is a ghost tree. A negative number if not.
+# See also
+https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
+
+### Prototype
+```c
+t8_locidx_t t8_forest_get_local_or_ghost_id (const t8_forest_t forest, const t8_gloidx_t gtreeid);
+```
+"""
+function t8_forest_get_local_or_ghost_id(forest, gtreeid)
+    @ccall libt8.t8_forest_get_local_or_ghost_id(forest::t8_forest_t, gtreeid::t8_gloidx_t)::t8_locidx_t
+end
+
+"""
     t8_forest_ltreeid_to_cmesh_ltreeid(forest, ltreeid)
 
 Given the local id of a tree in a forest, compute the tree's local id in the associated cmesh.
@@ -13469,12 +14531,12 @@ Given the local id of a tree in a forest, compute the tree's local id in the ass
 
     For forest local trees, this is the inverse function of t8_forest_cmesh_ltreeid_to_ltreeid.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The local id of a tree or ghost in the forest.
-### Returns
+# Returns
 The local id of the tree in the cmesh associated with the forest. *forest* must be committed before calling this function.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -13495,12 +14557,12 @@ Given the local id of a tree in the coarse mesh of a forest, compute the tree's 
 
     For forest local trees, this is the inverse function of t8_forest_ltreeid_to_cmesh_ltreeid.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The local id of a tree in the coarse mesh of *forest*.
-### Returns
+# Returns
 The local id of the tree in the forest. -1 if the tree is not forest local. *forest* must be committed before calling this function.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -13517,10 +14579,10 @@ end
 
 Given the local id of a tree in a forest, return the coarse tree of the cmesh that corresponds to this tree.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The local id of a tree in the forest.
-### Returns
+# Returns
 The coarse tree that matches the forest tree with local id *ltreeid*.
 ### Prototype
 ```c
@@ -13532,13 +14594,13 @@ function t8_forest_get_coarse_tree(forest, ltreeid)
 end
 
 """
-    t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leafs, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced)
+    t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced)
 
 Compute the leaf face neighbors of a forest.
 
 !!! note
 
-    If there are no face neighbors, then *neighbor\\_leafs = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
+    If there are no face neighbors, then *neighbor\\_leaves = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
 
 !!! note
 
@@ -13548,24 +14610,36 @@ Compute the leaf face neighbors of a forest.
 
     *forest* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest. Must have a valid ghost layer.
 * `ltreeid`:\\[in\\] A local tree id.
 * `leaf`:\\[in\\] A leaf in tree *ltreeid* of *forest*.
-* `neighbor_leafs`:\\[out\\] Unallocated on input. On output the neighbor leafs are stored here.
+* `neighbor_leaves`:\\[out\\] Unallocated on input. On output the neighbor leaves are stored here.
 * `face`:\\[in\\] The index of the face across which the face neighbors are searched.
 * `dual_face`:\\[out\\] On output the face id's of the neighboring elements' faces.
-* `num_neighbors`:\\[out\\] On output the number of neighbor leafs.
-* `pelement_indices`:\\[out\\] Unallocated on input. On output the element indices of the neighbor leafs are stored here. 0, 1, ... num\\_local\\_el - 1 for local leafs and num\\_local\\_el , ... , num\\_local\\_el + num\\_ghosts - 1 for ghosts.
+* `num_neighbors`:\\[out\\] On output the number of neighbor leaves.
+* `pelement_indices`:\\[out\\] Unallocated on input. On output the element indices of the neighbor leaves are stored here. 0, 1, ... num\\_local\\_el - 1 for local leaves and num\\_local\\_el , ... , num\\_local\\_el + num\\_ghosts - 1 for ghosts.
 * `pneigh_scheme`:\\[out\\] On output the eclass scheme of the neighbor elements.
 * `forest_is_balanced`:\\[in\\] True if we know that *forest* is balanced, false otherwise.
 ### Prototype
 ```c
-void t8_forest_leaf_face_neighbors (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leafs[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_scheme_c **pneigh_scheme, int forest_is_balanced);
+void t8_forest_leaf_face_neighbors (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leaves[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_scheme_c **pneigh_scheme, int forest_is_balanced);
 ```
 """
-function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leafs, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced)
-    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leafs::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_scheme::Ptr{Ptr{t8_eclass_scheme_c}}, forest_is_balanced::Cint)::Cvoid
+function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced)
+    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_scheme::Ptr{Ptr{t8_eclass_scheme_c}}, forest_is_balanced::Cint)::Cvoid
+end
+
+"""
+    t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced, gneigh_tree)
+
+### Prototype
+```c
+void t8_forest_leaf_face_neighbors_ext (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leaves[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_scheme_c **pneigh_scheme, int forest_is_balanced, t8_gloidx_t *gneigh_tree);
+```
+"""
+function t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_scheme, forest_is_balanced, gneigh_tree)
+    @ccall libt8.t8_forest_leaf_face_neighbors_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_scheme::Ptr{Ptr{t8_eclass_scheme_c}}, forest_is_balanced::Cint, gneigh_tree::Ptr{t8_gloidx_t})::Cvoid
 end
 
 """
@@ -13577,7 +14651,7 @@ Exchange ghost information of user defined element data.
 
     This function is collective and hence must be called by all processes in the forest's MPI Communicator.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest. Must be committed.
 * `element_data`:\\[in\\] An array of length num\\_local\\_elements + num\\_ghosts storing one value for each local element and ghost in *forest*. After calling this function the entries for the ghost elements are update with the entries in the *element_data* array of the corresponding owning process.
 ### Prototype
@@ -13632,9 +14706,9 @@ end
 
 Return the global id of the first local tree of a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The global id of the first local tree in *forest*.
 ### Prototype
 ```c
@@ -13650,9 +14724,9 @@ end
 
 Return the number of local trees of a given forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The number of local trees of that forest.
 ### Prototype
 ```c
@@ -13668,9 +14742,9 @@ end
 
 Return the number of ghost trees of a given forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The number of ghost trees of that forest.
 ### Prototype
 ```c
@@ -13686,9 +14760,9 @@ end
 
 Return the number of global trees of a given forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The number of global trees of that forest.
 ### Prototype
 ```c
@@ -13704,12 +14778,12 @@ end
 
 Return the global id of a local tree or a ghost tree.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] An id 0 <= *ltreeid* < num\\_local\\_trees + num\\_ghosts specifying a local tree or ghost tree.
-### Returns
+# Returns
 The global id corresponding to the tree with local id *ltreeid*. *forest* must be committed before calling this function.
-### See also
+# See also
 https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
 ### Prototype
@@ -13726,10 +14800,10 @@ end
 
 Return a pointer to a tree in a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltree_id`:\\[in\\] The local id of the tree.
-### Returns
+# Returns
 A pointer to the tree with local id *ltree_id*. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -13745,10 +14819,10 @@ end
 
 Return a pointer to the vertex coordinates of a tree.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The id of a local tree.
-### Returns
+# Returns
 If stored, a pointer to the vertex coordinates of *tree*. If no coordinates for this tree are found, NULL.
 ### Prototype
 ```c
@@ -13760,22 +14834,22 @@ function t8_forest_get_tree_vertices(forest, ltreeid)
 end
 
 """
-    t8_forest_tree_get_leafs(forest, ltree_id)
+    t8_forest_tree_get_leaves(forest, ltree_id)
 
 Return the array of leaf elements of a local tree in a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltree_id`:\\[in\\] The local id of a local tree of *forest*.
-### Returns
+# Returns
 An array of [`t8_element_t`](@ref) * storing all leaf elements of this tree.
 ### Prototype
 ```c
-t8_element_array_t * t8_forest_tree_get_leafs (const t8_forest_t forest, const t8_locidx_t ltree_id);
+t8_element_array_t * t8_forest_tree_get_leaves (const t8_forest_t forest, const t8_locidx_t ltree_id);
 ```
 """
-function t8_forest_tree_get_leafs(forest, ltree_id)
-    @ccall libt8.t8_forest_tree_get_leafs(forest::t8_forest_t, ltree_id::t8_locidx_t)::Ptr{t8_element_array_t}
+function t8_forest_tree_get_leaves(forest, ltree_id)
+    @ccall libt8.t8_forest_tree_get_leaves(forest::t8_forest_t, ltree_id::t8_locidx_t)::Ptr{t8_element_array_t}
 end
 
 """
@@ -13783,9 +14857,9 @@ end
 
 Return a cmesh associated to a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
-### Returns
+# Returns
 The cmesh associated to the forest.
 ### Prototype
 ```c
@@ -13805,11 +14879,11 @@ Return an element of the forest.
 
     This function performs a binary search. For constant access, use t8_forest_get_element_in_tree *forest* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `lelement_id`:\\[in\\] The local id of an element in *forest*.
 * `ltreeid`:\\[out\\] If not NULL, on output the local tree id of the tree in which the element lies in.
-### Returns
+# Returns
 A pointer to the element. NULL if this element does not exist.
 ### Prototype
 ```c
@@ -13829,11 +14903,11 @@ Return an element of a local tree in a forest.
 
     If the tree id is know, this function should be preferred over t8_forest_get_element. *forest* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] An id of a local tree in the forest.
 * `leid_in_tree`:\\[in\\] The index of an element in the tree.
-### Returns
+# Returns
 A pointer to the element.
 ### Prototype
 ```c
@@ -13849,10 +14923,10 @@ end
 
 Return the number of elements of a tree.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] A local id of a tree.
-### Returns
+# Returns
 The number of elements in the local tree *ltreeid*.
 ### Prototype
 ```c
@@ -13872,10 +14946,10 @@ Return the element offset of a local tree, that is the number of elements in all
 
     *forest* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] A local id of a tree.
-### Returns
+# Returns
 The number of leaf elements on all local tree with id < *ltreeid*.
 ### Prototype
 ```c
@@ -13891,9 +14965,9 @@ end
 
 Return the number of elements of a tree.
 
-### Parameters
+# Arguments
 * `tree`:\\[in\\] A tree in a forest.
-### Returns
+# Returns
 The number of elements of that tree.
 ### Prototype
 ```c
@@ -13909,10 +14983,10 @@ end
 
 Return the eclass of a tree in a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltreeid`:\\[in\\] The local id of a tree (local or ghost) in *forest*.
-### Returns
+# Returns
 The element class of the tree with local id *ltreeid*.
 ### Prototype
 ```c
@@ -13928,9 +15002,9 @@ end
 
 Compute the global index of the first local element of a forest. This function is collective.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] A committed forest, whose first element's index is computed.
-### Returns
+# Returns
 The global index of *forest*'s first local element. Forest must be committed when calling this function. This function is collective and must be called on each process.
 ### Prototype
 ```c
@@ -13946,11 +15020,11 @@ end
 
 Return the element scheme associated to a forest.
 
-### Parameters
+# Arguments
 * `forest.`:\\[in\\] A committed forest.
-### Returns
+# Returns
 The element scheme of the forest.
-### See also
+# See also
 [`t8_forest_set_scheme`](@ref)
 
 ### Prototype
@@ -13971,12 +15045,12 @@ Return the eclass scheme of a given element class associated to a forest.
 
     The forest is not required to have trees of class *eclass*.
 
-### Parameters
+# Arguments
 * `forest.`:\\[in\\] A committed forest.
 * `eclass.`:\\[in\\] An element class.
-### Returns
+# Returns
 The eclass scheme of *eclass* associated to forest.
-### See also
+# See also
 [`t8_forest_set_scheme`](@ref)
 
 ### Prototype
@@ -13993,12 +15067,12 @@ end
 
 Return the eclass of the tree in which a face neighbor of a given element lies.
 
-### Parameters
+# Arguments
 * `forest.`:\\[in\\] A committed forest.
 * `ltreeid.`:\\[in\\] The local tree in which the element lies.
 * `elem.`:\\[in\\] An element in the tree *ltreeid*.
 * `face.`:\\[in\\] A face number of *elem*.
-### Returns
+# Returns
 The local tree id of the tree in which the face neighbor of *elem* across *face* lies.
 ### Prototype
 ```c
@@ -14014,13 +15088,13 @@ end
 
 Construct the face neighbor of an element, possibly across tree boundaries. Returns the global tree-id of the tree in which the neighbor element lies in.
 
-### Parameters
+# Arguments
 * `elem`:\\[in\\] The element to be considered.
 * `neigh`:\\[in,out\\] On input an allocated element of the scheme of the face\\_neighbors eclass. On output, this element's data is filled with the data of the face neighbor. If the neighbor does not exist the data could be modified arbitrarily.
 * `neigh_scheme`:\\[in\\] The eclass scheme of *neigh*.
 * `face`:\\[in\\] The number of the face along which the neighbor should be constructed.
 * `neigh_face`:\\[out\\] The number of the face viewed from perspective of *neigh*.
-### Returns
+# Returns
 The global tree-id of the tree in which *neigh* is in. -1 if there exists no neighbor across that face.
 ### Prototype
 ```c
@@ -14044,33 +15118,7 @@ function t8_forest_iterate(forest)
 end
 
 """
-    t8_forest_element_point_inside(forest, ltreeid, element, point, tolerance)
-
-Query whether a given point lies inside an element or not. For bilinearly interpolated elements.
-
-!!! note
-
-    For 2D quadrilateral elements this function is only an approximation. It is correct if the four vertices lie in the same plane, but it may produce only approximate results if  the vertices do not lie in the same plane.
-
-### Parameters
-* `forest`:\\[in\\] The forest.
-* `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
-* `element`:\\[in\\] The element.
-* `point`:\\[in\\] 3-dimensional coordinates of the point to check
-* `tolerance`:\\[in\\] tolerance that we allow the point to not exactly match the element. If this value is larger we detect more points. If it is zero we probably do not detect points even if they are inside due to rounding errors.
-### Returns
-True (non-zero) if *point* lies within *element*, false otherwise. The return value is also true if the point lies on the element boundary. Thus, this function may return true for different leaf elements, if they are neighbors and the point lies on the common boundary.
-### Prototype
-```c
-int t8_forest_element_point_inside (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double point[3], const double tolerance);
-```
-"""
-function t8_forest_element_point_inside(forest, ltreeid, element, point, tolerance)
-    @ccall libt8.t8_forest_element_point_inside(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
-end
-
-"""
-    t8_forest_element_point_batch_inside(forest, ltreeid, element, points, num_points, is_inside, tolerance)
+    t8_forest_element_points_inside(forest, ltreeid, element, points, num_points, is_inside, tolerance)
 
 Query whether a batch of points lies inside an element. For bilinearly interpolated elements.
 
@@ -14078,7 +15126,7 @@ Query whether a batch of points lies inside an element. For bilinearly interpola
 
     For 2D quadrilateral elements this function is only an approximation. It is correct if the four vertices lie in the same plane, but it may produce only approximate results if  the vertices do not lie in the same plane.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `ltree_id`:\\[in\\] The forest local id of the tree in which the element is.
 * `element`:\\[in\\] The element.
@@ -14088,11 +15136,11 @@ Query whether a batch of points lies inside an element. For bilinearly interpola
 * `tolerance`:\\[in\\] Tolerance that we allow the point to not exactly match the element. If this value is larger we detect more points. If it is zero we probably do not detect points even if they are inside due to rounding errors.
 ### Prototype
 ```c
-void t8_forest_element_point_batch_inside (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double *points, int num_points, int *is_inside, const double tolerance);
+void t8_forest_element_points_inside (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double *points, int num_points, int *is_inside, const double tolerance);
 ```
 """
-function t8_forest_element_point_batch_inside(forest, ltreeid, element, points, num_points, is_inside, tolerance)
-    @ccall libt8.t8_forest_element_point_batch_inside(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, points::Ptr{Cdouble}, num_points::Cint, is_inside::Ptr{Cint}, tolerance::Cdouble)::Cvoid
+function t8_forest_element_points_inside(forest, ltreeid, element, points, num_points, is_inside, tolerance)
+    @ccall libt8.t8_forest_element_points_inside(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, points::Ptr{Cdouble}, num_points::Cint, is_inside::Ptr{Cint}, tolerance::Cdouble)::Cvoid
 end
 
 """
@@ -14116,14 +15164,14 @@ Build a adapted forest from another forest.
 
     This is equivalent to calling t8_forest_init, t8_forest_set_adapt, t8_forest_set_ghost, and t8_forest_commit
 
-### Parameters
+# Arguments
 * `forest_from`:\\[in\\] The forest to refine
 * `adapt_fn`:\\[in\\] Adapt function to use
 * `replace_fn`:\\[in\\] Replace function to use
 * `recursive`:\\[in\\] If true adptation is recursive
 * `do_face_ghost`:\\[in\\] If true, a layer of ghost elements is created for the forest.
 * `user_data`:\\[in\\] If not NULL, the user data pointer of the forest is set to this value.
-### Returns
+# Returns
 A new forest that is adapted from *forest_from*.
 ### Prototype
 ```c
@@ -14139,7 +15187,7 @@ end
 
 Increase the reference counter of a forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] On input, this forest must exist with positive reference count. It may be in any state.
 ### Prototype
 ```c
@@ -14155,7 +15203,7 @@ end
 
 Decrease the reference counter of a forest. If the counter reaches zero, this forest is destroyed. In this case, the forest dereferences its cmesh and scheme members.
 
-### Parameters
+# Arguments
 * `pforest`:\\[in,out\\] On input, the forest pointed to must exist with positive reference count. It may be in any state. If the reference count reaches zero, the forest is destroyed and this pointer set to NULL. Otherwise, the pointer is not changed and the forest is not modified in other ways.
 ### Prototype
 ```c
@@ -14313,7 +15361,7 @@ end
 # typedef int ( * t8_forest_iterate_face_fn ) ( t8_forest_t forest , t8_locidx_t ltreeid , const t8_element_t * element , int face , void * user_data , t8_locidx_t tree_leaf_index )
 const t8_forest_iterate_face_fn = Ptr{Cvoid}
 
-# typedef int ( * t8_forest_search_query_fn ) ( t8_forest_t forest , t8_locidx_t ltreeid , const t8_element_t * element , const int is_leaf , t8_element_array_t * leaf_elements , t8_locidx_t tree_leaf_index , void * query , size_t query_index )
+# typedef int ( * t8_forest_search_query_fn ) ( t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int is_leaf , const t8_element_array_t * leaf_elements , const t8_locidx_t tree_leaf_index , void * query , sc_array_t * query_indices , int * query_matches , const size_t num_active_queries )
 const t8_forest_search_query_fn = Ptr{Cvoid}
 
 """
@@ -14361,7 +15409,7 @@ Given two forest where the elements in one forest are either direct children or 
 
     To pass a user pointer to *replace_fn* use t8_forest_set_user_data and t8_forest_get_user_data.
 
-### Parameters
+# Arguments
 * `forest_new`:\\[in\\] A forest, each element is a parent or child of an element in *forest_old*.
 * `forest_old`:\\[in\\] The initial forest.
 * `replace_fn`:\\[in\\] A replace callback function.
@@ -14391,7 +15439,7 @@ end
 
 Create the element\\_offset array of a partitioned forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -14407,10 +15455,10 @@ end
 
 If t8_forest_partition_create_offsets was already called, compute for a given rank the next greater rank that is not empty.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `rank`:\\[in\\] An MPI rank.
-### Returns
+# Returns
 A rank q > *rank* such that the forest has elements on *q*. If such a *q* does not exist, returns mpisize.
 ### Prototype
 ```c
@@ -14426,7 +15474,7 @@ end
 
 Create the array of global\\_first\\_descendant ids of a partitioned forest.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -14442,7 +15490,7 @@ end
 
 Create the array tree offsets of a partitioned forest. This arrays stores at position p the global id of the first tree of this process. Or if this tree is shared, it stores -(global\\_id) - 1.
 
-### Parameters
+# Arguments
 * `forest`:\\[in,out\\] The forest. *forest* must be committed before calling this function.
 ### Prototype
 ```c
@@ -14474,7 +15522,7 @@ Test if the last descendant of the last element of current rank has a smaller li
 
     *forest* must be committed before calling this function.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 ### Prototype
 ```c
@@ -14662,7 +15710,7 @@ Write the forest in .pvtu file format. Writes one .vtu file per process and a me
 
     If t8code was not configured with vtk, use t8_forest_vtk_write_file
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `fileprefix`:\\[in\\] The prefix of the output files. The meta file will be named *fileprefix*.pvtu .
 * `write_treeid`:\\[in\\] If true, the global tree id is written for each element.
@@ -14673,7 +15721,7 @@ Write the forest in .pvtu file format. Writes one .vtu file per process and a me
 * `write_ghosts`:\\[in\\] If true, write out ghost elements as well.
 * `num_data`:\\[in\\] Number of user defined double valued data fields to write.
 * `data`:\\[in\\] Array of [`t8_vtk_data_field_t`](@ref) of length *num_data* providing the user defined per element data. If scalar and vector fields are used, all scalar fields must come first in the array.
-### Returns
+# Returns
 True if successful, false if not (process local).
 ### Prototype
 ```c
@@ -14689,7 +15737,7 @@ end
 
 Write the forest in .pvtu file format. Writes one .vtu file per process and a meta .pvtu file. This function writes ASCII files and can be used when t8code is not configure with "--with-vtk" and t8_forest_vtk_write_file_via_API is not available.
 
-### Parameters
+# Arguments
 * `forest`:\\[in\\] The forest.
 * `fileprefix`:\\[in\\] The prefix of the output files.
 * `write_treeid`:\\[in\\] If true, the global tree id is written for each element.
@@ -14699,7 +15747,7 @@ Write the forest in .pvtu file format. Writes one .vtu file per process and a me
 * `write_ghosts`:\\[in\\] If true, each process additionally writes its ghost elements. For ghost element the treeid is -1.
 * `num_data`:\\[in\\] Number of user defined double valued data fields to write.
 * `data`:\\[in\\] Array of [`t8_vtk_data_field_t`](@ref) of length *num_data* providing the used defined per element data. If scalar and vector fields are used, all scalar fields must come first in the array.
-### Returns
+# Returns
 True if successful, false if not (process local).
 ### Prototype
 ```c
@@ -14715,210 +15763,42 @@ end
 
 This enumeration contains all possible geometries.
 
-| Enumerator                                     | Note                                                                                          |
-| :--------------------------------------------- | :-------------------------------------------------------------------------------------------- |
-| T8\\_GEOMETRY\\_TYPE\\_ZERO                    | The zero geometry maps all points to zero.                                                    |
-| T8\\_GEOMETRY\\_TYPE\\_LINEAR                  | The linear geometry uses linear interpolations to interpolate between the tree vertices.      |
-| T8\\_GEOMETRY\\_TYPE\\_LINEAR\\_AXIS\\_ALIGNED | The linear, axis aligned geometry uses only 2 vertices, since it is axis aligned.             |
-| T8\\_GEOMETRY\\_TYPE\\_ANALYTIC                | The analytic geometry uses a user-defined analytic function to map into the physical domain.  |
-| T8\\_GEOMETRY\\_TYPE\\_OCC                     | The OCC geometry uses OCC CAD shapes to map trees exactly to the underlying CAD model.        |
-| T8\\_GEOMETRY\\_TYPE\\_COUNT                   | This is no geometry type but can be used as the number of geometry types.                     |
-| T8\\_GEOMETRY\\_TYPE\\_UNDEFINED               | This is no geometry type but is used for every geometry, where no type is defined             |
+| Enumerator                                     | Note                                                                                             |
+| :--------------------------------------------- | :----------------------------------------------------------------------------------------------- |
+| T8\\_GEOMETRY\\_TYPE\\_ZERO                    | The zero geometry maps all points to zero.                                                       |
+| T8\\_GEOMETRY\\_TYPE\\_LINEAR                  | The linear geometry uses linear interpolations to interpolate between the tree vertices.         |
+| T8\\_GEOMETRY\\_TYPE\\_LINEAR\\_AXIS\\_ALIGNED | The linear, axis aligned geometry uses only 2 vertices, since it is axis aligned.                |
+| T8\\_GEOMETRY\\_TYPE\\_LAGRANGE                | The Lagrange geometry uses a mapping with Lagrange polynomials to approximate curved elements .  |
+| T8\\_GEOMETRY\\_TYPE\\_ANALYTIC                | The analytic geometry uses a user-defined analytic function to map into the physical domain.     |
+| T8\\_GEOMETRY\\_TYPE\\_CAD                     | The opencascade geometry uses CAD shapes to map trees exactly to the underlying CAD model.       |
+| T8\\_GEOMETRY\\_TYPE\\_COUNT                   | This is no geometry type but can be used as the number of geometry types.                        |
+| T8\\_GEOMETRY\\_TYPE\\_UNDEFINED               | This is no geometry type but is used for every geometry, where no type is defined                |
 """
 @cenum t8_geometry_type::UInt32 begin
     T8_GEOMETRY_TYPE_ZERO = 0
     T8_GEOMETRY_TYPE_LINEAR = 1
     T8_GEOMETRY_TYPE_LINEAR_AXIS_ALIGNED = 2
-    T8_GEOMETRY_TYPE_ANALYTIC = 3
-    T8_GEOMETRY_TYPE_OCC = 4
-    T8_GEOMETRY_TYPE_COUNT = 5
-    T8_GEOMETRY_TYPE_UNDEFINED = 6
+    T8_GEOMETRY_TYPE_LAGRANGE = 3
+    T8_GEOMETRY_TYPE_ANALYTIC = 4
+    T8_GEOMETRY_TYPE_CAD = 5
+    T8_GEOMETRY_TYPE_COUNT = 6
+    T8_GEOMETRY_TYPE_UNDEFINED = 7
 end
 
 """This enumeration contains all possible geometries."""
 const t8_geometry_type_t = t8_geometry_type
 
-struct t8_geometry_handler
-    registered_geometries::sc_array_t
-    active_geometry::Ptr{t8_geometry_c}
-    active_tree::t8_gloidx_t
-    is_committed::Cint
-    rc::t8_refcount_t
-end
-
-const t8_geometry_handler_t = t8_geometry_handler
-
-"""
-    t8_geom_handler_init(pgeom_handler)
-
-Initialize a geometry handler. This will allocate memory.
-
-### Parameters
-* `pgeom_handler`:\\[in,out\\] On input a pointer to unallocated memory. On output this will point to an initialized geometry handler.
-### Prototype
-```c
-void t8_geom_handler_init (t8_geometry_handler_t **pgeom_handler);
-```
-"""
-function t8_geom_handler_init(pgeom_handler)
-    @ccall libt8.t8_geom_handler_init(pgeom_handler::Ptr{Ptr{t8_geometry_handler_t}})::Cvoid
-end
-
-"""
-    t8_geom_handler_ref(geom_handler)
-
-Increase the reference counter of a geometry handler.
-
-### Parameters
-* `geom_handler`:\\[in\\] An initialized geometry handler.
-### Prototype
-```c
-void t8_geom_handler_ref (t8_geometry_handler_t *geom_handler);
-```
-"""
-function t8_geom_handler_ref(geom_handler)
-    @ccall libt8.t8_geom_handler_ref(geom_handler::Ptr{t8_geometry_handler_t})::Cvoid
-end
-
-"""
-    t8_geom_handler_unref(pgeom_handler)
-
-Decrease the reference count of a geometry handler, if the refcount reaches 0, the handler will get destroyed.
-
-### Parameters
-* `pgeom_handler`:\\[in,out\\] Pointer to an initialized geometry handler. If the refcount reaches 0, will point to NULL afterwards.
-### Prototype
-```c
-void t8_geom_handler_unref (t8_geometry_handler_t **pgeom_handler);
-```
-"""
-function t8_geom_handler_unref(pgeom_handler)
-    @ccall libt8.t8_geom_handler_unref(pgeom_handler::Ptr{Ptr{t8_geometry_handler_t}})::Cvoid
-end
-
-"""
-    t8_geom_handler_destroy(pgeom_handler)
-
-Destroy a geometry handler and free its memory.  This is only valid if its reference count is 1. If you are unsure, call t8_geom_handler_unref instead.
-
-### Parameters
-* `pgeom_handler`:\\[in,out\\] Pointer to an initialized geometry handler. Will point to NULL afterwards.
-### Prototype
-```c
-void t8_geom_handler_destroy (t8_geometry_handler_t **pgeom_handler);
-```
-"""
-function t8_geom_handler_destroy(pgeom_handler)
-    @ccall libt8.t8_geom_handler_destroy(pgeom_handler::Ptr{Ptr{t8_geometry_handler_t}})::Cvoid
-end
-
-"""
-    t8_geom_handler_register_geometry(geom_handler, geometry)
-
-Add a geometry to the geometry handler.
-
-### Parameters
-* `geom_handler`:\\[in,out\\] An initialized but not committed geometry handler.
-* `geometry`:\\[in\\] The geometry to add.
-### Prototype
-```c
-void t8_geom_handler_register_geometry (t8_geometry_handler_t *geom_handler, const t8_geometry_c *geometry);
-```
-"""
-function t8_geom_handler_register_geometry(geom_handler, geometry)
-    @ccall libt8.t8_geom_handler_register_geometry(geom_handler::Ptr{t8_geometry_handler_t}, geometry::Ptr{t8_geometry_c})::Cvoid
-end
-
-"""
-    t8_geom_handler_commit(geom_handler)
-
-Commit a geometry handler. This specifies that no geometries will be added to it and makes it ready to be used.
-
-### Parameters
-* `geom_handler`:\\[in,out\\] An initialized but not committed geometry handler.
-### Prototype
-```c
-void t8_geom_handler_commit (t8_geometry_handler_t *geom_handler);
-```
-"""
-function t8_geom_handler_commit(geom_handler)
-    @ccall libt8.t8_geom_handler_commit(geom_handler::Ptr{t8_geometry_handler_t})::Cvoid
-end
-
-"""
-    t8_geom_handler_is_committed(geom_handler)
-
-### Prototype
-```c
-int t8_geom_handler_is_committed (const t8_geometry_handler_t *geom_handler);
-```
-"""
-function t8_geom_handler_is_committed(geom_handler)
-    @ccall libt8.t8_geom_handler_is_committed(geom_handler::Ptr{t8_geometry_handler_t})::Cint
-end
-
-"""
-    t8_geom_handler_get_num_geometries(geom_handler)
-
-Return the number of registered geometries.
-
-### Parameters
-* `geom_handler`:\\[in\\] A geometry handler (must be initialized and may or may not be committed).
-### Returns
-The number of registered geometries in *geom_handler*.
-### Prototype
-```c
-size_t t8_geom_handler_get_num_geometries (const t8_geometry_handler_t *geom_handler);
-```
-"""
-function t8_geom_handler_get_num_geometries(geom_handler)
-    @ccall libt8.t8_geom_handler_get_num_geometries(geom_handler::Ptr{t8_geometry_handler_t})::Csize_t
-end
-
-"""
-    t8_geom_handler_get_unique_geometry(geom_handler)
-
-If a geometry handler only has one registered geometry, get a pointer to this geometry.
-
-!!! note
-
-    Most cmeshes will have only one geometry and this function is an optimization for that special case. It is used for example in t8_cmesh_get_tree_geometry.
-
-### Parameters
-* `geom_handler`:\\[in\\] Must be committed and have exactly one geometry registered.
-### Returns
-The only registered geometry of *geom_handler*.
-### Prototype
-```c
-const t8_geometry_c * t8_geom_handler_get_unique_geometry (const t8_geometry_handler_t *geom_handler);
-```
-"""
-function t8_geom_handler_get_unique_geometry(geom_handler)
-    @ccall libt8.t8_geom_handler_get_unique_geometry(geom_handler::Ptr{t8_geometry_handler_t})::Ptr{t8_geometry_c}
-end
-
-"""
-    t8_geom_handler_find_geometry(geom_handler, name)
-
-Given a geometry's name find that geometry in the geometry handler and return it.
-
-### Parameters
-* `geom_handler`:\\[in\\] A committed geometry handler.
-* `name`:\\[in\\] The name of a geometry.
-### Returns
-A pointer to the geometry or NULL if it was not found.
-### Prototype
-```c
-t8_geometry_c * t8_geom_handler_find_geometry (const t8_geometry_handler_t *geom_handler, const char *name);
-```
-"""
-function t8_geom_handler_find_geometry(geom_handler, name)
-    @ccall libt8.t8_geom_handler_find_geometry(geom_handler::Ptr{t8_geometry_handler_t}, name::Cstring)::Ptr{t8_geometry_c}
-end
-
 """
     t8_geometry_evaluate(cmesh, gtreeid, ref_coords, num_coords, out_coords)
 
+Evaluates the geometry of a tree at a given reference point.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh
+* `gtreeid`:\\[in\\] The global id of the tree
+* `ref_coords`:\\[in\\] The reference coordinates at which to evaluate the geometry
+* `num_coords`:\\[in\\] The number of reference coordinates
+* `out_coords`:\\[out\\] The evaluated coordinates
 ### Prototype
 ```c
 void t8_geometry_evaluate (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const double *ref_coords, const size_t num_coords, double *out_coords);
@@ -14931,6 +15811,14 @@ end
 """
     t8_geometry_jacobian(cmesh, gtreeid, ref_coords, num_coords, jacobian)
 
+Evaluates the jacobian of a tree at a given reference point.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh
+* `gtreeid`:\\[in\\] The global id of the tree
+* `ref_coords`:\\[in\\] The reference coordinates at which to evaluate the jacobian
+* `num_coords`:\\[in\\] The number of reference coordinates
+* `jacobian`:\\[out\\] The jacobian at the reference coordinates
 ### Prototype
 ```c
 void t8_geometry_jacobian (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const double *ref_coords, const size_t num_coords, double *jacobian);
@@ -14943,6 +15831,13 @@ end
 """
     t8_geometry_get_type(cmesh, gtreeid)
 
+This function returns the geometry type of a tree.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh
+* `gtreeid`:\\[in\\] The global id of the tree
+# Returns
+The geometry type of the tree with id gtreeid
 ### Prototype
 ```c
 t8_geometry_type_t t8_geometry_get_type (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
@@ -14953,13 +15848,32 @@ function t8_geometry_get_type(cmesh, gtreeid)
 end
 
 """
+    t8_geometry_tree_negative_volume(cmesh, gtreeid)
+
+Check if a tree has a negative volume
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh to check
+* `gtreeid`:\\[in\\] The global id of the tree
+# Returns
+True if the tree with id gtreeid has a negative volume. False otherwise.
+### Prototype
+```c
+int t8_geometry_tree_negative_volume (const t8_cmesh_t cmesh, const t8_gloidx_t gtreeid);
+```
+"""
+function t8_geometry_tree_negative_volume(cmesh, gtreeid)
+    @ccall libt8.t8_geometry_tree_negative_volume(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Cint
+end
+
+"""
     t8_geom_get_dimension(geom)
 
 Get the dimension of a geometry.
 
-### Parameters
+# Arguments
 * `geom`:\\[in\\] A geometry.
-### Returns
+# Returns
 The dimension of *geom*.
 ### Prototype
 ```c
@@ -14975,9 +15889,9 @@ end
 
 Get the name of a geometry.
 
-### Parameters
+# Arguments
 * `geom`:\\[in\\] A geometry.
-### Returns
+# Returns
 The name of *geom*.
 ### Prototype
 ```c
@@ -14993,9 +15907,9 @@ end
 
 Get the type of a geometry.
 
-### Parameters
+# Arguments
 * `geom`:\\[in\\] A geometry.
-### Returns
+# Returns
 The type of *geom*.
 ### Prototype
 ```c
@@ -15035,7 +15949,7 @@ end
 
 Interpolates linearly between 2, bilinearly between 4 or trilineraly between 8 points.
 
-### Parameters
+# Arguments
 * `coefficients`:\\[in\\] An array of size at least dim giving the coefficients used for the interpolation
 * `corner_values`:\\[in\\] An array of size 2^dim * 3, giving for each corner (in zorder) of the unit square/cube its function values in space.
 * `corner_value_dim`:\\[in\\] The dimension of the *corner_values*.
@@ -15055,7 +15969,7 @@ end
 
 Triangular interpolation between 3 points (triangle) or 4 points (tetrahedron) using barycentric coordinates.
 
-### Parameters
+# Arguments
 * `coefficients`:\\[in\\] An array of size *interpolation_dim* giving the coefficients used for the interpolation
 * `corner_values`:\\[in\\] An array of size  3 * *corner_value_dim* for *interpolation_dim* == 2 or 4 * *corner_value_dim* for *interpolation_dim* == 3,  giving the function values of the triangle/tetrahedron for each corner (in zorder)
 * `corner_value_dim`:\\[in\\] The dimension of the *corner_values*.
@@ -15099,7 +16013,7 @@ end
 
 Calculates a point of intersection in a triangular reference space. The intersection is the extension of a straight line passing through a reference point and the opposite vertex of the edge. /|\\ / | \\ o -> reference point / o \\ x -> intersection point / | \\ /\\_\\_\\_\\_x\\_\\_\\_\\_\\
 
-### Parameters
+# Arguments
 * `edge_index`:\\[in\\] Index of the edge, the intersection lies on.
 * `ref_coords`:\\[in\\] Array containing the coordinates of the reference point.
 * `ref_intersection`:\\[out\\] Coordinates of the intersection point.
@@ -15117,7 +16031,7 @@ end
 
 Calculates the scaling factor for edge displacement along a triangular tree face depending on the position of the global reference point.
 
-### Parameters
+# Arguments
 * `edge_index`:\\[in\\] Index of the edge, whose displacement should be scaled.
 * `tree_vertices`:\\[in\\] Array with the tree vertex coordinates.
 * `glob_intersection`:\\[in\\] Array containing the coordinates of the intersection point of a line drawn from the opposite vertex through the glob\\_ref\\_point onto the edge with edge\\_index.
@@ -15132,15 +16046,143 @@ function t8_geom_get_triangle_scaling_factor(edge_index, tree_vertices, glob_int
 end
 
 """
-    t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
+    t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index, face_index, ref_coords)
 
+Calculates the scaling factor for the displacement of an edge over a face of a tetrahedral element.
+
+# Arguments
+* `edge_index`:\\[in\\] Index of the edge, whose displacement should be scaled.
+* `face_index`:\\[in\\] Index of the face, the displacement should be scaled on.
+* `ref_coords`:\\[in\\] Array containing the coordinates of the reference point.
+# Returns
+The scaling factor of the edge displacement on the face at the point of the reference coordinates.
 ### Prototype
 ```c
-void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, double *vertices, int num_vertices);
+double t8_geom_get_scaling_factor_of_edge_on_face_tet (int edge_index, int face_index, const double *ref_coords);
+```
+"""
+function t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index, face_index, ref_coords)
+    @ccall libt8.t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index::Cint, face_index::Cint, ref_coords::Ptr{Cdouble})::Cdouble
+end
+
+"""
+    t8_geom_get_tet_face_intersection(face_index, ref_coords, face_intersection)
+
+Calculates the face intersection of a ray passing trough the reference coordinates and the opposite vertex of that face for a tetrahedron. The coordinates of the face intersection are reference coordinates: [0,1]^3.
+
+# Arguments
+* `face_index`:\\[in\\] Index of the face, on which the intersection should be calculated.
+* `ref_coords`:\\[in\\] Array containing the coordinates of the reference point.
+* `face_intersection`:\\[out\\] Three dimensional array containing the intersection point on the face in reference space.
+### Prototype
+```c
+void t8_geom_get_tet_face_intersection (const int face_index, const double *ref_coords, double face_intersection[3]);
+```
+"""
+function t8_geom_get_tet_face_intersection(face_index, ref_coords, face_intersection)
+    @ccall libt8.t8_geom_get_tet_face_intersection(face_index::Cint, ref_coords::Ptr{Cdouble}, face_intersection::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_vertex_point_inside(vertex_coords, point, tolerance)
+
+Check if a point lies inside a vertex
+
+# Arguments
+* `vertex_coords`:\\[in\\] The coordinates of the vertex
+* `point`:\\[in\\] The coordinates of the point to check
+* `tolerance`:\\[in\\] A double > 0 defining the tolerance
+# Returns
+0 if the point is outside, 1 otherwise.
+### Prototype
+```c
+int t8_vertex_point_inside (const double vertex_coords[3], const double point[3], const double tolerance);
+```
+"""
+function t8_vertex_point_inside(vertex_coords, point, tolerance)
+    @ccall libt8.t8_vertex_point_inside(vertex_coords::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+end
+
+"""
+    t8_line_point_inside(p_0, vec, point, tolerance)
+
+Check if a point is inside a line that is defined by a starting point *p_0* and a vector *vec*
+
+# Arguments
+* `p_0`:\\[in\\] Starting point of the line
+* `vec`:\\[in\\] Direction of the line (not normalized)
+* `point`:\\[in\\] The coordinates of the point to check
+* `tolerance`:\\[in\\] A double > 0 defining the tolerance
+# Returns
+0 if the point is outside, 1 otherwise.
+### Prototype
+```c
+int t8_line_point_inside (const double *p_0, const double *vec, const double *point, const double tolerance);
+```
+"""
+function t8_line_point_inside(p_0, vec, point, tolerance)
+    @ccall libt8.t8_line_point_inside(p_0::Ptr{Cdouble}, vec::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+end
+
+"""
+    t8_triangle_point_inside(p_0, v, w, point, tolerance)
+
+Check if a point is inside of a triangle described by a point *p_0* and two vectors *v* and *w*.
+
+# Arguments
+* `p_0`:\\[in\\] The first vertex of a triangle
+* `v`:\\[in\\] The vector from p\\_0 to p\\_1 (second vertex in the triangle)
+* `w`:\\[in\\] The vector from p\\_0 to p\\_2 (third vertex in the triangle)
+* `point`:\\[in\\] The coordinates of the point to check
+* `tolerance`:\\[in\\] A double > 0 defining the tolerance
+# Returns
+0 if the point is outside, 1 otherwise.
+### Prototype
+```c
+int t8_triangle_point_inside (const double p_0[3], const double v[3], const double w[3], const double point[3], const double tolerance);
+```
+"""
+function t8_triangle_point_inside(p_0, v, w, point, tolerance)
+    @ccall libt8.t8_triangle_point_inside(p_0::Ptr{Cdouble}, v::Ptr{Cdouble}, w::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+end
+
+"""
+    t8_plane_point_inside(point_on_face, face_normal, point)
+
+Check if a point lays on the inner side of a plane of a bilinearly interpolated volume element.  the plane is described by a point and the normal of the face.
+
+# Arguments
+* `point_on_face`:\\[in\\] A point on the plane
+* `face_normal`:\\[in\\] The normal of the face
+* `point`:\\[in\\] The point to check
+# Returns
+0 if the point is outside, 1 otherwise.
+### Prototype
+```c
+int t8_plane_point_inside (const double point_on_face[3], const double face_normal[3], const double point[3]);
+```
+"""
+function t8_plane_point_inside(point_on_face, face_normal, point)
+    @ccall libt8.t8_plane_point_inside(point_on_face::Ptr{Cdouble}, face_normal::Ptr{Cdouble}, point::Ptr{Cdouble})::Cint
+end
+
+"""
+    t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
+
+Set the vertex coordinates of a tree in the cmesh. This is currently inefficient, since the vertices are duplicated for each tree. Eventually this function will be replaced by a more efficient one. It is not allowed to call this function after t8_cmesh_commit. The eclass of the tree has to be set before calling this function.
+
+# Arguments
+* `cmesh`:\\[in,out\\] The cmesh to be updated.
+* `gtree_id`:\\[in\\] The global number of the tree.
+* `vertices`:\\[in\\] An array of 3 doubles per tree vertex.
+* `num_vertices`:\\[in\\] The number of verticess in *vertices*. Must match the number of corners of the tree.
+### Prototype
+```c
+void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, const t8_gloidx_t gtree_id, const double *vertices, const int num_vertices);
 ```
 """
 function t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
-    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::Cint, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
 end
 
 """
@@ -15169,12 +16211,147 @@ end
 
 const vtk_read_success_t = vtk_read_success
 
+# typedef void ( * t8_geom_analytic_fn ) ( t8_cmesh_t cmesh , t8_gloidx_t gtreeid , const double * ref_coords , const size_t num_coords , double * out_coords , const void * tree_data , const void * user_data )
+"""
+Definition of an analytic geometry function. This function maps reference coordinates to physical coordinates.
+
+```c++
+ [0,1]^\\mathrm{dim} 
+```
+
+.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `gtreeid`:\\[in\\] The global tree (of the cmesh) in which the reference point is.
+* `ref_coords`:\\[in\\] Array of dimension x *num_coords* many entries, specifying a point in
+* `num_coords`:\\[in\\]
+* `out_coords`:\\[out\\] The mapped coordinates in physical space of *ref_coords*. The length is *num_coords* * 3.
+* `tree_data`:\\[in\\] The data of the current tree as loaded by a t8_geom_load_tree_data_fn.
+* `user_data`:\\[in\\] The user data pointer stored in the geometry.
+"""
+const t8_geom_analytic_fn = Ptr{Cvoid}
+
+# typedef void ( * t8_geom_analytic_jacobian_fn ) ( t8_cmesh_t cmesh , t8_gloidx_t gtreeid , const double * ref_coords , const size_t num_coords , double * jacobian , const void * tree_data , const void * user_data )
+"""
+Definition for the jacobian of an analytic geometry function.
+
+```c++
+ [0,1]^\\mathrm{dim} 
+```
+
+.
+
+```c++
+ \\mathrm{dim} \\cdot 3 
+```
+
+x *num_coords*. Indices
+
+```c++
+ 3 \\cdot i
+```
+
+,
+
+```c++
+ 3 \\cdot i+1 
+```
+
+,
+
+```c++
+ 3 \\cdot i+2 
+```
+
+correspond to the
+
+```c++
+ i 
+```
+
+-th column of the jacobian (Entry
+
+```c++
+ 3 \\cdot i + j 
+```
+
+is
+
+```c++
+ \\frac{\\partial f_j}{\\partial x_i} 
+```
+
+).
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `gtreeid`:\\[in\\] The global tree (of the cmesh) in which the reference point is.
+* `ref_coords`:\\[in\\] Array of *dimension* x *num_coords* many entries, specifying points in
+* `num_coords`:\\[in\\] Amount of points of /f\$ {dim} /f\$ to map.
+* `jacobian`:\\[out\\] The jacobian at *ref_coords*. Array of size
+* `tree_data`:\\[in\\] The data of the current tree as loaded by a t8_geom_load_tree_data_fn.
+* `user_data`:\\[in\\] The user data pointer stored in the geometry.
+"""
+const t8_geom_analytic_jacobian_fn = Ptr{Cvoid}
+
+# typedef void ( * t8_geom_load_tree_data_fn ) ( t8_cmesh_t cmesh , t8_gloidx_t gtreeid , const void * * tree_data )
+"""
+Definition for the load tree data function.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `gtreeid`:\\[in\\] The global tree (of the cmesh) in which the reference point is.
+* `tree_data`:\\[in\\] The data of the trees.
+"""
+const t8_geom_load_tree_data_fn = Ptr{Cvoid}
+
+# typedef int ( * t8_geom_tree_negative_volume_fn ) ( )
+"""Definition for the negative volume function."""
+const t8_geom_tree_negative_volume_fn = Ptr{Cvoid}
+
+"""
+    t8_geometry_analytic_destroy(geom)
+
+### Prototype
+```c
+void t8_geometry_analytic_destroy (t8_geometry_c **geom);
+```
+"""
+function t8_geometry_analytic_destroy(geom)
+    @ccall libt8.t8_geometry_analytic_destroy(geom::Ptr{Ptr{Cint}})::Cvoid
+end
+
+"""
+    t8_geometry_analytic_new(dim, name, analytical, jacobian, load_tree_data, tree_negative_volume, user_data)
+
+### Prototype
+```c
+t8_geometry_c * t8_geometry_analytic_new (int dim, const char *name, t8_geom_analytic_fn analytical, t8_geom_analytic_jacobian_fn jacobian, t8_geom_load_tree_data_fn load_tree_data, t8_geom_tree_negative_volume_fn tree_negative_volume, const void *user_data);
+```
+"""
+function t8_geometry_analytic_new(dim, name, analytical, jacobian, load_tree_data, tree_negative_volume, user_data)
+    @ccall libt8.t8_geometry_analytic_new(dim::Cint, name::Cstring, analytical::t8_geom_analytic_fn, jacobian::t8_geom_analytic_jacobian_fn, load_tree_data::t8_geom_load_tree_data_fn, tree_negative_volume::t8_geom_tree_negative_volume_fn, user_data::Ptr{Cvoid})::Ptr{Cint}
+end
+
+"""
+    t8_geom_load_tree_data_vertices(cmesh, gtreeid, user_data)
+
+### Prototype
+```c
+void t8_geom_load_tree_data_vertices (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const void **user_data);
+```
+"""
+function t8_geom_load_tree_data_vertices(cmesh, gtreeid, user_data)
+    @ccall libt8.t8_geom_load_tree_data_vertices(cmesh::Cint, gtreeid::Cint, user_data::Ptr{Ptr{Cvoid}})::Cvoid
+end
+
 """
     t8_geometry_destroy(geom)
 
 Destroy a geometry object.
 
-### Parameters
+# Arguments
 * `geom`:\\[in,out\\] A pointer to a geometry object. Set to NULL on output.
 ### Prototype
 ```c
@@ -15187,19 +16364,19 @@ end
 
 # no prototype is found for this function at t8_geometry_examples.h:45:1, please use with caution
 """
-    t8_geometry_squared_disk_new()
+    t8_geometry_quadrangulated_disk_new()
 
-Create a new squared\\_disk geometry.
+Create a new quadrangulated\\_disk geometry.
 
-### Returns
+# Returns
 A pointer to an allocated geometry struct.
 ### Prototype
 ```c
-t8_geometry_c * t8_geometry_squared_disk_new ();
+t8_geometry_c * t8_geometry_quadrangulated_disk_new ();
 ```
 """
-function t8_geometry_squared_disk_new()
-    @ccall libt8.t8_geometry_squared_disk_new()::Ptr{t8_geometry_c}
+function t8_geometry_quadrangulated_disk_new()
+    @ccall libt8.t8_geometry_quadrangulated_disk_new()::Ptr{t8_geometry_c}
 end
 
 # no prototype is found for this function at t8_geometry_examples.h:51:1, please use with caution
@@ -15208,7 +16385,7 @@ end
 
 Create a new triangulated\\_spherical\\_surface geometry.
 
-### Returns
+# Returns
 A pointer to an allocated geometry struct.
 ### Prototype
 ```c
@@ -15219,14 +16396,116 @@ function t8_geometry_triangulated_spherical_surface_new()
     @ccall libt8.t8_geometry_triangulated_spherical_surface_new()::Ptr{t8_geometry_c}
 end
 
+# no prototype is found for this function at t8_geometry_examples.h:57:1, please use with caution
+"""
+    t8_geometry_quadrangulated_spherical_surface_new()
+
+Create a new quadrangulated\\_spherical\\_surface geometry.
+
+# Returns
+A pointer to an allocated geometry struct.
+### Prototype
+```c
+t8_geometry_c * t8_geometry_quadrangulated_spherical_surface_new ();
+```
+"""
+function t8_geometry_quadrangulated_spherical_surface_new()
+    @ccall libt8.t8_geometry_quadrangulated_spherical_surface_new()::Ptr{t8_geometry_c}
+end
+
+# no prototype is found for this function at t8_geometry_examples.h:63:1, please use with caution
+"""
+    t8_geometry_cubed_spherical_shell_new()
+
+Create a new cubed\\_spherical\\_shell geometry.
+
+# Returns
+A pointer to an allocated geometry struct.
+### Prototype
+```c
+t8_geometry_c * t8_geometry_cubed_spherical_shell_new ();
+```
+"""
+function t8_geometry_cubed_spherical_shell_new()
+    @ccall libt8.t8_geometry_cubed_spherical_shell_new()::Ptr{t8_geometry_c}
+end
+
+# no prototype is found for this function at t8_geometry_examples.h:69:1, please use with caution
+"""
+    t8_geometry_prismed_spherical_shell_new()
+
+Create a new spherical\\_shell geometry.
+
+# Returns
+A pointer to an allocated geometry struct.
+### Prototype
+```c
+t8_geometry_c * t8_geometry_prismed_spherical_shell_new ();
+```
+"""
+function t8_geometry_prismed_spherical_shell_new()
+    @ccall libt8.t8_geometry_prismed_spherical_shell_new()::Ptr{t8_geometry_c}
+end
+
+# no prototype is found for this function at t8_geometry_examples.h:75:1, please use with caution
+"""
+    t8_geometry_cubed_sphere_new()
+
+Create a new cubed sphere geometry.
+
+# Returns
+A pointer to an allocated geometry struct.
+### Prototype
+```c
+t8_geometry_c * t8_geometry_cubed_sphere_new ();
+```
+"""
+function t8_geometry_cubed_sphere_new()
+    @ccall libt8.t8_geometry_cubed_sphere_new()::Ptr{t8_geometry_c}
+end
+
+"""
+    t8_geometry_lagrange_new(dim)
+
+Create a new Lagrange geometry of a given dimension. The geometry is compatible with all tree types and uses as many vertices as the number of Lagrange basis functions used for the mapping. The vertices are saved via the t8_cmesh_set_tree_vertices function. Sets the dimension and the name to "t8\\_geom\\_lagrange\\_{dim}"
+
+# Arguments
+* `dim`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
+# Returns
+A pointer to an allocated t8\\_geometry\\_lagrange struct, as if the t8_geometry_lagrange (int dim) constructor was called.
+### Prototype
+```c
+t8_geometry_c * t8_geometry_lagrange_new (int dim);
+```
+"""
+function t8_geometry_lagrange_new(dim)
+    @ccall libt8.t8_geometry_lagrange_new(dim::Cint)::Ptr{t8_geometry_c}
+end
+
+"""
+    t8_geometry_lagrange_destroy(geom)
+
+Destroy a Lagrange geometry that was created with t8_geometry_lagrange_new.
+
+# Arguments
+* `geom`:\\[in,out\\] A Lagrange geometry. Set to NULL on output.
+### Prototype
+```c
+void t8_geometry_lagrange_destroy (t8_geometry_c **geom);
+```
+"""
+function t8_geometry_lagrange_destroy(geom)
+    @ccall libt8.t8_geometry_lagrange_destroy(geom::Ptr{Ptr{t8_geometry_c}})::Cvoid
+end
+
 """
     t8_geometry_linear_new(dim)
 
 Create a new linear geometry of a given dimension. The geometry is only all tree types and as many vertices as the tree type has. The vertices are saved via the t8_cmesh_set_tree_vertices function. Sets the dimension and the name to "t8\\_geom\\_linear\\_{dim}"
 
-### Parameters
+# Arguments
 * `dim`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
-### Returns
+# Returns
 A pointer to an allocated t8\\_geometry\\_linear struct, as if the t8_geometry_linear (int dim) constructor was called.
 ### Prototype
 ```c
@@ -15242,7 +16521,7 @@ end
 
 Destroy a linear geometry that was created with t8_geometry_linear_new.
 
-### Parameters
+# Arguments
 * `geom`:\\[in,out\\] A linear geometry. Set to NULL on output.
 ### Prototype
 ```c
@@ -15258,9 +16537,9 @@ end
 
 Create a new linear, axis-aligned geometry of a given dimension. The geometry is only viable for line/quad/hex elements and uses two vertices (min and max coords) per tree. The vertices are saved via the t8_cmesh_set_tree_vertices function.
 
-### Parameters
+# Arguments
 * `dim`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
-### Returns
+# Returns
 A pointer to an allocated t8\\_geometry\\_linear\\_axis\\_aligned struct, as if the t8\\_geometry\\_linear\\_axis\\_aligned (int dimension) constructor was called.
 ### Prototype
 ```c
@@ -15276,7 +16555,7 @@ end
 
 Destroy a linear, axis-aligned geometry that was created with t8_geometry_linear_axis_aligned_new.
 
-### Parameters
+# Arguments
 * `geom`:\\[in,out\\] A linear, axis-aligned geometry. Set to NULL on output.
 ### Prototype
 ```c
@@ -15287,45 +16566,38 @@ function t8_geometry_linear_axis_aligned_destroy(geom)
     @ccall libt8.t8_geometry_linear_axis_aligned_destroy(geom::Ptr{Ptr{t8_geometry_c}})::Cvoid
 end
 
-mutable struct t8_geometry_occ end
-
-"""This typedef holds virtual functions for a particular geometry. We need it so that we can use [`t8_geometry_occ_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling)"""
-const t8_geometry_occ_c = t8_geometry_occ
-
 """
-    t8_geometry_occ_new(dim, fileprefix, name_in)
+    t8_geometry_zero_new(dim)
 
-Create a new occ geometry with a given dimension. The geometry is currently viable with quad/hex and triangle trees. Tets will be supported soon. The geometry uses as many vertices as the tree type has, as well as additional geometry information, which is extracted from a .brep file. The vertices are saved via the t8_cmesh_set_tree_vertices function. Since the internals of this geometry are finely tuned to the .brep file it is recommended to only use it with the t8_cmesh_readmshfile function.
+Create a new zero geometry of a given dimension. The geometry is only all tree types and as many vertices as the tree type has. The vertices are saved via the t8_cmesh_set_tree_vertices function. Sets the dimension and the name to "t8\\_geom\\_zero\\_{dim}"
 
-### Parameters
+# Arguments
 * `dim`:\\[in\\] 0 <= *dimension* <= 3. The dimension.
-* `fileprefix`:\\[in\\] Prefix of a .brep file from which to extract an occ geometry.
-* `name`:\\[in\\] The name to give this geometry.
-### Returns
-A pointer to an allocated [`t8_geometry_occ`](@ref) struct, as if the t8_geometry_occ (int dim, const *char fileprefix,  const char *name)  constructor was called.
+# Returns
+A pointer to an allocated t8\\_geometry\\_zero struct, as if the t8_geometry_zero (int dim) constructor was called.
 ### Prototype
 ```c
-t8_geometry_occ_c * t8_geometry_occ_new (int dim, const char *fileprefix, const char *name_in);
+t8_geometry_c * t8_geometry_zero_new (int dim);
 ```
 """
-function t8_geometry_occ_new(dim, fileprefix, name_in)
-    @ccall libt8.t8_geometry_occ_new(dim::Cint, fileprefix::Cstring, name_in::Cstring)::Ptr{t8_geometry_occ_c}
+function t8_geometry_zero_new(dim)
+    @ccall libt8.t8_geometry_zero_new(dim::Cint)::Ptr{t8_geometry_c}
 end
 
 """
-    t8_geometry_occ_destroy(geom)
+    t8_geometry_zero_destroy(geom)
 
-Destroy a occ geometry that was created with t8_geometry_occ_new.
+Destroy a zero geometry that was created with t8_geometry_zero_new.
 
-### Parameters
-* `geom`:\\[in,out\\] A occ geometry. Set to NULL on output.
+# Arguments
+* `geom`:\\[in,out\\] A zero geometry. Set to NULL on output.
 ### Prototype
 ```c
-void t8_geometry_occ_destroy (t8_geometry_occ_c **geom);
+void t8_geometry_zero_destroy (t8_geometry_c **geom);
 ```
 """
-function t8_geometry_occ_destroy(geom)
-    @ccall libt8.t8_geometry_occ_destroy(geom::Ptr{Ptr{t8_geometry_occ_c}})::Cvoid
+function t8_geometry_zero_destroy(geom)
+    @ccall libt8.t8_geometry_zero_destroy(geom::Ptr{Ptr{t8_geometry_c}})::Cvoid
 end
 
 """
@@ -15347,9 +16619,9 @@ end
 
 Check whether a given eclass\\_scheme is on of the default schemes.
 
-### Parameters
+# Arguments
 * `ts`:\\[in\\] A (pointer to a) scheme
-### Returns
+# Returns
 True (non-zero) if *ts* is one of the default schemes, false (zero) otherwise.
 ### Prototype
 ```c
@@ -15362,11 +16634,11 @@ end
 
 const SC_CC = "mpicc"
 
-const SC_CFLAGS = "-O3"
+const SC_CFLAGS = "-g -O2"
 
 const SC_CPP = "mpicc -E"
 
-const SC_CPPFLAGS = "-I/workspace/destdir/include"
+const SC_CPPFLAGS = ""
 
 const SC_ENABLE_MEMALIGN = 1
 
@@ -15400,6 +16672,8 @@ const SC_HAVE_DIRNAME = 1
 
 const SC_HAVE_FSYNC = 1
 
+const SC_HAVE_GETTIMEOFDAY = 1
+
 const SC_HAVE_GNU_QSORT_R = 1
 
 const SC_HAVE_MATH = 1
@@ -15416,7 +16690,7 @@ const SC_HAVE_STRTOLL = 1
 
 const SC_HAVE_ZLIB = 1
 
-const SC_LDFLAGS = "-L/workspace/destdir/lib"
+const SC_LDFLAGS = ""
 
 const SC_LIBS = "-lz -lm "
 
@@ -15438,13 +16712,13 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 2.8.5.67-edbe8"
+const SC_PACKAGE_STRING = "libsc 2.8.5.406-2b20"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "2.8.5.67-edbe8"
+const SC_PACKAGE_VERSION = "2.8.5.406-2b20"
 
 const SC_SIZEOF_INT = 4
 
@@ -15466,11 +16740,12 @@ const SC_USE_REALLOC = 1
 
 const SC_USING_AUTOCONF = 1
 
-const SC_VERSION = "2.8.5.67-edbe8"
+const SC_VERSION = "2.8.5.406-2b20"
 
 const SC_VERSION_MAJOR = 2
 
 const SC_VERSION_MINOR = 8
+
 
 
 
@@ -15513,6 +16788,8 @@ const sc_MPI_UNSIGNED_SHORT = MPI.UNSIGNED_SHORT
 
 const sc_MPI_INT = MPI.INT
 
+const sc_MPI_INT8_T = MPI.INT8_T
+
 const sc_MPI_UNSIGNED = MPI.UNSIGNED
 
 const sc_MPI_LONG = MPI.LONG
@@ -15527,6 +16804,7 @@ const sc_MPI_FLOAT = MPI.FLOAT
 
 const sc_MPI_DOUBLE = MPI.DOUBLE
 
+
 const sc_MPI_Comm = MPI.Comm
 
 const sc_MPI_Group = MPI.Group
@@ -15534,6 +16812,9 @@ const sc_MPI_Group = MPI.Group
 const sc_MPI_Datatype = MPI.Datatype
 
 const sc_MPI_Info = MPI.Info
+
+
+
 
 
 
@@ -15609,19 +16890,23 @@ const T8_MPI_LINEARIDX = sc_MPI_UNSIGNED_LONG_LONG
 
 const T8_PRECISION_EPS = SC_EPS
 
+const T8_PRECISION_SQRT_EPS = sqrt(T8_PRECISION_EPS)
+
 const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 2
 
 const T8_CC = "mpicc"
 
-const T8_CFLAGS = "-O3"
+const T8_CFLAGS = "-g -O2"
 
 const T8_CPP = "mpicc -E"
 
-const T8_CPPFLAGS = "-I/workspace/destdir/include"
+const T8_CPPFLAGS = ""
 
 const T8_CPPSTD = 1
 
 const T8_ENABLE_CPPSTD = 1
+
+const T8_ENABLE_LESS_TESTS = 1
 
 const T8_ENABLE_MEMALIGN = 1
 
@@ -15639,6 +16924,8 @@ const T8_ENABLE_MPIWINSHARED = 1
 
 const T8_HAVE_ALIGNED_ALLOC = 1
 
+const T8_HAVE_CXX17 = 1
+
 const T8_HAVE_GNU_QSORT_R = 1
 
 const T8_HAVE_MATH = 1
@@ -15647,7 +16934,9 @@ const T8_HAVE_POSIX_MEMALIGN = 1
 
 const T8_HAVE_ZLIB = 1
 
-const T8_LDFLAGS = "-L/workspace/destdir/lib"
+const T8_LDFLAGS = ""
+
+const T8_LESS_TESTS = 1
 
 const T8_LIBS = "-lz -lm  -lstdc++"
 
@@ -15665,27 +16954,27 @@ const T8_MPIIO = 1
 
 const T8_PACKAGE = "t8"
 
-const T8_PACKAGE_BUGREPORT = "johannes.holke@dlr.de, burstedde@ins.uni-bonn.de"
+const T8_PACKAGE_BUGREPORT = "https://github.com/dlr-amr/t8code"
 
 const T8_PACKAGE_NAME = "t8"
 
-const T8_PACKAGE_STRING = "t8 1.6.1"
+const T8_PACKAGE_STRING = "t8 2.0.0-alpha.39-80e9c"
 
 const T8_PACKAGE_TARNAME = "t8"
 
 const T8_PACKAGE_URL = ""
 
-const T8_PACKAGE_VERSION = "1.6.1"
+const T8_PACKAGE_VERSION = "2.0.0-alpha.39-80e9c"
 
 const T8_STDC_HEADERS = 1
 
 const T8_USING_AUTOCONF = 1
 
-const T8_VERSION = "1.6.1"
+const T8_VERSION = "2.0.0-alpha.39-80e9c"
 
-const T8_VERSION_MAJOR = 1
+const T8_VERSION_MAJOR = 2
 
-const T8_VERSION_MINOR = 6
+const T8_VERSION_MINOR = 0
 
 
 const T8_WITH_NETCDF_PAR = 0
@@ -15719,8 +17008,6 @@ const T8_VTK_FLOAT_NAME = "Float32"
 
 const T8_VTK_FLOAT_TYPE = Float32
 
-const T8_VTK_ASCII = 1
-
 const T8_VTK_FORMAT_STRING = "ascii"
 
 const sc_mpi_read = sc_io_read
@@ -15735,11 +17022,11 @@ const P4EST_BUILD_P6EST = 1
 
 const P4EST_CC = "mpicc"
 
-const P4EST_CFLAGS = "-O3"
+const P4EST_CFLAGS = "-g -O2"
 
 const P4EST_CPP = "mpicc -E"
 
-const P4EST_CPPFLAGS = "-I/workspace/destdir/include"
+const P4EST_CPPFLAGS = ""
 
 const P4EST_ENABLE_BUILD_2D = 1
 
@@ -15775,7 +17062,7 @@ const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
 
-const P4EST_LDFLAGS = "-L/workspace/destdir/lib"
+const P4EST_LDFLAGS = ""
 
 const P4EST_LIBS = "-lz -lm "
 
@@ -15797,19 +17084,19 @@ const P4EST_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const P4EST_PACKAGE_NAME = "p4est"
 
-const P4EST_PACKAGE_STRING = "p4est 2.8.5.69-aee0b"
+const P4EST_PACKAGE_STRING = "p4est 2.8.5.367-931f"
 
 const P4EST_PACKAGE_TARNAME = "p4est"
 
 const P4EST_PACKAGE_URL = ""
 
-const P4EST_PACKAGE_VERSION = "2.8.5.69-aee0b"
+const P4EST_PACKAGE_VERSION = "2.8.5.367-931f"
 
 const P4EST_STDC_HEADERS = 1
 
 const P4EST_USING_AUTOCONF = 1
 
-const P4EST_VERSION = "2.8.5.69-aee0b"
+const P4EST_VERSION = "2.8.5.367-931f"
 
 const P4EST_VERSION_MAJOR = 2
 
@@ -15921,6 +17208,24 @@ const P8EST_STRING = "p8est"
 const P8EST_ONDISK_FORMAT = 0x03000009
 
 const T8_CMESH_FORMAT = 0x0002
+
+const T8_CMESH_VERTICES_ATTRIBUTE_KEY = 0
+
+const T8_CMESH_GEOMETRY_ATTRIBUTE_KEY = 1
+
+const T8_CMESH_CAD_EDGE_ATTRIBUTE_KEY = 2
+
+const T8_CMESH_CAD_EDGE_PARAMETERS_ATTRIBUTE_KEY = 3
+
+const T8_CMESH_CAD_FACE_ATTRIBUTE_KEY = T8_CMESH_CAD_EDGE_PARAMETERS_ATTRIBUTE_KEY + T8_ECLASS_MAX_EDGES
+
+const T8_CMESH_CAD_FACE_PARAMETERS_ATTRIBUTE_KEY = T8_CMESH_CAD_FACE_ATTRIBUTE_KEY + 1
+
+const T8_CMESH_LAGRANGE_POLY_DEGREE = T8_CMESH_CAD_FACE_PARAMETERS_ATTRIBUTE_KEY + T8_ECLASS_MAX_FACES
+
+const T8_CMESH_NEXT_POSSIBLE_KEY = T8_CMESH_LAGRANGE_POLY_DEGREE + 1
+
+const T8_CPROFILE_NUM_STATS = 11
 
 const T8_SHMEM_BEST_TYPE = SC_SHMEM_WINDOW
 

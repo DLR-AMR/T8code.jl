@@ -2,8 +2,8 @@ using Pkg
 Pkg.activate(@__DIR__)
 Pkg.instantiate()
 
-using Artifacts
-cp(joinpath(artifact"t8code", "include"), "t8code_include"; force = true)
+# using Artifacts
+# cp(joinpath(artifact"t8code", "include"), "t8code_include"; force = true)
 
 using Glob
 
@@ -22,7 +22,9 @@ using Clang.Generators
 
 cd(@__DIR__)
 
-include_dir = joinpath(@__DIR__, "t8code_include")
+# include_dir = joinpath(@__DIR__, "t8code_include")
+include_dir = joinpath("/localdata1/mark_jo/install/t8code/remove-bool-from-c-files/include")
+# include_dir = joinpath("/localdata1/mark_jo/install/t8code/main/include")
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 

@@ -1,11 +1,11 @@
 [[t8code]]
 arch = "x86_64"
-git-tree-sha1 = "a688a61da42b4eb2d73ba45ad5edb09bc45a6039"
+git-tree-sha1 = "c4f1d72edcd9fb78ba861a3552e1e278a91ebbc2"
 lazy = true
 libc = "glibc"
 mpi = "mpich"
 os = "linux"
 
     [[t8code.download]]
-    sha256 = "49c53718a2482307d27151782ef15c3acce59ef2b8e7a5e5ff79927fb550d4a9"
-    url = "https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases/download/t8code-v1.6.1+1/t8code.v1.6.1.x86_64-linux-gnu-mpi+mpich.tar.gz"
+    sha256 = "606a02672a35b82a0fdaf0e6de6c3e569cb484664e0ef11c46e20b4d2c2b8f34"
+    url = "file:///localdata1/mark_jo/build/t8code/speedup-cubed-shell-cmesh/t8-2.0.0-alpha.53-9204.tar.gz"

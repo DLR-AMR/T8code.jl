@@ -103,3 +103,5 @@ sed -i "/= MPI_Offset/d" "${LIB_JL}"
 sed -i "/= MPI_File_/d" "${LIB_JL}"
 
 sed -i "s/= MPI_/= MPI./" "${LIB_JL}"
+
+sed -i "s/packageid/package_id/" "${LIB_JL}"

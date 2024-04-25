@@ -16634,11 +16634,11 @@ end
 
 const SC_CC = "mpicc"
 
-const SC_CFLAGS = "-g -O2"
+const SC_CFLAGS = "-O3"
 
 const SC_CPP = "mpicc -E"
 
-const SC_CPPFLAGS = ""
+const SC_CPPFLAGS = "-I/workspace/destdir/include"
 
 const SC_ENABLE_MEMALIGN = 1
 
@@ -16690,7 +16690,7 @@ const SC_HAVE_STRTOLL = 1
 
 const SC_HAVE_ZLIB = 1
 
-const SC_LDFLAGS = ""
+const SC_LDFLAGS = "-L/workspace/destdir/lib"
 
 const SC_LIBS = "-lz -lm "
 
@@ -16896,17 +16896,15 @@ const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 2
 
 const T8_CC = "mpicc"
 
-const T8_CFLAGS = "-g -O2"
+const T8_CFLAGS = "-O3"
 
 const T8_CPP = "mpicc -E"
 
-const T8_CPPFLAGS = ""
+const T8_CPPFLAGS = "-I/workspace/destdir/include"
 
 const T8_CPPSTD = 1
 
 const T8_ENABLE_CPPSTD = 1
-
-const T8_ENABLE_LESS_TESTS = 1
 
 const T8_ENABLE_MEMALIGN = 1
 
@@ -16934,9 +16932,7 @@ const T8_HAVE_POSIX_MEMALIGN = 1
 
 const T8_HAVE_ZLIB = 1
 
-const T8_LDFLAGS = ""
-
-const T8_LESS_TESTS = 1
+const T8_LDFLAGS = "-L/workspace/destdir/lib"
 
 const T8_LIBS = "-lz -lm  -lstdc++"
 
@@ -16958,19 +16954,19 @@ const T8_PACKAGE_BUGREPORT = "https://github.com/dlr-amr/t8code"
 
 const T8_PACKAGE_NAME = "t8"
 
-const T8_PACKAGE_STRING = "t8 2.0.0-alpha.39-80e9c"
+const T8_PACKAGE_STRING = "t8 2.0.0"
 
 const T8_PACKAGE_TARNAME = "t8"
 
 const T8_PACKAGE_URL = ""
 
-const T8_PACKAGE_VERSION = "2.0.0-alpha.39-80e9c"
+const T8_PACKAGE_VERSION = "2.0.0"
 
 const T8_STDC_HEADERS = 1
 
 const T8_USING_AUTOCONF = 1
 
-const T8_VERSION = "2.0.0-alpha.39-80e9c"
+const T8_VERSION = "2.0.0"
 
 const T8_VERSION_MAJOR = 2
 
@@ -17022,11 +17018,11 @@ const P4EST_BUILD_P6EST = 1
 
 const P4EST_CC = "mpicc"
 
-const P4EST_CFLAGS = "-g -O2"
+const P4EST_CFLAGS = "-O3"
 
 const P4EST_CPP = "mpicc -E"
 
-const P4EST_CPPFLAGS = ""
+const P4EST_CPPFLAGS = "-I/workspace/destdir/include"
 
 const P4EST_ENABLE_BUILD_2D = 1
 
@@ -17062,7 +17058,7 @@ const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
 
-const P4EST_LDFLAGS = ""
+const P4EST_LDFLAGS = "-L/workspace/destdir/lib"
 
 const P4EST_LIBS = "-lz -lm "
 

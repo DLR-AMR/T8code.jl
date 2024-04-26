@@ -1,6 +1,6 @@
 module Libt8
 
-using CEnum:@cenum
+using CEnum: @cenum
 
 to_c_type(t::Type) = t
 to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)

@@ -90,6 +90,10 @@ sed -i "/MPI_ERR_GROUP/d" "${LIB_JL}"
 
 sed -i "/SC_VERSION_POINT/d" "${LIB_JL}"
 
+sed -i "/sc_MPI_PACKED/d" "${LIB_JL}"
+sed -i "/sc_MPI_Pack/d" "${LIB_JL}"
+sed -i "/sc_MPI_Unpack/d" "${LIB_JL}"
+
 sed -i "/= MPI_MODE_/d" "${LIB_JL}"
 sed -i "/= MPI_SEEK_/d" "${LIB_JL}"
 sed -i "/= MPI_ERR_/d" "${LIB_JL}"
@@ -99,3 +103,5 @@ sed -i "/= MPI_Offset/d" "${LIB_JL}"
 sed -i "/= MPI_File_/d" "${LIB_JL}"
 
 sed -i "s/= MPI_/= MPI./" "${LIB_JL}"
+
+sed -i "s/packageid/package_id/" "${LIB_JL}"

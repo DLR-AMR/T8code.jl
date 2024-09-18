@@ -19,6 +19,7 @@ include("Libt8.jl")
 
 export @t8_adapt_callback
 export @t8_replace_callback
+export @t8_load_tree_data
 export @T8_ASSERT
 export t8_free
 
@@ -211,6 +212,20 @@ macro t8_replace_callback(callback)
     :(@cfunction($callback, Cvoid,
                  (Ptr{Cvoid}, Ptr{Cvoid}, t8_locidx_t, Ptr{Cvoid}, Cint, Cint, t8_locidx_t,
                   Cint, t8_locidx_t)))
+end
+
+# typedef void (*t8_geom_load_tree_data_fn) (t8_cmesh_t cmesh,
+#                                            t8_gloidx_t gtreeid,
+#                                            const void **tree_data);
+"""
+    @t8_load_tree_data(callback)
+
+Wrap the Julia function `callback` in an `@cfunction` with the appropriate
+signature required for callback functions in [`t8_geom_load_tree_data_fn`](@ref).
+"""
+macro t8_load_tree_data(callback)
+    :(@cfunction($callback, Cvoid,
+                 (t8_cmesh_t, t8_gloidx_t, Ptr{Cvoid})))
 end
 
 function __init__()

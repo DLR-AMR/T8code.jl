@@ -12282,6 +12282,18 @@ function t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons
 end
 
 """
+    t8_cmesh_new_hypercube_pad_ext(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_hypercube_pad_ext (const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int periodic_x, const int periodic_y, const int periodic_z, const int use_axis_aligned, const int set_partition, t8_gloidx_t offset);
+```
+"""
+function t8_cmesh_new_hypercube_pad_ext(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
+    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::t8_cmesh_t
+end
+
+"""
     t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
 
 ### Prototype

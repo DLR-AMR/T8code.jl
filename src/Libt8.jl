@@ -7324,6 +7324,9 @@ end
 #     stats_computed::Cint
 # end
 
+# This struct is not supposed to be read and modified directly.
+# Besides, there is a circular dependency with `t8_forest_t`
+# leading to an error output by Julia.
 mutable struct t8_forest end
 
 """Opaque pointer to a forest implementation."""

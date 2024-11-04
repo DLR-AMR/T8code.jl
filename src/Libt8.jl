@@ -7283,46 +7283,48 @@ end
 | global\\_num\\_elements | Number of elements on all processors.                                                                                                                                                                                                                                                          |
 | profile                 | If not NULL, runtimes and statistics about forest\\_commit are stored here.                                                                                                                                                                                                                    |
 """
-struct t8_forest
-    rc::t8_refcount_t
-    set_level::Cint
-    set_for_coarsening::Cint
-    mpicomm::MPI_Comm
-    cmesh::t8_cmesh_t
-    scheme_cxx::Ptr{t8_scheme_cxx_t}
-    maxlevel::Cint
-    maxlevel_existing::Cint
-    do_dup::Cint
-    dimension::Cint
-    incomplete_trees::Cint
-    set_from::t8_forest_t
-    from_method::t8_forest_from_t
-    set_adapt_fn::t8_forest_adapt_t
-    set_adapt_recursive::Cint
-    set_balance::Cint
-    do_ghost::Cint
-    ghost_type::t8_ghost_type_t
-    ghost_algorithm::Cint
-    user_data::Ptr{Cvoid}
-    user_function::Ptr{Cvoid}
-    t8code_data::Ptr{Cvoid}
-    committed::Cint
-    mpisize::Cint
-    mpirank::Cint
-    first_local_tree::t8_gloidx_t
-    last_local_tree::t8_gloidx_t
-    global_num_trees::t8_gloidx_t
-    trees::Ptr{sc_array_t}
-    ghosts::t8_forest_ghost_t
-    element_offsets::t8_shmem_array_t
-    global_first_desc::t8_shmem_array_t
-    tree_offsets::t8_shmem_array_t
-    local_num_elements::t8_locidx_t
-    global_num_elements::t8_gloidx_t
-    profile::Ptr{t8_profile_t}
-    stats::NTuple{14, sc_statinfo_t}
-    stats_computed::Cint
-end
+# struct t8_forest
+#     rc::t8_refcount_t
+#     set_level::Cint
+#     set_for_coarsening::Cint
+#     mpicomm::MPI_Comm
+#     cmesh::t8_cmesh_t
+#     scheme_cxx::Ptr{t8_scheme_cxx_t}
+#     maxlevel::Cint
+#     maxlevel_existing::Cint
+#     do_dup::Cint
+#     dimension::Cint
+#     incomplete_trees::Cint
+#     set_from::t8_forest_t
+#     from_method::t8_forest_from_t
+#     set_adapt_fn::t8_forest_adapt_t
+#     set_adapt_recursive::Cint
+#     set_balance::Cint
+#     do_ghost::Cint
+#     ghost_type::t8_ghost_type_t
+#     ghost_algorithm::Cint
+#     user_data::Ptr{Cvoid}
+#     user_function::Ptr{Cvoid}
+#     t8code_data::Ptr{Cvoid}
+#     committed::Cint
+#     mpisize::Cint
+#     mpirank::Cint
+#     first_local_tree::t8_gloidx_t
+#     last_local_tree::t8_gloidx_t
+#     global_num_trees::t8_gloidx_t
+#     trees::Ptr{sc_array_t}
+#     ghosts::t8_forest_ghost_t
+#     element_offsets::t8_shmem_array_t
+#     global_first_desc::t8_shmem_array_t
+#     tree_offsets::t8_shmem_array_t
+#     local_num_elements::t8_locidx_t
+#     global_num_elements::t8_gloidx_t
+#     profile::Ptr{t8_profile_t}
+#     stats::NTuple{14, sc_statinfo_t}
+#     stats_computed::Cint
+# end
+
+mutable struct t8_forest end
 
 """Opaque pointer to a forest implementation."""
 const t8_forest_t = Ptr{t8_forest}

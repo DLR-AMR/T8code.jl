@@ -33,9 +33,9 @@ export t8_hex_len
 
 Is intended to return `true`` if the `t8code` library was compiled with MPI
 enabled. Since T8code.jl currently only supports `t8code` with MPI enabled,
-this may always return `true`.
+this always returns `true`.
 """
-uses_mpi() = T8_ENABLE_MPI == 1
+uses_mpi() = true
 
 """
     T8code.version()

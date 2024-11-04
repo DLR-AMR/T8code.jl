@@ -113,7 +113,7 @@ cat << EOT >&2
 
 # Manual fix. #
 
-Addtionally, comment out
+Additionally, comment out
 
   struct t8_forest
     [...]

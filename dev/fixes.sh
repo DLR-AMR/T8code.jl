@@ -105,3 +105,27 @@ sed -i "/= MPI_File_/d" "${LIB_JL}"
 sed -i "s/= MPI_/= MPI./" "${LIB_JL}"
 
 sed -i "s/packageid/package_id/" "${LIB_JL}"
+
+cat << EOT >&2
+
+# !!!!!! #
+# !!!!!! #
+
+# Manual fix. #
+
+Addtionally, comment out
+
+  struct t8_forest
+    [...]
+  end
+
+and add
+
+  mutable struct t8_forest end
+
+in order to avoid error output due to
+circular dependency of 't8_forest_t'.
+
+# !!!!!! #
+# !!!!!! #
+EOT

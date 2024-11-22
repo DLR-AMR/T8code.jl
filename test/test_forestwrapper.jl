@@ -3,6 +3,7 @@
     # Clean up t8code before MPI shuts down.
     MPI.add_finalize_hook!() do
         T8code.clean_up()
+        @test length(T8code.T8CODE_OBJECT_TRACKER) == 0
         status = T8code.Libt8.sc_finalize_noabort()
         # If the following test fails the allocated objects were not cleaned up
         # properly before shutting down.

@@ -348,7 +348,7 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
                             pointer(schlieren)),
         t8_vtk_data_field_t(T8_VTK_SCALAR,
                             NTuple{8192, Cchar}(rpad("curvature\0", 8192, ' ')),
-                            pointer(curvature))
+                            pointer(curvature)),
     ]
 
     # The number of user defined data fields to write.

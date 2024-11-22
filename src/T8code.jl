@@ -214,7 +214,7 @@ mutable struct ForestWrapper
 
         # Register the T8codeForestWrapper with the object tracker.
         T8CODE_OBJECT_TRACKER[unique_id] = wrapper
-    
+
         return wrapper
     end
 end
@@ -228,7 +228,8 @@ function clean_up()
 
         # Make sure all MPI ranks finalize the same object.
         if MPI.Comm_size(MPI.Comm(t8_forest_get_mpicomm(forest_wrapper.pointer))) > 1
-            unique_id = MPI.bcast(unique_id, MPI.Comm(t8_forest_get_mpicomm(forest_wrapper.pointer)))
+            unique_id = MPI.bcast(unique_id,
+                                  MPI.Comm(t8_forest_get_mpicomm(forest_wrapper.pointer)))
         end
 
         # Finalize the object. The object deregisters itself from the

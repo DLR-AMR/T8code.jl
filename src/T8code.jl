@@ -167,13 +167,13 @@ if !@isdefined(T8CODE_OBJECT_TRACKER)
 end
 
 """
-    T8codeForestWrapper
+    ForestWrapper
 
 Lightweight `t8_forest_t` pointer wrapper which helps to free
 resources allocated by t8code in an orderly fashion.
 
 When initialized with a t8code forest pointer the wrapper
-registers itself with a t8code object tracker called `__T8CODE_OBJECT_TRACKER`.
+registers itself with a t8code object tracker called `T8CODE_OBJECT_TRACKER`.
 
 In serial mode the wrapper and in consequence the t8code forest
 can be finalized immediately whenever Julia's garbage collector sees fit.
@@ -182,22 +182,20 @@ In (MPI) parallel mode the wrapper (and the t8code forest) is kept till the end
 of the session or when finalized explicitly. At the end of the session (resp.
 when the program shuts down) the object tracker finalizes all registered t8code
 objects in sync with all MPI ranks. This is necessary since t8code internally
-allocates MPI shared arrays. See `src/auxiliary/t8code.jl` for the finalization
-code when Trixi is shutting down.
+allocates MPI shared arrays.
 """
 mutable struct ForestWrapper
     pointer::Ptr{t8_forest} # cpointer to t8code forest
-    unique_id::UInt
 
     function ForestWrapper(pointer::Ptr{t8_forest})
         wrapper = new(pointer)
 
-        # Compute the unique id from the T8codeForestWrapper object.
-        wrapper.unique_id = pointer_from_objref(wrapper)
+        # Compute a unique id from the ForestWrapper object.
+        unique_id = UInt64(pointer_from_objref(wrapper))
 
         if MPI.Comm_size(MPI.Comm(t8_forest_get_mpicomm(pointer))) > 1
             # Make sure the unique id is identical for each MPI rank.
-            wrapper.unique_id = MPI.bcast(wrapper.unique_id, MPI.Comm(t8_forest_get_mpicomm(pointer)))
+            unique_id = MPI.bcast(unique_id, MPI.Comm(t8_forest_get_mpicomm(pointer)))
         end
 
         finalizer(wrapper) do wrapper
@@ -211,11 +209,11 @@ mutable struct ForestWrapper
             t8_forest_unref(Ref(wrapper.pointer))
 
             # Deregister from the object tracker.
-            delete!(T8CODE_OBJECT_TRACKER, wrapper.unique_id)
+            delete!(T8CODE_OBJECT_TRACKER, unique_id)
         end
 
         # Register the T8codeForestWrapper with the object tracker.
-        T8CODE_OBJECT_TRACKER[wrapper.unique_id] = wrapper
+        T8CODE_OBJECT_TRACKER[unique_id] = wrapper
     end
 end
 

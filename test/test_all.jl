@@ -23,6 +23,10 @@ end
     end
 end
 
+@testset "forestwrapper" begin
+    include("test_forestwrapper.jl")
+end
+
 @testset "cmesh" begin
     include("cmesh/test_readmshfile.jl")
 end

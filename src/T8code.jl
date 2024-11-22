@@ -159,13 +159,6 @@ not a system-provided `t8code` installation. In this case, T8code.jl is not usab
 preferences_set_correctly() = !(_PREFERENCE_LIBT8 == "t8code_jll" &&
                                 MPIPreferences.binary == "system")
 
-# Minimal reference tracker holding active t8code related objects
-# created throughout the life time of a Julia session. t8code objects
-# should remove themselves from the tracker when they get finalized.
-if !@isdefined(T8CODE_OBJECT_TRACKER)
-    T8CODE_OBJECT_TRACKER = Dict{UInt64, ForestWrapper}()
-end
-
 """
     ForestWrapper
 
@@ -236,6 +229,13 @@ function clean_up()
         # object tracker automatically.
         finalize(forest_wrapper)
     end
+end
+
+# Minimal reference tracker holding active t8code related objects
+# created throughout the life time of a Julia session. t8code objects
+# should remove themselves from the tracker when they get finalized.
+if !@isdefined(T8CODE_OBJECT_TRACKER)
+    T8CODE_OBJECT_TRACKER = Dict{UInt64, ForestWrapper}()
 end
 
 const T8_QUAD_MAXLEVEL = 30

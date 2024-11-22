@@ -154,7 +154,7 @@ function t8_cmesh_new_periodic_hybrid_2d(comm)
         1, 1, 0,
         0.5, 0.5, 0,                # tree 5, triangle
         1, 1, 0,
-        0.5, 1, 0,
+        0.5, 1, 0
     ]
 
     # 2. Initialization of the mesh.

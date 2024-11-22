@@ -20,7 +20,7 @@ function main()
 
     # Set default path if none is given on command line
     if isempty(ARGS)
-        paths = String["."]
+        paths = String["./src/T8code.jl", "./test"]
     else
         paths = ARGS
     end

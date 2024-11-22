@@ -163,7 +163,7 @@ preferences_set_correctly() = !(_PREFERENCE_LIBT8 == "t8code_jll" &&
 # created throughout the life time of a Julia session. t8code objects
 # should remove themselves from the tracker when they get finalized.
 if !@isdefined(T8CODE_OBJECT_TRACKER)
-    T8CODE_OBJECT_TRACKER = Dict()
+    T8CODE_OBJECT_TRACKER = Dict{UInt64, ForestWrapper}()
 end
 
 """
@@ -214,6 +214,8 @@ mutable struct ForestWrapper
 
         # Register the T8codeForestWrapper with the object tracker.
         T8CODE_OBJECT_TRACKER[unique_id] = wrapper
+    
+        return wrapper
     end
 end
 

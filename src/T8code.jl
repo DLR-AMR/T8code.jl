@@ -212,6 +212,13 @@ mutable struct ForestWrapper
     end
 end
 
+Base.pointer(fw::ForestWrapper) = fw.pointer
+# This dispatched conversion allows to directly pass a ForestWrapper object to,
+# for example, `t8_forest_...` call.  The following link leads to a lengthy
+# discussion about if this is a valid way to do achieve this:
+# https://discourse.julialang.org/t/how-to-use-ccall-cconvert-and-unsafe-convert-in-a-convenient-and-memory-safe-way/41932/18
+Base.unsafe_convert(::Type{Ptr{T8code.Libt8.t8_forest}}, fw::ForestWrapper) = fw.pointer
+
 function clean_up()
     # Finalize all registered t8code objects before MPI shuts down.
     while length(T8CODE_OBJECT_TRACKER) > 0

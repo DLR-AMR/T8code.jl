@@ -17844,7 +17844,7 @@ void t8_geom_load_tree_data_vertices (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, con
 ```
 """
 function t8_geom_load_tree_data_vertices(cmesh, gtreeid, user_data)
-    @ccall libt8.t8_geom_load_tree_data_vertices(cmesh::Cint, gtreeid::Cint, user_data::Ptr{Ptr{Cvoid}})::Cvoid
+    @ccall libt8.t8_geom_load_tree_data_vertices(cmesh::t8_cmesh_t, gtreeid::Cint, user_data::Ptr{Ptr{Cvoid}})::Cvoid
 end
 
 """

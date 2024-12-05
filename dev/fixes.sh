@@ -9,6 +9,8 @@ LIB_JL="Libt8.jl"
 
 set -euxo pipefail
 
+sed -i "s/using CEnum/using CEnum: @cenum/g" "${LIB_JL}"
+
 # Remove Fortran macros
 sed -i "/INTEGER(KIND/d" "${LIB_JL}"
 
@@ -24,6 +26,8 @@ sed -i "s/\binternode::Ptr{Cint}/internode::Ptr{MPI_Comm}/g" "${LIB_JL}"
 sed -i "s/mpifile::Cint/mpifile::MPI_File/g" "${LIB_JL}"
 sed -i "s/mpidatatype::Cint/mpidatatype::MPI_Datatype/g" "${LIB_JL}"
 sed -i "s/\bt::Cint/t::MPI_Datatype/g" "${LIB_JL}"
+
+sed -i "s/t8_forest_get_mpicomm\(forest::t8_forest_t\)::Cint/t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm/g" "${LIB_JL}"
 
 sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
 

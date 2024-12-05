@@ -41,7 +41,7 @@ end
 const ptrdiff_t = Cptrdiff_t
 
 # Definitions used from MPI.jl
-using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_Group, MPI_File
+using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_File
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SELF = MPI.COMM_SELF
@@ -13125,7 +13125,7 @@ end
 """
     t8_stash_attribute_sort(stash)
 
-Sort the attributes array of a stash in the order (treeid, packageid, key) *
+Sort the attributes array of a stash in the order (treeid, package_id, key) *
 
 # Arguments
 * `stash`:\\[in,out\\] The stash to be considered.
@@ -15698,7 +15698,7 @@ sc_MPI_Comm t8_forest_get_mpicomm (const t8_forest_t forest);
 ```
 """
 function t8_forest_get_mpicomm(forest)
-    @ccall libt8.t8_forest_get_mpicomm(forest::t8_forest_t)::Cint
+    @ccall libt8.t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm
 end
 
 """

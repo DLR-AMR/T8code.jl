@@ -30,7 +30,6 @@ sed -i "s/\bt::Cint/t::MPI_Datatype/g" "${LIB_JL}"
 sed -i "s/t8_forest_get_mpicomm\(forest::t8_forest_t\)::Cint/t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm/g" "${LIB_JL}"
 
 sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
-sed -i "s/cmesh::Cint/cmesh::t8_cmesh_t/" "${LIB_JL}"
 
 # Use libsc for `sc_*` functions
 sed -i "s/libt8\.sc_/libsc.sc_/g" "${LIB_JL}"

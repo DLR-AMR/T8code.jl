@@ -33,6 +33,7 @@ end
 
 @testset "forest" begin
     include("forest/test_element_volume.jl")
+    include("forest/test_write_vtk.jl")
 end
 
 end # module

@@ -2,6 +2,7 @@
 # All t8code eclasses are tested with a basic forest with elements of level 0 to 3.
 @testset "test_write_vtk" begin
     outdir = "out_test"
+    isdir(outdir) && rm(outdir, recursive = true)
     mkdir(outdir)
     for eclass in T8_ECLASS_ZERO:t8_eclass(T8_ECLASS_COUNT - 1)
         for level in 0:3
@@ -37,5 +38,5 @@
         end
     end
 
-    rm(outdir, recursive = true)
+    @test_nowarn rm(outdir, recursive = true)
 end

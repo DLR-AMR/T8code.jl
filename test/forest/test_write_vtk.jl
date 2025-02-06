@@ -17,8 +17,9 @@
                 data = rand(num_elements)
 
                 vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR,
-                                            NTuple{8192, Cchar}(rpad("data_1)\0", 8192, ' ')),
-                                            pointer(data))
+                                               NTuple{8192, Cchar}(rpad("data_1)\0", 8192,
+                                                                        ' ')),
+                                               pointer(data))
 
                 # The number of user defined data fields to write.
                 num_data = 1

@@ -104,7 +104,7 @@ function t8_step6_build_forest(comm, dim, level)
 end
 
 # Allocate and fill the element data array with `heights` from an arbitrary
-# mathematical function. Returns a pointer to the array which is then ownded by
+# mathematical function. Returns a pointer to the array which is then owned by
 # the calling scope.
 function t8_step6_create_element_data(forest)
     # Check that the forest is a committed.

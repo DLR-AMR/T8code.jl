@@ -14860,7 +14860,7 @@ const t8_forest_adapt_t = Ptr{Cvoid}
 """
     t8_forest_init(pforest)
 
-Create a new forest with reference count one. This forest needs to be specialized with the t8\\_forest\\_set\\_* calls. Currently it is manatory to either call the functions t8_forest_set_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
+Create a new forest with reference count one. This forest needs to be specialized with the t8\\_forest\\_set\\_* calls. Currently it is mandatory to either call the functions t8_forest_set_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
 
 # Arguments
 * `pforest`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new forest.

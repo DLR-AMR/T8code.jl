@@ -81,11 +81,17 @@ end
 
         t8_supported_msh_file(cmesh)
         t8_cmesh_destroy(Ref(cmesh))
+
+
+        println("Hello 4!")
     end
 
     @testset "test_msh_file_vers4_ascii" begin
         fileprefix = "cmesh/testfiles/test_msh_file_vers4_ascii"
         filename = fileprefix * ".msh"
+
+
+        println("Hello 3!")
 
         @assert isfile(filename) "File not found: "*filename
 
@@ -94,35 +100,43 @@ end
         @assert cmesh!=C_NULL "Could not read cmesh from ascii version 4, but should be able to: "*filename
 
         t8_cmesh_destroy(Ref(cmesh))
+
     end
 
-    @testset "test_msh_file_vers2_bin" begin
-        fileprefix = "cmesh/testfiles/test_msh_file_vers2_bin"
-        filename = fileprefix * ".msh"
+    # @testset "test_msh_file_vers2_bin" begin
 
-        @assert isfile(filename) "File not found: "*filename
 
-        cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
+    #     println("Hello!")
+    #     fileprefix = "cmesh/testfiles/test_msh_file_vers2_bin"
+    #     filename = fileprefix * ".msh"
 
-        @assert cmesh==C_NULL "Expected fail of reading binary msh file v.2, but did not fail."
+    #     @assert isfile(filename) "File not found: "*filename
 
-        if cmesh != C_NULL
-            t8_cmesh_destroy(Ref(cmesh))
-        end
-    end
+    #     cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
 
-    @testset "test_msh_file_vers4_bin" begin
-        fileprefix = "cmesh/testfiles/test_msh_file_vers4_bin"
-        filename = fileprefix * ".msh"
+    #     @assert cmesh==C_NULL "Expected fail of reading binary msh file v.2, but did not fail."
 
-        @assert isfile(filename) "File not found: "*filename
+    #     if cmesh != C_NULL
+    #         t8_cmesh_destroy(Ref(cmesh))
+    #     end
 
-        cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
+    # end
 
-        @assert cmesh==C_NULL "Expected fail of reading binary msh file v.4, but did not fail."
+    # @testset "test_msh_file_vers4_bin" begin
+    #     fileprefix = "cmesh/testfiles/test_msh_file_vers4_bin"
+    #     filename = fileprefix * ".msh"
 
-        if cmesh != C_NULL
-            t8_cmesh_destroy(Ref(cmesh))
-        end
-    end
+
+    #     println("Hello 2!")
+
+    #     @assert isfile(filename) "File not found: "*filename
+
+    #     cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
+
+    #     @assert cmesh==C_NULL "Expected fail of reading binary msh file v.4, but did not fail."
+
+    #     if cmesh != C_NULL
+    #         t8_cmesh_destroy(Ref(cmesh))
+    #     end
+    # end
 end

@@ -81,17 +81,11 @@ end
 
         t8_supported_msh_file(cmesh)
         t8_cmesh_destroy(Ref(cmesh))
-
-
-        println("Hello 4!")
     end
 
     @testset "test_msh_file_vers4_ascii" begin
         fileprefix = "cmesh/testfiles/test_msh_file_vers4_ascii"
         filename = fileprefix * ".msh"
-
-
-        println("Hello 3!")
 
         @assert isfile(filename) "File not found: "*filename
 
@@ -100,13 +94,9 @@ end
         @assert cmesh!=C_NULL "Could not read cmesh from ascii version 4, but should be able to: "*filename
 
         t8_cmesh_destroy(Ref(cmesh))
-
     end
 
     # @testset "test_msh_file_vers2_bin" begin
-
-
-    #     println("Hello!")
     #     fileprefix = "cmesh/testfiles/test_msh_file_vers2_bin"
     #     filename = fileprefix * ".msh"
 
@@ -119,15 +109,11 @@ end
     #     if cmesh != C_NULL
     #         t8_cmesh_destroy(Ref(cmesh))
     #     end
-
     # end
 
     # @testset "test_msh_file_vers4_bin" begin
     #     fileprefix = "cmesh/testfiles/test_msh_file_vers4_bin"
     #     filename = fileprefix * ".msh"
-
-
-    #     println("Hello 2!")
 
     #     @assert isfile(filename) "File not found: "*filename
 

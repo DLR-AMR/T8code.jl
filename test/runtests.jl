@@ -29,6 +29,4 @@ import MPIPreferences
 
         @info "Finished serial tests"
     end
-
-    # end
 end

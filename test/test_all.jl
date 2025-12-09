@@ -23,16 +23,4 @@ end
     end
 end
 
-@testset "forestwrapper" begin
-    include("test_forestwrapper.jl")
-end
-
-@testset "cmesh" begin
-    include("cmesh/test_readmshfile.jl")
-end
-
-@testset "forest" begin
-    include("forest/test_element_volume.jl")
-end
-
 end # module

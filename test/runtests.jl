@@ -25,7 +25,8 @@ import MPIPreferences
     @time @testset "serial" begin
         @info "Starting serial tests"
 
-        include("test_all.jl")
+        # For another weird reason, we observe a segmentation fault if the tests are simply run by "include" rather than as external thread.
+        run(`$(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("test_all.jl"))`)
 
         @info "Finished serial tests"
     end

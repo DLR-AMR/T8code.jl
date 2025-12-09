@@ -33,6 +33,7 @@ end
 
 @testset "forest" begin
     include("forest/test_element_volume.jl")
+end
 
 @testset "finalize" begin
     T8code.Libt8.sc_finalize()

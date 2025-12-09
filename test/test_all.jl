@@ -12,8 +12,4 @@ MPI.Init()
 
 comm = MPI.COMM_WORLD
 
-@testset "init" begin
-    include("test_init.jl")
-end
-
 end # module

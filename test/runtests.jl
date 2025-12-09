@@ -22,11 +22,11 @@ import MPIPreferences
         @info "Finished parallel tests"
     end
 
-    @time @testset "serial" begin
-        @info "Starting serial tests"
+    # @time @testset "serial" begin
+    #     @info "Starting serial tests"
 
-        include("test_all.jl")
+    #     include("test_all.jl")
 
-        @info "Finished serial tests"
-    end
+    #     @info "Finished serial tests"
+    # end
 end

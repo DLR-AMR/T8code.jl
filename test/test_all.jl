@@ -12,4 +12,10 @@ MPI.Init()
 
 comm = MPI.COMM_WORLD
 
+@testset "init" begin
+    include("test_init.jl")
+end
+
+T8code.Libt8.sc_finalize()
+
 end # module

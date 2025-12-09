@@ -23,17 +23,17 @@ end
     end
 end
 
-# @testset "forestwrapper" begin
-#     include("test_forestwrapper.jl")
-# end
+@testset "forestwrapper" begin
+    include("test_forestwrapper.jl")
+end
 
-# @testset "cmesh" begin
-#     include("cmesh/test_readmshfile.jl")
-# end
+@testset "cmesh" begin
+    include("cmesh/test_readmshfile.jl")
+end
 
-# @testset "forest" begin
-#     include("forest/test_element_volume.jl")
-# end
+@testset "forest" begin
+    include("forest/test_element_volume.jl")
+end
 
 @testset "finalize" begin
     T8code.Libt8.sc_finalize()

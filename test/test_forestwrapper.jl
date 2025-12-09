@@ -33,6 +33,8 @@
 
     @test length(T8code.T8CODE_OBJECT_TRACKER) == 1
 
+    finalize(wrapper_B)
+
     # The second wrapper should be finalized automatically when Julia shuts down.
     # ... finalize(wrapper_B) ...
 end

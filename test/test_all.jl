@@ -16,6 +16,8 @@ comm = MPI.COMM_WORLD
     include("test_init.jl")
 end
 
-# MPI.
+@testset "finalize" begin
+    T8code.Libt8.sc_finalize()
+end
 
 end # module

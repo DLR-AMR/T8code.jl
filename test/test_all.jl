@@ -16,6 +16,24 @@ comm = MPI.COMM_WORLD
     include("test_init.jl")
 end
 
+@testset "general" begin
+    if !Sys.iswindows()
+        # These tests do not work in Windows since the DLL loader does not search for symbols beyond libt8.dll.
+        include("test_refcount.jl")
+    end
+end
+
+@testset "forestwrapper" begin
+    include("test_forestwrapper.jl")
+end
+
+@testset "cmesh" begin
+    include("cmesh/test_readmshfile.jl")
+end
+
+@testset "forest" begin
+    include("forest/test_element_volume.jl")
+
 @testset "finalize" begin
     T8code.Libt8.sc_finalize()
 end

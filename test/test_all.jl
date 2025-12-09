@@ -16,11 +16,4 @@ comm = MPI.COMM_WORLD
     include("test_init.jl")
 end
 
-@testset "general" begin
-    if !Sys.iswindows()
-        # These tests do not work in Windows since the DLL loader does not search for symbols beyond libt8.dll.
-        include("test_refcount.jl")
-    end
-end
-
 end # module

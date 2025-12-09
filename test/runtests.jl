@@ -25,7 +25,7 @@ import MPIPreferences
     @time @testset "serial" begin
         @info "Starting serial tests"
 
-        include("test_all_serial.jl")
+        run(`$(Base.julia_cmd()) --threads=1 --check-bounds=yes --project=$(dirname(@__DIR__)) $(abspath("test_all.jl"))`)
 
         @info "Finished serial tests"
     end

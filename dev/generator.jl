@@ -29,11 +29,12 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 args = get_default_args()  # Note you must call this function firstly and then append your own flags
 push!(args, "-I$include_dir")
 
-headers = [glob("t8_*.h", include_dir);
-           glob("**/t8_*.h", include_dir);
-           glob("**/**/t8_*.h", include_dir)
-           # glob("**/**/**/t8_*.h", include_dir)
-           ]
+headers = [
+  glob("t8_*.h", include_dir) ; 
+  glob("**/t8_*.h", include_dir) ; 
+  glob("**/**/t8_*.h", include_dir) ;
+  # glob("**/**/**/t8_*.h", include_dir)
+]
 
 # create context
 ctx = create_context(headers, args, options)

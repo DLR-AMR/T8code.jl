@@ -10,6 +10,11 @@
         @test status == 0
     end
 
+    # This test case comes with its own sc_init, since it will be executed after the examples,
+    # that is, after sc_finalize.
+    @test_nowarn T8code.Libt8.sc_init(comm, 0, 1, C_NULL, SC_LP_DEFAULT)
+    @test_nowarn t8_init(SC_LP_DEFAULT)
+
     @test length(T8code.T8CODE_OBJECT_TRACKER) == 0
 
     # Create a forest and wrap by `ForestWrapper`

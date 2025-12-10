@@ -23,16 +23,29 @@ end
     end
 end
 
-@testset "forestwrapper" begin
-    include("test_forestwrapper.jl")
-end
-
 @testset "cmesh" begin
     include("cmesh/test_readmshfile.jl")
 end
 
 @testset "forest" begin
     include("forest/test_element_volume.jl")
+end
+
+# NOTE: We have to call sc_finalize before running the examples, since the examples come 
+#       with their own sc_init to allow their standalone execution.
+@testset "finalize" begin
+    T8code.Libt8.sc_finalize()
+end
+
+@testset "examples" begin
+    include("test_examples.jl")
+end
+
+# CAUTION: The forestWrapper test also covers a MPI hook executed upon finalization of MPI.
+#          It therefore has to be executed after all other test cases to avoid a memory balance 
+#          error in the next sc_finalize call.
+@testset "forestwrapper" begin
+    include("test_forestwrapper.jl")
 end
 
 end # module

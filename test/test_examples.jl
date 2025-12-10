@@ -1,5 +1,5 @@
 
-# This file makes sure to run all examples within the testing suite too. 
+# This file makes sure to run all examples within the testing suite too.
 # It does not add extra sanity checks, assertions etc. to the examples,
 # but is intended to make sure the exampples run without throwing errors.
 

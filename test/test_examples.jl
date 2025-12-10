@@ -13,7 +13,9 @@ include("../examples/t8_step3_adapt_forest.jl")
 
 include("../examples/t8_step4_partition_balance_ghost.jl")
 
-include("../examples/t8_step5_element_data.jl")
+if !Sys.iswindows()
+  include("../examples/t8_step5_element_data.jl")
+end
 
 include("../examples/t8_step6_stencil.jl")
 

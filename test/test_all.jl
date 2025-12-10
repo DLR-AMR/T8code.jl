@@ -34,7 +34,7 @@ end
 # NOTE: We have to call sc_finalize before running the examples, since the examples come 
 #       with their own sc_init to allow their standalone execution.
 @testset "finalize" begin
-    T8code.Libt8.sc_finalize()
+    @test_nowarn T8code.Libt8.sc_finalize()
 end
 
 @testset "examples" begin

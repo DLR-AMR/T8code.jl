@@ -23,13 +23,14 @@ end
     include("../examples/t8_step4_partition_balance_ghost.jl")
 end
 
+# Unfortunately, step 5 and step 6 currently crash in Windows and MacOS, see
+# related issue https://github.com/DLR-AMR/T8code.jl/issues/104.
+# Until this is fixed, the two cases are skipped for these operating systems.
 if !Sys.iswindows() && !Sys.isapple()
     @testset "t8_step5_element_data" begin
         include("../examples/t8_step5_element_data.jl")
     end
-end
 
-if !Sys.iswindows() && !Sys.isapple()
     @testset "t8_step6_stencil" begin
         include("../examples/t8_step6_stencil.jl")
     end

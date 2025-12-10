@@ -23,18 +23,18 @@ end
     include("../examples/t8_step4_partition_balance_ghost.jl")
 end
 
-# Unfortunately, step 5 and step 6 currently crash in Windows and MacOS, see
-# related issue https://github.com/DLR-AMR/T8code.jl/issues/104.
-# Until this is fixed, the two cases are skipped for these operating systems.
-if !Sys.iswindows() && !Sys.isapple()
-    @testset "t8_step5_element_data" begin
-        include("../examples/t8_step5_element_data.jl")
-    end
+# Unfortunately, step 5 and step 6 currently crash (1.) in Windows, (2.) in MacOS,
+# and (3.) with Julia older than 1.9, see related issues
+# https://github.com/DLR-AMR/T8code.jl/issues/30 and https://github.com/DLR-AMR/T8code.jl/issues/104.
+# Until they are resolved, the two cases are skipped.
 
-    @testset "t8_step6_stencil" begin
-        include("../examples/t8_step6_stencil.jl")
-    end
-end
+# @testset "t8_step5_element_data" begin
+#     include("../examples/t8_step5_element_data.jl")
+# end
+
+# @testset "t8_step6_stencil" begin
+#     include("../examples/t8_step6_stencil.jl")
+# end
 
 @testset "t8_tutorial_build_cmesh" begin
     include("../examples/t8_tutorial_build_cmesh.jl")

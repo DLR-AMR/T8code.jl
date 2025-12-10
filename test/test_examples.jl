@@ -28,8 +28,11 @@ if !Sys.iswindows()
     include("../examples/t8_step5_element_data.jl")
   end
 end
-@testset "t8_step6_stencil" begin
-  include("../examples/t8_step6_stencil.jl")
+
+if !Sys.iswindows()
+  @testset "t8_step6_stencil" begin
+    include("../examples/t8_step6_stencil.jl")
+  end
 end
 
 @testset "t8_tutorial_build_cmesh" begin

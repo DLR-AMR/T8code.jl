@@ -3,7 +3,7 @@
 # In this example we build a coarse mesh with a cube geometry.
 # The cube is meshed with 6 coarse tetrahedra.
 # We then output it in vtu format and destroy it.
-# 
+#
 # How you can experiment here:
 #  - Use Paraview to visualize the output files.
 #  - Change the parameters of t8_cmesh_new_hypercube
@@ -27,7 +27,7 @@ function t8_step1_build_tetcube_coarse_mesh(comm)
     # You can modify the first parameter to build a cube with different
     # tree shapes, i.e. T8_ECLASS_QUAD for a unit square with 1 quadrilateral tree.
     # See t8_eclass.h, t8_cmesh.h for all possible shapes.
-    # 
+    #
     # The second argument is the MPI communicator to use for this cmesh.
     # The remaining arguments are 3 flags that control
     #   do_bcast     - If non-zero only the root process will build the cmesh and will broadcast it to the other processes. The result is the same.
@@ -42,12 +42,12 @@ end
 # Write vtk (or more accurately vtu) files of the cmesh.
 # \param [in] cmesh    A coarse mesh.
 # \param [in] prefix   A string that is used as a prefix of the output files.
-# 
+#
 # This will create the file prefix.pvtu and the file prefix_0000.vtu.
 # If the coarse mesh would be repartitioned, then it would write the .pvtu file
 # and additionally one file prefix_MPIRANK.vtu per MPI rank.
 function t8_step1_write_cmesh_vtk(cmesh, prefix)
-    t8_cmesh_vtk_write_file(cmesh, prefix, 1.0)
+    t8_cmesh_vtk_write_file(cmesh, prefix)
 end
 
 # Destroy a cmesh. This will free all allocated memory.

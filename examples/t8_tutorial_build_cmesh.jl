@@ -163,7 +163,7 @@ function t8_cmesh_new_periodic_hybrid_2d(comm)
     cmesh = cmesh_ref[]
 
     # 3. Definition of the geometry.
-    linear_geom = t8_geometry_linear_new(2)
+    linear_geom = t8_geometry_linear_new()
     t8_cmesh_register_geometry(cmesh, linear_geom)      # Use linear geometry.
 
     # 4. Definition of the classes of the different trees.
@@ -175,12 +175,12 @@ function t8_cmesh_new_periodic_hybrid_2d(comm)
     t8_cmesh_set_tree_class(cmesh, 5, T8_ECLASS_TRIANGLE)
 
     # 5. Classification of the vertices for each tree.
-    t8_cmesh_set_tree_vertices(cmesh, 0, vertices, 3)
-    t8_cmesh_set_tree_vertices(cmesh, 1, vertices + 9, 3)
-    t8_cmesh_set_tree_vertices(cmesh, 2, vertices + 18, 4)
-    t8_cmesh_set_tree_vertices(cmesh, 3, vertices + 30, 4)
-    t8_cmesh_set_tree_vertices(cmesh, 4, vertices + 42, 3)
-    t8_cmesh_set_tree_vertices(cmesh, 5, vertices + 51, 3)
+    t8_cmesh_set_tree_vertices(cmesh, 0, pointer(vertices, 0), 3)
+    t8_cmesh_set_tree_vertices(cmesh, 1, pointer(vertices, 9), 3)
+    t8_cmesh_set_tree_vertices(cmesh, 2, pointer(vertices, 18), 4)
+    t8_cmesh_set_tree_vertices(cmesh, 3, pointer(vertices, 30), 4)
+    t8_cmesh_set_tree_vertices(cmesh, 4, pointer(vertices, 42), 3)
+    t8_cmesh_set_tree_vertices(cmesh, 5, pointer(vertices, 51), 3)
 
     # 6. Definition of the face neighbors between the different trees.
     t8_cmesh_set_join(cmesh, 0, 1, 1, 2, 0)
@@ -208,7 +208,7 @@ end
 # The mesh consists of two tetrahedra, two prisms, one pyramid, and one hexahedron.
 function t8_cmesh_new_hybrid_gate_3d(comm)
     vertices = Vector{Cdouble}(undef, 24)
-    linear_geom = t8_geometry_linear_new(3)
+    linear_geom = t8_geometry_linear_new()
 
     # Initialization of the mesh.
     cmesh_ref = Ref(t8_cmesh_t())
@@ -409,9 +409,9 @@ cmesh_3D = t8_cmesh_new_hybrid_gate_3d(comm)
 t8_global_productionf("[tutorial] A 3D hybrid cmesh (in style of a gate) has been created.\n")
 
 # Output the meshes to vtu files.
-t8_cmesh_vtk_write_file(cmesh_2D, prefix_2D, 1.0)
+t8_cmesh_vtk_write_file(cmesh_2D, prefix_2D)
 t8_global_productionf("[tutorial] Wrote the 2D cmesh to vtu files.\n")
-t8_cmesh_vtk_write_file(cmesh_3D, prefix_3D, 1.0)
+t8_cmesh_vtk_write_file(cmesh_3D, prefix_3D)
 t8_global_productionf("[tutorial] Wrote the 3D cmesh to vtu files.\n")
 
 #

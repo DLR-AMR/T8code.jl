@@ -205,9 +205,11 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     write_level = 1
     write_element_id = 1
     write_ghosts = 0
+    GC.@preserve forest prefix vtk_data begin
     t8_forest_write_vtk_ext(forest, prefix, write_treeid, write_mpirank,
                             write_level, write_element_id, write_ghosts,
                             0, 0, num_data, Ref(vtk_data))
+    end
 end
 
 # The prefix for our output files.

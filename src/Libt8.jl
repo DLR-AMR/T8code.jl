@@ -442,7 +442,7 @@ void sc_mpi_comm_attach_node_comms (sc_MPI_Comm comm, int processes_per_node);
 ```
 """
 function sc_mpi_comm_attach_node_comms(comm, processes_per_node)
-    @ccall libt8.sc_mpi_comm_attach_node_comms(comm::Cint, processes_per_node::Cint)::Cvoid
+    @ccall libt8.sc_mpi_comm_attach_node_comms(comm::MPI_Comm, processes_per_node::Cint)::Cvoid
 end
 
 """
@@ -454,7 +454,7 @@ void sc_mpi_comm_detach_node_comms (sc_MPI_Comm comm);
 ```
 """
 function sc_mpi_comm_detach_node_comms(comm)
-    @ccall libt8.sc_mpi_comm_detach_node_comms(comm::Cint)::Cvoid
+    @ccall libt8.sc_mpi_comm_detach_node_comms(comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -466,7 +466,7 @@ void sc_mpi_comm_get_node_comms (sc_MPI_Comm comm, sc_MPI_Comm * intranode, sc_M
 ```
 """
 function sc_mpi_comm_get_node_comms(comm, intranode, internode)
-    @ccall libt8.sc_mpi_comm_get_node_comms(comm::Cint, intranode::Ptr{Cint}, internode::Ptr{Cint})::Cvoid
+    @ccall libt8.sc_mpi_comm_get_node_comms(comm::MPI_Comm, intranode::Ptr{MPI_Comm}, internode::Ptr{MPI_Comm})::Cvoid
 end
 
 """
@@ -478,7 +478,7 @@ int sc_mpi_comm_get_and_attach (sc_MPI_Comm comm);
 ```
 """
 function sc_mpi_comm_get_and_attach(comm)
-    @ccall libt8.sc_mpi_comm_get_and_attach(comm::Cint)::Cint
+    @ccall libt8.sc_mpi_comm_get_and_attach(comm::MPI_Comm)::Cint
 end
 
 # typedef void ( * sc_handler_t ) ( void * data )
@@ -869,7 +869,7 @@ void sc_init (sc_MPI_Comm mpicomm, int catch_signals, int print_backtrace, sc_lo
 ```
 """
 function sc_init(mpicomm, catch_signals, print_backtrace, log_handler, log_threshold)
-    @ccall libt8.sc_init(mpicomm::Cint, catch_signals::Cint, print_backtrace::Cint, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libt8.sc_init(mpicomm::MPI_Comm, catch_signals::Cint, print_backtrace::Cint, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
@@ -4022,7 +4022,7 @@ void *sc_shmem_malloc (int package, size_t elem_size, size_t elem_count, sc_MPI_
 ```
 """
 function sc_shmem_malloc(package, elem_size, elem_count, comm)
-    @ccall libt8.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::Cint)::Ptr{Cvoid}
+    @ccall libt8.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
 end
 
 """
@@ -4034,7 +4034,7 @@ void sc_shmem_free (int package, void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_free(package, array, comm)
-    @ccall libt8.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::Cint)::Cvoid
+    @ccall libt8.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -4067,7 +4067,7 @@ void sc_shmem_set_type (sc_MPI_Comm comm, sc_shmem_type_t type);
 ```
 """
 function sc_shmem_set_type(comm, type)
-    @ccall libt8.sc_shmem_set_type(comm::Cint, type::sc_shmem_type_t)::Cvoid
+    @ccall libt8.sc_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
 end
 
 """
@@ -4079,7 +4079,7 @@ sc_shmem_type_t sc_shmem_get_type (sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_get_type(comm)
-    @ccall libt8.sc_shmem_get_type(comm::Cint)::sc_shmem_type_t
+    @ccall libt8.sc_shmem_get_type(comm::MPI_Comm)::sc_shmem_type_t
 end
 
 """
@@ -4091,7 +4091,7 @@ int sc_shmem_write_start (void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_write_start(array, comm)
-    @ccall libt8.sc_shmem_write_start(array::Ptr{Cvoid}, comm::Cint)::Cint
+    @ccall libt8.sc_shmem_write_start(array::Ptr{Cvoid}, comm::MPI_Comm)::Cint
 end
 
 """
@@ -4103,7 +4103,7 @@ void sc_shmem_write_end (void *array, sc_MPI_Comm comm);
 ```
 """
 function sc_shmem_write_end(array, comm)
-    @ccall libt8.sc_shmem_write_end(array::Ptr{Cvoid}, comm::Cint)::Cvoid
+    @ccall libt8.sc_shmem_write_end(array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -4115,7 +4115,7 @@ void sc_shmem_memcpy (void *destarray, void *srcarray, size_t bytes, sc_MPI_Comm
 ```
 """
 function sc_shmem_memcpy(destarray, srcarray, bytes, comm)
-    @ccall libt8.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid}, bytes::Csize_t, comm::Cint)::Cvoid
+    @ccall libt8.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid}, bytes::Csize_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -4127,7 +4127,7 @@ void sc_shmem_allgather (void *sendbuf, int sendcount, sc_MPI_Datatype sendtype,
 ```
 """
 function sc_shmem_allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm)
-    @ccall libt8.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint, comm::Cint)::Cvoid
+    @ccall libt8.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -4139,7 +4139,7 @@ void sc_shmem_prefix (void *sendbuf, void *recvbuf, int count, sc_MPI_Datatype t
 ```
 """
 function sc_shmem_prefix(sendbuf, recvbuf, count, type, op, comm)
-    @ccall libt8.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::Cint)::Cvoid
+    @ccall libt8.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
 mutable struct t8_cmesh end
@@ -4272,7 +4272,7 @@ t8_shmem_array_t t8_cmesh_alloc_offsets (int mpisize, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_alloc_offsets(mpisize, comm)
-    @ccall libt8.t8_cmesh_alloc_offsets(mpisize::Cint, comm::Cint)::t8_shmem_array_t
+    @ccall libt8.t8_cmesh_alloc_offsets(mpisize::Cint, comm::MPI_Comm)::t8_shmem_array_t
 end
 
 """
@@ -4580,7 +4580,7 @@ t8_cmesh_t t8_cmesh_bcast (t8_cmesh_t cmesh_in, int root, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_bcast(cmesh_in, root, comm)
-    @ccall libt8.t8_cmesh_bcast(cmesh_in::t8_cmesh_t, root::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_bcast(cmesh_in::t8_cmesh_t, root::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 mutable struct t8_geometry end
@@ -4638,7 +4638,7 @@ void t8_cmesh_commit (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_commit(cmesh, comm)
-    @ccall libt8.t8_cmesh_commit(cmesh::t8_cmesh_t, comm::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_commit(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -4671,7 +4671,7 @@ t8_cmesh_t t8_cmesh_load (const char *filename, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_load(filename, comm)
-    @ccall libt8.t8_cmesh_load(filename::Cstring, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_load(filename::Cstring, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -4706,7 +4706,7 @@ t8_cmesh_t t8_cmesh_load_and_distribute (const char *fileprefix, int num_files, 
 ```
 """
 function t8_cmesh_load_and_distribute(fileprefix, num_files, comm, mode, procs_per_node)
-    @ccall libt8.t8_cmesh_load_and_distribute(fileprefix::Cstring, num_files::Cint, comm::Cint, mode::t8_load_mode_t, procs_per_node::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_load_and_distribute(fileprefix::Cstring, num_files::Cint, comm::MPI_Comm, mode::t8_load_mode_t, procs_per_node::Cint)::t8_cmesh_t
 end
 
 """
@@ -4718,7 +4718,7 @@ int t8_cmesh_comm_is_valid (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_comm_is_valid(cmesh, comm)
-    @ccall libt8.t8_cmesh_comm_is_valid(cmesh::t8_cmesh_t, comm::Cint)::Cint
+    @ccall libt8.t8_cmesh_comm_is_valid(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cint
 end
 
 """
@@ -5261,7 +5261,7 @@ void t8_cmesh_uniform_bounds_for_irregular_refinement (const t8_cmesh_t cmesh, c
 ```
 """
 function t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh, level, scheme, first_local_tree, child_in_tree_begin, last_local_tree, child_in_tree_end, first_tree_shared, comm)
-    @ccall libt8.t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh::t8_cmesh_t, level::Cint, scheme::Ptr{t8_scheme_c}, first_local_tree::Ptr{t8_gloidx_t}, child_in_tree_begin::Ptr{t8_gloidx_t}, last_local_tree::Ptr{t8_gloidx_t}, child_in_tree_end::Ptr{t8_gloidx_t}, first_tree_shared::Ptr{Int8}, comm::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh::t8_cmesh_t, level::Cint, scheme::Ptr{t8_scheme_c}, first_local_tree::Ptr{t8_gloidx_t}, child_in_tree_begin::Ptr{t8_gloidx_t}, last_local_tree::Ptr{t8_gloidx_t}, child_in_tree_end::Ptr{t8_gloidx_t}, first_tree_shared::Ptr{Int8}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -5374,7 +5374,7 @@ void t8_cmesh_debug_print_trees (const t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_debug_print_trees(cmesh, comm)
-    @ccall libt8.t8_cmesh_debug_print_trees(cmesh::t8_cmesh_t, comm::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_debug_print_trees(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -5405,7 +5405,7 @@ void sc_io_read (sc_MPI_File mpifile, void *ptr, size_t zcount, sc_MPI_Datatype 
 ```
 """
 function sc_io_read(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_io_read(mpifile::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
+    @ccall libt8.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -5417,7 +5417,7 @@ void sc_io_write (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Da
 ```
 """
 function sc_io_write(mpifile, ptr, zcount, t, errmsg)
-    @ccall libt8.sc_io_write(mpifile::Cint, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
+    @ccall libt8.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
 end
 
 """Typedef for quadrant coordinates."""
@@ -6092,7 +6092,7 @@ int sc_io_open (sc_MPI_Comm mpicomm, const char *filename, sc_io_open_mode_t amo
 ```
 """
 function sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
-    @ccall libt8.sc_io_open(mpicomm::Cint, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
+    @ccall libt8.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
 end
 
 """
@@ -6104,7 +6104,7 @@ int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int cou
 ```
 """
 function sc_io_read_at(mpifile, offset, ptr, count, t, ocount)
-    @ccall libt8.sc_io_read_at(mpifile::Cint, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libt8.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -6116,7 +6116,7 @@ int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int
 ```
 """
 function sc_io_read_at_all(mpifile, offset, ptr, count, t, ocount)
-    @ccall libt8.sc_io_read_at_all(mpifile::Cint, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libt8.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -6128,7 +6128,7 @@ int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, 
 ```
 """
 function sc_io_write_at(mpifile, offset, ptr, count, t, ocount)
-    @ccall libt8.sc_io_write_at(mpifile::Cint, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libt8.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -6140,7 +6140,7 @@ int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *p
 ```
 """
 function sc_io_write_at_all(mpifile, offset, ptr, count, t, ocount)
-    @ccall libt8.sc_io_write_at_all(mpifile::Cint, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libt8.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -6814,7 +6814,7 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t * conn_in, 
 ```
 """
 function p4est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libt8.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8169,7 +8169,7 @@ p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t * conn_in, 
 ```
 """
 function p8est_connectivity_bcast(conn_in, root, comm)
-    @ccall libt8.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libt8.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -8927,7 +8927,7 @@ t8_cmesh_t t8_cmesh_new_from_p4est (p4est_connectivity_t *conn, sc_MPI_Comm comm
 ```
 """
 function t8_cmesh_new_from_p4est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p4est(conn::Ptr{p4est_connectivity_t}, comm::Cint, do_partition::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_from_p4est(conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
 end
 
 """
@@ -8939,7 +8939,7 @@ t8_cmesh_t t8_cmesh_new_from_p8est (p8est_connectivity_t *conn, sc_MPI_Comm comm
 ```
 """
 function t8_cmesh_new_from_p8est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p8est(conn::Ptr{p8est_connectivity_t}, comm::Cint, do_partition::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_from_p8est(conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
 end
 
 """
@@ -8951,7 +8951,7 @@ t8_cmesh_t t8_cmesh_new_empty (sc_MPI_Comm comm, const int do_partition, const i
 ```
 """
 function t8_cmesh_new_empty(comm, do_partition, dimension)
-    @ccall libt8.t8_cmesh_new_empty(comm::Cint, do_partition::Cint, dimension::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_empty(comm::MPI_Comm, do_partition::Cint, dimension::Cint)::t8_cmesh_t
 end
 
 """
@@ -8963,7 +8963,7 @@ t8_cmesh_t t8_cmesh_new_from_class (t8_eclass_t eclass, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_from_class(eclass, comm)
-    @ccall libt8.t8_cmesh_new_from_class(eclass::t8_eclass_t, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_from_class(eclass::t8_eclass_t, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -8975,7 +8975,7 @@ t8_cmesh_t t8_cmesh_new_hypercube (t8_eclass_t eclass, sc_MPI_Comm comm, int do_
 ```
 """
 function t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube(eclass::t8_eclass_t, comm::Cint, do_bcast::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hypercube(eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
 end
 
 """
@@ -8987,7 +8987,7 @@ t8_cmesh_t t8_cmesh_new_hypercube_pad (const t8_eclass_t eclass, sc_MPI_Comm com
 ```
 """
 function t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
-    @ccall libt8.t8_cmesh_new_hypercube_pad(eclass::t8_eclass_t, comm::Cint, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hypercube_pad(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::t8_cmesh_t
 end
 
 """
@@ -8999,7 +8999,7 @@ t8_cmesh_t t8_cmesh_new_hypercube_pad_ext (const t8_eclass_t eclass, sc_MPI_Comm
 ```
 """
 function t8_cmesh_new_hypercube_pad_ext(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
-    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(eclass::t8_eclass_t, comm::Cint, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::t8_cmesh_t
 end
 
 """
@@ -9011,7 +9011,7 @@ t8_cmesh_t t8_cmesh_new_hypercube_hybrid (sc_MPI_Comm comm, int do_partition, in
 ```
 """
 function t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube_hybrid(comm::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid(comm::MPI_Comm, do_partition::Cint, periodic::Cint)::t8_cmesh_t
 end
 
 """
@@ -9023,7 +9023,7 @@ t8_cmesh_t t8_cmesh_new_periodic (sc_MPI_Comm comm, int dim);
 ```
 """
 function t8_cmesh_new_periodic(comm, dim)
-    @ccall libt8.t8_cmesh_new_periodic(comm::Cint, dim::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_periodic(comm::MPI_Comm, dim::Cint)::t8_cmesh_t
 end
 
 """
@@ -9035,7 +9035,7 @@ t8_cmesh_t t8_cmesh_new_periodic_tri (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_periodic_tri(comm)
-    @ccall libt8.t8_cmesh_new_periodic_tri(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_periodic_tri(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9047,7 +9047,7 @@ t8_cmesh_t t8_cmesh_new_periodic_hybrid (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_periodic_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_periodic_hybrid(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_periodic_hybrid(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9059,7 +9059,7 @@ t8_cmesh_t t8_cmesh_new_periodic_line_more_trees (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_periodic_line_more_trees(comm)
-    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9071,7 +9071,7 @@ t8_cmesh_t t8_cmesh_new_bigmesh (t8_eclass_t eclass, int num_trees, sc_MPI_Comm 
 ```
 """
 function t8_cmesh_new_bigmesh(eclass, num_trees, comm)
-    @ccall libt8.t8_cmesh_new_bigmesh(eclass::t8_eclass_t, num_trees::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_bigmesh(eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9083,7 +9083,7 @@ t8_cmesh_t t8_cmesh_new_line_zigzag (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_line_zigzag(comm)
-    @ccall libt8.t8_cmesh_new_line_zigzag(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_line_zigzag(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9095,7 +9095,7 @@ t8_cmesh_t t8_cmesh_new_prism_cake (sc_MPI_Comm comm, int num_of_prisms);
 ```
 """
 function t8_cmesh_new_prism_cake(comm, num_of_prisms)
-    @ccall libt8.t8_cmesh_new_prism_cake(comm::Cint, num_of_prisms::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prism_cake(comm::MPI_Comm, num_of_prisms::Cint)::t8_cmesh_t
 end
 
 """
@@ -9107,7 +9107,7 @@ t8_cmesh_t t8_cmesh_new_prism_deformed (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_prism_deformed(comm)
-    @ccall libt8.t8_cmesh_new_prism_deformed(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prism_deformed(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9119,7 +9119,7 @@ t8_cmesh_t t8_cmesh_new_pyramid_deformed (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_pyramid_deformed(comm)
-    @ccall libt8.t8_cmesh_new_pyramid_deformed(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_pyramid_deformed(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9131,7 +9131,7 @@ t8_cmesh_t t8_cmesh_new_prism_cake_funny_oriented (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_prism_cake_funny_oriented(comm)
-    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9143,7 +9143,7 @@ t8_cmesh_t t8_cmesh_new_prism_geometry (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_prism_geometry(comm)
-    @ccall libt8.t8_cmesh_new_prism_geometry(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prism_geometry(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9155,7 +9155,7 @@ t8_cmesh_t t8_cmesh_new_brick_2d (t8_gloidx_t num_x, t8_gloidx_t num_y, int x_pe
 ```
 """
 function t8_cmesh_new_brick_2d(num_x, num_y, x_periodic, y_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_2d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_brick_2d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9167,7 +9167,7 @@ t8_cmesh_t t8_cmesh_new_brick_3d (t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloid
 ```
 """
 function t8_cmesh_new_brick_3d(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_3d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_brick_3d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9179,7 +9179,7 @@ t8_cmesh_t t8_cmesh_new_disjoint_bricks (t8_gloidx_t num_x, t8_gloidx_t num_y, t
 ```
 """
 function t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_disjoint_bricks(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_disjoint_bricks(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9191,7 +9191,7 @@ t8_cmesh_t t8_cmesh_new_tet_orientation_test (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_tet_orientation_test(comm)
-    @ccall libt8.t8_cmesh_new_tet_orientation_test(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_tet_orientation_test(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9203,7 +9203,7 @@ t8_cmesh_t t8_cmesh_new_hybrid_gate (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_hybrid_gate(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hybrid_gate(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9215,7 +9215,7 @@ t8_cmesh_t t8_cmesh_new_hybrid_gate_deformed (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_hybrid_gate_deformed(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9227,7 +9227,7 @@ t8_cmesh_t t8_cmesh_new_full_hybrid (sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_full_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_full_hybrid(comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_full_hybrid(comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9239,7 +9239,7 @@ t8_cmesh_t t8_cmesh_new_pyramid_cake (sc_MPI_Comm comm, int num_of_pyra);
 ```
 """
 function t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
-    @ccall libt8.t8_cmesh_new_pyramid_cake(comm::Cint, num_of_pyra::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_pyramid_cake(comm::MPI_Comm, num_of_pyra::Cint)::t8_cmesh_t
 end
 
 """
@@ -9251,7 +9251,7 @@ t8_cmesh_t t8_cmesh_new_long_brick_pyramid (sc_MPI_Comm comm, int num_cubes);
 ```
 """
 function t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
-    @ccall libt8.t8_cmesh_new_long_brick_pyramid(comm::Cint, num_cubes::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_long_brick_pyramid(comm::MPI_Comm, num_cubes::Cint)::t8_cmesh_t
 end
 
 """
@@ -9263,7 +9263,7 @@ t8_cmesh_t t8_cmesh_new_row_of_cubes (t8_locidx_t num_trees, const int set_attri
 ```
 """
 function t8_cmesh_new_row_of_cubes(num_trees, set_attributes, do_partition, comm, package_id)
-    @ccall libt8.t8_cmesh_new_row_of_cubes(num_trees::t8_locidx_t, set_attributes::Cint, do_partition::Cint, comm::Cint, package_id::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_row_of_cubes(num_trees::t8_locidx_t, set_attributes::Cint, do_partition::Cint, comm::MPI_Comm, package_id::Cint)::t8_cmesh_t
 end
 
 """
@@ -9275,7 +9275,7 @@ t8_cmesh_t t8_cmesh_new_quadrangulated_disk (const double radius, sc_MPI_Comm co
 ```
 """
 function t8_cmesh_new_quadrangulated_disk(radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_disk(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_quadrangulated_disk(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9287,7 +9287,7 @@ t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_octahedron (const double 
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_octahedron(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9299,7 +9299,7 @@ t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_icosahedron (const double
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9311,7 +9311,7 @@ t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_cube (const double radius
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_cube(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9323,7 +9323,7 @@ t8_cmesh_t t8_cmesh_new_quadrangulated_spherical_surface (const double radius, s
 ```
 """
 function t8_cmesh_new_quadrangulated_spherical_surface(radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9335,7 +9335,7 @@ t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_octahedron (const double inner_r
 ```
 """
 function t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9347,7 +9347,7 @@ t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_icosahedron (const double inner_
 ```
 """
 function t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9359,7 +9359,7 @@ t8_cmesh_t t8_cmesh_new_cubed_spherical_shell (const double inner_radius, const 
 ```
 """
 function t8_cmesh_new_cubed_spherical_shell(inner_radius, shell_thickness, num_trees, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(inner_radius::Cdouble, shell_thickness::Cdouble, num_trees::Cint, num_layers::Cint, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(inner_radius::Cdouble, shell_thickness::Cdouble, num_trees::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9371,7 +9371,7 @@ t8_cmesh_t t8_cmesh_new_cubed_sphere (const double radius, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_cubed_sphere(radius, comm)
-    @ccall libt8.t8_cmesh_new_cubed_sphere(radius::Cdouble, comm::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_new_cubed_sphere(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -9933,7 +9933,7 @@ void t8_shmem_init (sc_MPI_Comm comm);
 ```
 """
 function t8_shmem_init(comm)
-    @ccall libt8.t8_shmem_init(comm::Cint)::Cvoid
+    @ccall libt8.t8_shmem_init(comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -9945,7 +9945,7 @@ void t8_shmem_finalize (sc_MPI_Comm comm);
 ```
 """
 function t8_shmem_finalize(comm)
-    @ccall libt8.t8_shmem_finalize(comm::Cint)::Cvoid
+    @ccall libt8.t8_shmem_finalize(comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -9957,7 +9957,7 @@ void t8_shmem_set_type (sc_MPI_Comm comm, sc_shmem_type_t type);
 ```
 """
 function t8_shmem_set_type(comm, type)
-    @ccall libt8.t8_shmem_set_type(comm::Cint, type::sc_shmem_type_t)::Cvoid
+    @ccall libt8.t8_shmem_set_type(comm::MPI_Comm, type::sc_shmem_type_t)::Cvoid
 end
 
 """
@@ -9969,7 +9969,7 @@ void t8_shmem_array_init (t8_shmem_array_t *parray, size_t elem_size, size_t ele
 ```
 """
 function t8_shmem_array_init(parray, elem_size, elem_count, comm)
-    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t, elem_count::Csize_t, comm::Cint)::Cvoid
+    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10081,7 +10081,7 @@ void t8_shmem_array_allgatherv (void *sendbuf, const int sendcount, sc_MPI_Datat
 ```
 """
 function t8_shmem_array_allgatherv(sendbuf, sendcount, sendtype, recvarray, recvtype, comm)
-    @ccall libt8.t8_shmem_array_allgatherv(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvtype::Cint, comm::Cint)::Cvoid
+    @ccall libt8.t8_shmem_array_allgatherv(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvtype::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10093,7 +10093,7 @@ void t8_shmem_array_prefix (const void *sendbuf, t8_shmem_array_t recvarray, con
 ```
 """
 function t8_shmem_array_prefix(sendbuf, recvarray, count, type, op, comm)
-    @ccall libt8.t8_shmem_array_prefix(sendbuf::Ptr{Cvoid}, recvarray::t8_shmem_array_t, count::Cint, type::Cint, op::Cint, comm::Cint)::Cvoid
+    @ccall libt8.t8_shmem_array_prefix(sendbuf::Ptr{Cvoid}, recvarray::t8_shmem_array_t, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10691,7 +10691,7 @@ end
 const sc_statinfo_t = sc_statinfo
 
 struct sc_stats
-    mpicomm::Cint
+    mpicomm::MPI_Comm
     kv::Ptr{sc_keyvalue_t}
     sarray::Ptr{sc_array_t}
 end
@@ -10836,7 +10836,7 @@ void sc_stats_compute (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute(mpicomm, nvars, stats)
-    @ccall libt8.sc_stats_compute(mpicomm::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libt8.sc_stats_compute(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -10848,7 +10848,7 @@ void sc_stats_compute1 (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute1(mpicomm, nvars, stats)
-    @ccall libt8.sc_stats_compute1(mpicomm::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libt8.sc_stats_compute1(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -10904,7 +10904,7 @@ sc_statistics_t *sc_statistics_new (sc_MPI_Comm mpicomm);
 ```
 """
 function sc_statistics_new(mpicomm)
-    @ccall libt8.sc_statistics_new(mpicomm::Cint)::Ptr{sc_statistics_t}
+    @ccall libt8.sc_statistics_new(mpicomm::MPI_Comm)::Ptr{sc_statistics_t}
 end
 
 """
@@ -11064,46 +11064,10 @@ end
 | stats                          | The SC profiling stats of the forest.                                                                                                                                                                                                                                                          |
 | stats\\_computed               | Switch indicating whether the profiling stats have been compute (1) or not (0)                                                                                                                                                                                                                 |
 """
-struct t8_forest
-    rc::t8_refcount_t
-    set_level::Cint
-    set_for_coarsening::Cint
-    mpicomm::Cint
-    cmesh::t8_cmesh_t
-    scheme::Ptr{t8_scheme_c}
-    maxlevel::Cint
-    maxlevel_existing::Cint
-    do_dup::Cint
-    dimension::Cint
-    incomplete_trees::Cint
-    set_from::t8_forest_t
-    from_method::t8_forest_from_t
-    set_adapt_fn::t8_forest_adapt_t
-    set_adapt_recursive::Cint
-    set_balance::Cint
-    do_ghost::Cint
-    ghost_type::t8_ghost_type_t
-    ghost_algorithm::Cint
-    user_data::Ptr{Cvoid}
-    user_function::Ptr{Cvoid}
-    t8code_data::Ptr{Cvoid}
-    committed::Cint
-    mpisize::Cint
-    mpirank::Cint
-    first_local_tree::t8_gloidx_t
-    last_local_tree::t8_gloidx_t
-    global_num_trees::t8_gloidx_t
-    trees::Ptr{sc_array_t}
-    ghosts::t8_forest_ghost_t
-    element_offsets::t8_shmem_array_t
-    global_first_desc::t8_shmem_array_t
-    tree_offsets::t8_shmem_array_t
-    local_num_leaf_elements::t8_locidx_t
-    global_num_leaf_elements::t8_gloidx_t
-    profile::Ptr{t8_profile_t}
-    stats::NTuple{17, sc_statinfo_t}
-    stats_computed::Cint
-end
+# This struct is not supposed to be read and modified directly.
+# Besides, there is a circular dependency with `t8_forest_t`
+# leading to an error output by Julia.
+mutable struct t8_forest end
 
 """Opaque pointer to a forest implementation."""
 const t8_forest_t = Ptr{t8_forest}
@@ -11331,7 +11295,7 @@ void t8_forest_set_cmesh (t8_forest_t forest, t8_cmesh_t cmesh, sc_MPI_Comm comm
 ```
 """
 function t8_forest_set_cmesh(forest, cmesh, comm)
-    @ccall libt8.t8_forest_set_cmesh(forest::t8_forest_t, cmesh::t8_cmesh_t, comm::Cint)::Cvoid
+    @ccall libt8.t8_forest_set_cmesh(forest::t8_forest_t, cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -12058,7 +12022,7 @@ void t8_forest_partition_cmesh (t8_forest_t forest, sc_MPI_Comm comm, int set_pr
 ```
 """
 function t8_forest_partition_cmesh(forest, comm, set_profiling)
-    @ccall libt8.t8_forest_partition_cmesh(forest::t8_forest_t, comm::Cint, set_profiling::Cint)::Cvoid
+    @ccall libt8.t8_forest_partition_cmesh(forest::t8_forest_t, comm::MPI_Comm, set_profiling::Cint)::Cvoid
 end
 
 """
@@ -12070,7 +12034,7 @@ sc_MPI_Comm t8_forest_get_mpicomm (const t8_forest_t forest);
 ```
 """
 function t8_forest_get_mpicomm(forest)
-    @ccall libt8.t8_forest_get_mpicomm(forest::t8_forest_t)::Cint
+    @ccall libt8.t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm
 end
 
 """
@@ -12542,7 +12506,7 @@ t8_forest_t t8_forest_new_uniform (t8_cmesh_t cmesh, const t8_scheme_c *scheme, 
 ```
 """
 function t8_forest_new_uniform(cmesh, scheme, level, do_face_ghost, comm)
-    @ccall libt8.t8_forest_new_uniform(cmesh::t8_cmesh_t, scheme::Ptr{t8_scheme_c}, level::Cint, do_face_ghost::Cint, comm::Cint)::t8_forest_t
+    @ccall libt8.t8_forest_new_uniform(cmesh::t8_cmesh_t, scheme::Ptr{t8_scheme_c}, level::Cint, do_face_ghost::Cint, comm::MPI_Comm)::t8_forest_t
 end
 
 """
@@ -15431,7 +15395,7 @@ void t8_element_MPI_Pack (const t8_scheme_c *scheme, const t8_eclass_t tree_clas
 ```
 """
 function t8_element_MPI_Pack(scheme, tree_class, elements, count, send_buffer, buffer_size, position, comm)
-    @ccall libt8.t8_element_MPI_Pack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::Cint)::Cvoid
+    @ccall libt8.t8_element_MPI_Pack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -15443,7 +15407,7 @@ void t8_element_MPI_Pack_size (const t8_scheme_c *scheme, const t8_eclass_t tree
 ```
 """
 function t8_element_MPI_Pack_size(scheme, tree_class, count, comm, pack_size)
-    @ccall libt8.t8_element_MPI_Pack_size(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, count::Cuint, comm::Cint, pack_size::Ptr{Cint})::Cvoid
+    @ccall libt8.t8_element_MPI_Pack_size(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
 end
 
 """
@@ -15455,7 +15419,7 @@ void t8_element_MPI_Unpack (const t8_scheme_c *scheme, const t8_eclass_t tree_cl
 ```
 """
 function t8_element_MPI_Unpack(scheme, tree_class, recvbuf, buffer_size, position, elements, count, comm)
-    @ccall libt8.t8_element_MPI_Unpack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, comm::Cint)::Cvoid
+    @ccall libt8.t8_element_MPI_Unpack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -15556,7 +15520,7 @@ int t8_cmesh_vtk_write_file_via_API (t8_cmesh_t cmesh, const char *fileprefix, s
 ```
 """
 function t8_cmesh_vtk_write_file_via_API(cmesh, fileprefix, comm)
-    @ccall libt8.t8_cmesh_vtk_write_file_via_API(cmesh::t8_cmesh_t, fileprefix::Cstring, comm::Cint)::Cint
+    @ccall libt8.t8_cmesh_vtk_write_file_via_API(cmesh::t8_cmesh_t, fileprefix::Cstring, comm::MPI_Comm)::Cint
 end
 
 """
@@ -15587,7 +15551,7 @@ t8_cmesh_t t8_cmesh_from_msh_file (const char *fileprefix, int partition, sc_MPI
 ```
 """
 function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_cad_geometry)
-    @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::Cint, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
 end
 
 struct sc_flopinfo
@@ -16199,7 +16163,7 @@ t8_cmesh_t t8_cmesh_from_tetgen_file (char *fileprefix, int partition, sc_MPI_Co
 ```
 """
 function t8_cmesh_from_tetgen_file(fileprefix, partition, comm, do_dup)
-    @ccall libt8.t8_cmesh_from_tetgen_file(fileprefix::Cstring, partition::Cint, comm::Cint, do_dup::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_from_tetgen_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint)::t8_cmesh_t
 end
 
 """
@@ -16211,7 +16175,7 @@ t8_cmesh_t t8_cmesh_from_tetgen_file_time (char *fileprefix, int partition, sc_M
 ```
 """
 function t8_cmesh_from_tetgen_file_time(fileprefix, partition, comm, do_dup, fi, snapshot, stats, statentry)
-    @ccall libt8.t8_cmesh_from_tetgen_file_time(fileprefix::Cstring, partition::Cint, comm::Cint, do_dup::Cint, fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t}, stats::Ptr{sc_statinfo_t}, statentry::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_from_tetgen_file_time(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint, fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t}, stats::Ptr{sc_statinfo_t}, statentry::Cint)::t8_cmesh_t
 end
 
 """
@@ -16223,7 +16187,7 @@ t8_cmesh_t t8_cmesh_from_triangle_file (char *fileprefix, int partition, sc_MPI_
 ```
 """
 function t8_cmesh_from_triangle_file(fileprefix, partition, comm, do_dup)
-    @ccall libt8.t8_cmesh_from_triangle_file(fileprefix::Cstring, partition::Cint, comm::Cint, do_dup::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_from_triangle_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint)::t8_cmesh_t
 end
 
 mutable struct t8_cmesh_vertex_connectivity end
@@ -17179,159 +17143,105 @@ const SC_VERSION_MINOR = 0
 
 const SC_VERSION_POINT = 0
 
-# Skipping MacroDefinition: _sc_const const
 
-const sc_MPI_ERR_ARG = MPI_ERR_ARG
 
-const sc_MPI_ERR_COUNT = MPI_ERR_COUNT
 
-const sc_MPI_ERR_UNKNOWN = MPI_ERR_UNKNOWN
 
-const sc_MPI_ERR_NO_MEM = MPI_ERR_NO_MEM
 
-const sc_MPI_MAX_ERROR_STRING = MPI_MAX_ERROR_STRING
 
-const sc_MPI_ERR_FILE = MPI_ERR_FILE
 
-const sc_MPI_ERR_NOT_SAME = MPI_ERR_NOT_SAME
 
-const sc_MPI_ERR_AMODE = MPI_ERR_AMODE
 
-const sc_MPI_ERR_UNSUPPORTED_DATAREP = MPI_ERR_UNSUPPORTED_DATAREP
 
-const sc_MPI_ERR_UNSUPPORTED_OPERATION = MPI_ERR_UNSUPPORTED_OPERATION
 
-const sc_MPI_ERR_NO_SUCH_FILE = MPI_ERR_NO_SUCH_FILE
 
-const sc_MPI_ERR_FILE_EXISTS = MPI_ERR_FILE_EXISTS
 
-const sc_MPI_ERR_BAD_FILE = MPI_ERR_BAD_FILE
 
-const sc_MPI_ERR_ACCESS = MPI_ERR_ACCESS
 
-const sc_MPI_ERR_NO_SPACE = MPI_ERR_NO_SPACE
 
-const sc_MPI_ERR_QUOTA = MPI_ERR_QUOTA
 
-const sc_MPI_ERR_READ_ONLY = MPI_ERR_READ_ONLY
 
-const sc_MPI_ERR_FILE_IN_USE = MPI_ERR_FILE_IN_USE
 
-const sc_MPI_ERR_DUP_DATAREP = MPI_ERR_DUP_DATAREP
 
-const sc_MPI_ERR_CONVERSION = MPI_ERR_CONVERSION
 
-const sc_MPI_ERR_IO = MPI_ERR_IO
 
-const sc_MPI_ERR_LASTCODE = MPI_ERR_LASTCODE
 
-const sc_MPI_Aint = MPI_Aint
 
-const sc_MPI_COMM_WORLD = MPI_COMM_WORLD
+const sc_MPI_COMM_WORLD = MPI.COMM_WORLD
 
-const sc_MPI_COMM_SELF = MPI_COMM_SELF
+const sc_MPI_COMM_SELF = MPI.COMM_SELF
 
-const sc_MPI_BYTE = MPI_BYTE
+const sc_MPI_BYTE = MPI.BYTE
 
-const sc_MPI_CHAR = MPI_CHAR
+const sc_MPI_CHAR = MPI.CHAR
 
-const sc_MPI_UNSIGNED_CHAR = MPI_UNSIGNED_CHAR
+const sc_MPI_UNSIGNED_CHAR = MPI.UNSIGNED_CHAR
 
-const sc_MPI_SHORT = MPI_SHORT
+const sc_MPI_SHORT = MPI.SHORT
 
-const sc_MPI_UNSIGNED_SHORT = MPI_UNSIGNED_SHORT
+const sc_MPI_UNSIGNED_SHORT = MPI.UNSIGNED_SHORT
 
-const sc_MPI_INT = MPI_INT
+const sc_MPI_INT = MPI.INT
 
-const sc_MPI_UNSIGNED = MPI_UNSIGNED
+const sc_MPI_UNSIGNED = MPI.UNSIGNED
 
-const sc_MPI_LONG = MPI_LONG
+const sc_MPI_LONG = MPI.LONG
 
-const sc_MPI_UNSIGNED_LONG = MPI_UNSIGNED_LONG
+const sc_MPI_UNSIGNED_LONG = MPI.UNSIGNED_LONG
 
-const sc_MPI_UNSIGNED_LONG_LONG = MPI_UNSIGNED_LONG_LONG
+const sc_MPI_UNSIGNED_LONG_LONG = MPI.UNSIGNED_LONG_LONG
 
-const sc_MPI_SIGNED_CHAR = MPI_SIGNED_CHAR
+const sc_MPI_SIGNED_CHAR = MPI.SIGNED_CHAR
 
-const sc_MPI_INT8_T = MPI_INT8_T
+const sc_MPI_INT8_T = MPI.INT8_T
 
-const sc_MPI_LONG_LONG_INT = MPI_LONG_LONG_INT
+const sc_MPI_LONG_LONG_INT = MPI.LONG_LONG_INT
 
-const sc_MPI_FLOAT = MPI_FLOAT
+const sc_MPI_FLOAT = MPI.FLOAT
 
-const sc_MPI_DOUBLE = MPI_DOUBLE
+const sc_MPI_DOUBLE = MPI.DOUBLE
 
-const sc_MPI_DOUBLE_INT = MPI_DOUBLE_INT
 
-const sc_MPI_PACKED = MPI_PACKED
 
-const sc_MPI_Comm = MPI_Comm
+const sc_MPI_Comm = MPI.Comm
 
-const sc_MPI_Group = MPI_Group
+const sc_MPI_Group = MPI.Group
 
-const sc_MPI_Datatype = MPI_Datatype
+const sc_MPI_Datatype = MPI.Datatype
 
-const sc_MPI_Info = MPI_Info
+const sc_MPI_Info = MPI.Info
 
-const sc_MPI_Type_size = MPI_Type_size
 
-const sc_MPI_Pack = MPI_Pack
 
-const sc_MPI_Unpack = MPI_Unpack
 
-const sc_MPI_Pack_size = MPI_Pack_size
 
-const sc_MPI_Aint_diff = MPI_Aint_diff
 
-const sc_MPI_MODE_RDONLY = MPI_MODE_RDONLY
 
-const sc_MPI_MODE_RDWR = MPI_MODE_RDWR
 
-const sc_MPI_MODE_WRONLY = MPI_MODE_WRONLY
 
-const sc_MPI_MODE_CREATE = MPI_MODE_CREATE
 
-const sc_MPI_MODE_EXCL = MPI_MODE_EXCL
 
-const sc_MPI_MODE_DELETE_ON_CLOSE = MPI_MODE_DELETE_ON_CLOSE
 
-const sc_MPI_MODE_UNIQUE_OPEN = MPI_MODE_UNIQUE_OPEN
 
-const sc_MPI_MODE_SEQUENTIAL = MPI_MODE_SEQUENTIAL
 
-const sc_MPI_MODE_APPEND = MPI_MODE_APPEND
 
-const sc_MPI_SEEK_SET = MPI_SEEK_SET
 
-const sc_MPI_SEEK_CUR = MPI_SEEK_CUR
 
-const sc_MPI_SEEK_END = MPI_SEEK_END
 
-const sc_MPI_Offset = MPI_Offset
 
-const sc_MPI_File = MPI_File
+const sc_MPI_File = MPI.File
 
-const sc_MPI_FILE_NULL = MPI_FILE_NULL
+const sc_MPI_FILE_NULL = MPI.FILE_NULL
 
-const sc_MPI_File_open = MPI_File_open
 
-const sc_MPI_File_close = MPI_File_close
 
-const sc_MPI_File_get_view = MPI_File_get_view
 
-const sc_MPI_File_set_view = MPI_File_set_view
 
-const sc_MPI_File_write_all = MPI_File_write_all
 
-const sc_MPI_File_read_all = MPI_File_read_all
 
-const sc_MPI_File_write_at_all = MPI_File_write_at_all
 
-const sc_MPI_File_read_at_all = MPI_File_read_at_all
 
-const sc_MPI_File_get_size = MPI_File_get_size
 
-const sc_MPI_File_set_size = MPI_File_set_size
 
 const SC_EPS = 2.220446049250313e-16
 
@@ -17365,9 +17275,7 @@ const SC_LP_SILENT = 9
 
 const SC_LP_THRESHOLD = SC_LP_INFO
 
-const t8_const = _sc_const
 
-const t8_restrict = _sc_restrict
 
 const T8_MPI_LOCIDX = sc_MPI_INT
 
@@ -17399,53 +17307,34 @@ const T8_ECLASS_MAX_CORNERS = 8
 
 const T8_ECLASS_MAX_DIM = 3
 
-const T8_ECLASS_TO_DIMENSION_VALUES = {0, 1, 2, 2, 3, 3, 3, 3}
 
-const T8_ECLASS_NUM_FACES_VALUES = {0, 2, 4, 3, 6, 4, 5, 5}
 
-const T8_ECLASS_MAX_NUM_FACES_VALUES = {0, 2, 4, 6}
 
-const T8_ECLASS_MAX_NUM_CHILDREN_VALUES = {1, 2, 4, 4, 8, 8, 8, 10}
 
-# Skipping MacroDefinition: T8_FACE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 2 , 4 , 6 } , { 1 , 3 , 5 , 7 } , { 0 , 1 , 4 , 5 } , { 2 , 3 , 6 , 7 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } } , /* hex */ { { 1 , 2 , 3 } , { 0 , 2 , 3 } , { 0 , 1 , 3 } , { 0 , 1 , 2 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { 0 , 2 , 4 } , { 1 , 3 , 4 } , { 0 , 1 , 4 } , { 2 , 3 , 4 } , { 0 , 1 , 2 , 3 } } /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_FACE_EDGE_TO_TREE_EDGE_VALUES { { { - 1 } } , /* vertex */ { { 0 } } , /* line */ { { 0 } , { 1 } , { 2 } , { 3 } } , /* quad */ { { 0 } , { 1 } , { 2 } } , /* triangle */ { { 8 , 10 , 4 , 6 } , { 9 , 11 , 5 , 7 } , { 8 , 9 , 0 , 2 } , { 10 , 11 , 1 , 3 } , { 4 , 5 , 0 , 1 } , { 6 , 7 , 2 , 3 } } , /* hex */ { { 3 , 4 , 5 } , { 1 , 2 , 5 } , { 0 , 2 , 4 } , { 0 , 1 , 3 } } , /* tet */ { { 0 , 7 , 3 , 6 } , { 1 , 8 , 4 , 7 } , { 2 , 6 , 5 , 8 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_FACE_TO_EDGE_NEIGHBOR_VALUES { { { - 1 } } , /* vertex */ { { - 1 } } , /* line */ { { 2 , 3 } , { 2 , 3 } , { 0 , 1 } , { 0 , 1 } } , /* quad */ { { 2 , 1 } , { 2 , 0 } , { 1 , 0 } } , /* triangle */ { { 0 , 1 , 2 , 3 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } , { 4 , 5 , 6 , 7 } , { 8 , 9 , 10 , 11 } , { 8 , 9 , 10 , 11 } } , /* hex */ { { 0 , 1 , 2 } , { 0 , 3 , 4 } , { 1 , 3 , 5 } , { 2 , 4 , 5 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 6 , 7 , 8 } , { 6 , 7 , 8 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_EDGE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 1 } , { 2 , 3 } , { 4 , 5 } , { 6 , 7 } , { 0 , 2 } , { 1 , 3 } , { 4 , 6 } , { 5 , 7 } , { 0 , 4 } , { 1 , 5 } , { 2 , 6 } , { 3 , 7 } } , /* hex */ { { 0 , 1 } , { 0 , 2 } , { 0 , 3 } , { 1 , 2 } , { 1 , 3 } , { 2 , 3 } } , /* tet */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } , { 4 , 5 } , { 3 , 5 } , { 3 , 4 } , { 1 , 4 } , { 2 , 5 } , { 0 , 3 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_EDGE_TO_FACE_VALUES { { { - 1 } } , /* vertex */ { { 0 } } , /* line */ { { 0 } , { 1 } , { 2 } , { 3 } } , /* quad */ { { 0 } , { 1 } , { 2 } } , /* triangle */ { { 2 , 4 } , { 3 , 4 } , { 2 , 5 } , { 3 , 5 } , { 0 , 4 } , { 1 , 4 } , { 0 , 5 } , { 1 , 5 } , { 0 , 2 } , { 1 , 2 } , { 0 , 3 } , { 1 , 3 } } , /* hex */ { { 2 , 3 } , { 1 , 3 } , { 1 , 2 } , { 0 , 3 } , { 0 , 2 } , { 0 , 1 } } , /* tet */ { { 0 , 3 } , { 1 , 3 } , { 2 , 3 } , { 0 , 4 } , { 1 , 4 } , { 2 , 4 } , { 0 , 2 } , { 0 , 1 } , { 1 , 2 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_ECLASS_FACE_ORIENTATION_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 0 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 0 , 0 , 0 , - 1 , - 1 } , /* quad */ { 0 , 0 , 0 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 1 , 0 , 0 , 1 } , /* hex */ { 0 , 1 , 0 , 1 , - 1 , - 1 } , /* tet */ { 1 , 0 , 1 , 0 , 1 , - 1 } , /* prism */ { 0 , 1 , 1 , 0 , 0 , - 1 } /* pyramid */ \
 #}
 
-const T8_REFERENCE_FACE_NORMAL_TET_VALUES = {{-1, 0, 0}, {1, 0, -1}, {0, -1, 1}, {0, 1, 0}}
 
-const T8_ECLASS_NUM_VERTICES_VALUES = {1, 2, 4, 3, 8, 4, 6, 5}
 
-const T8_ECLASS_NUM_EDGES_VALUES = {0, 1, 4, 3, 12, 6, 9, 8}
 
-const T8_ECLASS_VTK_TYPE_VALUES = {1, 3, 9, 5, 12, 10, 13, 14}
 
-# Skipping MacroDefinition: T8_ECLASS_VTK_TO_T8_CORNER_NUMBER_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 1 , 3 , 2 , - 1 , - 1 , - 1 , - 1 } , /* quad */ { 0 , 1 , 2 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 3 , 2 , 4 , 5 , 7 , 6 } , /* hex */ { 0 , 2 , 1 , 3 , - 1 , - 1 , - 1 , - 1 } , /* tet */ { 0 , 2 , 1 , 3 , 5 , 4 , - 1 , - 1 } , /* prism */ { 0 , 1 , 3 , 2 , 4 , - 1 , - 1 , - 1 } /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_ECLASS_T8_TO_VTK_CORNER_NUMBER_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 1 , 3 , 2 , - 1 , - 1 , - 1 , - 1 } , /* quad */ { 0 , 1 , 2 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 3 , 2 , 4 , 5 , 7 , 6 } , /* hex */ { 0 , 2 , 1 , 3 , - 1 , - 1 , - 1 , - 1 } , /* tet */ { 0 , 2 , 1 , 3 , 5 , 4 , - 1 , - 1 } , /* prism */ { 0 , 1 , 3 , 2 , 4 , - 1 , - 1 , - 1 } /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_ECLASS_FACE_TYPES_VALUES { { - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 0 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 1 , 1 , 1 , 1 , - 1 , - 1 } , /* quad */ { 1 , 1 , 1 , - 1 , - 1 , - 1 } , /* triangle */ { 2 , 2 , 2 , 2 , 2 , 2 } , /* hex */ { 3 , 3 , 3 , 3 , - 1 , - 1 } , /* tet */ { 2 , 2 , 2 , 3 , 3 , - 1 } , /* prism */ { 3 , 3 , 3 , 3 , 2 , - 1 } /* pyramid */ \
 #}
 
-# Skipping MacroDefinition: T8_ECLASS_BOUNDARY_COUNT_VALUES { { 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 } , /* vertex */ { 2 , 0 , 0 , 0 , 0 , 0 , 0 , 0 } , /* line */ { 4 , 4 , 0 , 0 , 0 , 0 , 0 , 0 } , /* quad */ { 3 , 3 , 0 , 0 , 0 , 0 , 0 , 0 } , /* triangle */ { 8 , 12 , 6 , 0 , 0 , 0 , 0 , 0 } , /* hex */ { 4 , 6 , 0 , 4 , 0 , 0 , 0 , 0 } , /* tet */ { 6 , 9 , 3 , 2 , 0 , 0 , 0 , 0 } , /* prism */ { 5 , 8 , 1 , 4 , 0 , 0 , 0 , 0 } /* pyramid */ \
 #}
 
-const T8_ECLASS_TO_STRING_VALUES = {"Vertex", "Line", "Quad", "Triangle", "Hex", "Tet", "Prism", "Pyramid", "Invalid"}
 
 # Skipping MacroDefinition: T8_MPI_ELEMENT_SHAPE_TYPE ( T8_ASSERT ( sizeof ( int ) == sizeof ( t8_element_shape_t ) ) , sc_MPI_INT )
 
@@ -17453,7 +17342,6 @@ const T8_ELEMENT_SHAPE_MAX_FACES = 6
 
 const T8_ELEMENT_SHAPE_MAX_CORNERS = 8
 
-const T8_VERSION_POINT_STRING = T8_STRINGIFY_MIDDLE(T8_VERSION_POINT)
 
 const T8_VTK_LOCIDX = "Int32"
 
@@ -17541,7 +17429,6 @@ const P4EST_MPI_QCOORD = sc_MPI_INT
 
 const P4EST_VTK_QCOORD = "Int32"
 
-const P4EST_F90_QCOORD = INTEGER(KIND = C_INT32_T)
 
 const P4EST_QCOORD_MIN = INT32_MIN
 
@@ -17557,7 +17444,6 @@ const P4EST_MPI_TOPIDX = sc_MPI_INT
 
 const P4EST_VTK_TOPIDX = "Int32"
 
-const P4EST_F90_TOPIDX = INTEGER(KIND = C_INT32_T)
 
 const P4EST_TOPIDX_MIN = INT32_MIN
 
@@ -17575,7 +17461,6 @@ const P4EST_MPI_LOCIDX = sc_MPI_INT
 
 const P4EST_VTK_LOCIDX = "Int32"
 
-const P4EST_F90_LOCIDX = INTEGER(KIND = C_INT32_T)
 
 const P4EST_LOCIDX_MIN = INT32_MIN
 
@@ -17591,7 +17476,6 @@ const P4EST_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
 
 const P4EST_VTK_GLOIDX = "Int64"
 
-const P4EST_F90_GLOIDX = INTEGER(KIND = C_INT64_T)
 
 const P4EST_GLOIDX_MIN = INT64_MIN
 
@@ -17599,13 +17483,9 @@ const P4EST_GLOIDX_MAX = INT64_MAX
 
 const P4EST_GLOIDX_1 = p4est_gloidx_t(1)
 
-const P4EST_GLOBAL_NOTICE = P4EST_GLOBAL_STATISTICS
 
-const P4EST_GLOBAL_NOTICEF = P4EST_GLOBAL_STATISTICSF
 
-const P4EST_NOTICE = P4EST_STATISTICS
 
-const P4EST_NOTICEF = P4EST_STATISTICSF
 
 const P4EST_DIM = 2
 

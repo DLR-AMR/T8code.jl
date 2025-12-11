@@ -12576,7 +12576,7 @@ int t8_forest_get_dimension (const t8_forest_t forest);
 ```
 """
 function t8_forest_get_dimension(forest)
-    @ccall libt8.t8_forest_get_dimension(forest::Cint)::Cint
+    @ccall libt8.t8_forest_get_dimension(forest::t8_forest_t)::Cint
 end
 
 """
@@ -12588,7 +12588,7 @@ void t8_forest_element_coordinate (t8_forest_t forest, t8_locidx_t ltree_id, con
 ```
 """
 function t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
-    @ccall libt8.t8_forest_element_coordinate(forest::Cint, ltree_id::t8_locidx_t, element::Ptr{t8_element_t}, corner_number::Cint, coordinates::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_coordinate(forest::t8_forest_t, ltree_id::t8_locidx_t, element::Ptr{t8_element_t}, corner_number::Cint, coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -12600,7 +12600,7 @@ void t8_forest_element_from_ref_coords_ext (t8_forest_t forest, t8_locidx_t ltre
 ```
 """
 function t8_forest_element_from_ref_coords_ext(forest, ltreeid, element, ref_coords, num_coords, coords_out, stretch_factors)
-    @ccall libt8.t8_forest_element_from_ref_coords_ext(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble}, stretch_factors::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_from_ref_coords_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble}, stretch_factors::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -12612,7 +12612,7 @@ void t8_forest_element_from_ref_coords (t8_forest_t forest, t8_locidx_t ltreeid,
 ```
 """
 function t8_forest_element_from_ref_coords(forest, ltreeid, element, ref_coords, num_coords, coords_out)
-    @ccall libt8.t8_forest_element_from_ref_coords(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_from_ref_coords(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -12624,7 +12624,7 @@ void t8_forest_element_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const 
 ```
 """
 function t8_forest_element_centroid(forest, ltreeid, element, coordinates)
-    @ccall libt8.t8_forest_element_centroid(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -12636,7 +12636,7 @@ double t8_forest_element_diam (t8_forest_t forest, t8_locidx_t ltreeid, const t8
 ```
 """
 function t8_forest_element_diam(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_diam(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+    @ccall libt8.t8_forest_element_diam(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
 end
 
 """
@@ -12648,7 +12648,7 @@ double t8_forest_element_volume (t8_forest_t forest, t8_locidx_t ltreeid, const 
 ```
 """
 function t8_forest_element_volume(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_volume(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+    @ccall libt8.t8_forest_element_volume(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
 end
 
 """
@@ -12660,7 +12660,7 @@ double t8_forest_element_face_area (t8_forest_t forest, t8_locidx_t ltreeid, con
 ```
 """
 function t8_forest_element_face_area(forest, ltreeid, element, face)
-    @ccall libt8.t8_forest_element_face_area(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint)::Cdouble
+    @ccall libt8.t8_forest_element_face_area(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint)::Cdouble
 end
 
 """
@@ -12672,7 +12672,7 @@ void t8_forest_element_face_centroid (t8_forest_t forest, t8_locidx_t ltreeid, c
 ```
 """
 function t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
-    @ccall libt8.t8_forest_element_face_centroid(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, centroid::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_face_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, centroid::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -12684,7 +12684,7 @@ void t8_forest_element_face_normal (t8_forest_t forest, t8_locidx_t ltreeid, con
 ```
 """
 function t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
-    @ccall libt8.t8_forest_element_face_normal(forest::Cint, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, normal::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_face_normal(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, normal::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -13071,7 +13071,7 @@ void t8_forest_save (t8_forest_t forest);
 ```
 """
 function t8_forest_save(forest)
-    @ccall libt8.t8_forest_save(forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_save(forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -13083,7 +13083,7 @@ int t8_forest_write_vtk_ext (t8_forest_t forest, const char *fileprefix, const i
 ```
 """
 function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
-    @ccall libt8.t8_forest_write_vtk_ext(forest::Cint, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
 end
 
 """
@@ -13095,7 +13095,7 @@ int t8_forest_write_vtk (t8_forest_t forest, const char *fileprefix);
 ```
 """
 function t8_forest_write_vtk(forest, fileprefix)
-    @ccall libt8.t8_forest_write_vtk(forest::Cint, fileprefix::Cstring)::Cint
+    @ccall libt8.t8_forest_write_vtk(forest::t8_forest_t, fileprefix::Cstring)::Cint
 end
 
 # typedef int ( * t8_forest_iterate_face_fn ) ( const t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int face , void * user_data , const t8_locidx_t tree_leaf_index )
@@ -13418,7 +13418,7 @@ void t8_forest_set_profiling (t8_forest_t forest, int set_profiling);
 ```
 """
 function t8_forest_set_profiling(forest, set_profiling)
-    @ccall libt8.t8_forest_set_profiling(forest::Cint, set_profiling::Cint)::Cvoid
+    @ccall libt8.t8_forest_set_profiling(forest::t8_forest_t, set_profiling::Cint)::Cvoid
 end
 
 """
@@ -13430,7 +13430,7 @@ void t8_forest_compute_profile (t8_forest_t forest);
 ```
 """
 function t8_forest_compute_profile(forest)
-    @ccall libt8.t8_forest_compute_profile(forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_compute_profile(forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -13442,7 +13442,7 @@ const sc_statinfo_t * t8_forest_profile_get_adapt_stats (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_adapt_stats(forest)
-    @ccall libt8.t8_forest_profile_get_adapt_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_adapt_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13454,7 +13454,7 @@ const sc_statinfo_t * t8_forest_profile_get_ghost_stats (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_ghost_stats(forest)
-    @ccall libt8.t8_forest_profile_get_ghost_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_ghost_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13466,7 +13466,7 @@ const sc_statinfo_t * t8_forest_profile_get_partition_stats (t8_forest_t forest)
 ```
 """
 function t8_forest_profile_get_partition_stats(forest)
-    @ccall libt8.t8_forest_profile_get_partition_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_partition_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13478,7 +13478,7 @@ const sc_statinfo_t * t8_forest_profile_get_commit_stats (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_commit_stats(forest)
-    @ccall libt8.t8_forest_profile_get_commit_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_commit_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13490,7 +13490,7 @@ const sc_statinfo_t * t8_forest_profile_get_balance_stats (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_balance_stats(forest)
-    @ccall libt8.t8_forest_profile_get_balance_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_balance_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13502,7 +13502,7 @@ const sc_statinfo_t * t8_forest_profile_get_balance_rounds_stats (t8_forest_t fo
 ```
 """
 function t8_forest_profile_get_balance_rounds_stats(forest)
-    @ccall libt8.t8_forest_profile_get_balance_rounds_stats(forest::Cint)::Ptr{sc_statinfo_t}
+    @ccall libt8.t8_forest_profile_get_balance_rounds_stats(forest::t8_forest_t)::Ptr{sc_statinfo_t}
 end
 
 """
@@ -13514,7 +13514,7 @@ void t8_forest_print_profile (t8_forest_t forest);
 ```
 """
 function t8_forest_print_profile(forest)
-    @ccall libt8.t8_forest_print_profile(forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_print_profile(forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -13526,7 +13526,7 @@ double t8_forest_profile_get_adapt_time (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_adapt_time(forest)
-    @ccall libt8.t8_forest_profile_get_adapt_time(forest::Cint)::Cdouble
+    @ccall libt8.t8_forest_profile_get_adapt_time(forest::t8_forest_t)::Cdouble
 end
 
 """
@@ -13538,7 +13538,7 @@ double t8_forest_profile_get_partition_time (t8_forest_t forest, int *procs_sent
 ```
 """
 function t8_forest_profile_get_partition_time(forest, procs_sent)
-    @ccall libt8.t8_forest_profile_get_partition_time(forest::Cint, procs_sent::Ptr{Cint})::Cdouble
+    @ccall libt8.t8_forest_profile_get_partition_time(forest::t8_forest_t, procs_sent::Ptr{Cint})::Cdouble
 end
 
 """
@@ -13550,7 +13550,7 @@ double t8_forest_profile_get_balance_time (t8_forest_t forest, int *balance_roun
 ```
 """
 function t8_forest_profile_get_balance_time(forest, balance_rounds)
-    @ccall libt8.t8_forest_profile_get_balance_time(forest::Cint, balance_rounds::Ptr{Cint})::Cdouble
+    @ccall libt8.t8_forest_profile_get_balance_time(forest::t8_forest_t, balance_rounds::Ptr{Cint})::Cdouble
 end
 
 """
@@ -13562,7 +13562,7 @@ double t8_forest_profile_get_ghost_time (t8_forest_t forest, t8_locidx_t *ghosts
 ```
 """
 function t8_forest_profile_get_ghost_time(forest, ghosts_sent)
-    @ccall libt8.t8_forest_profile_get_ghost_time(forest::Cint, ghosts_sent::Ptr{Cint})::Cdouble
+    @ccall libt8.t8_forest_profile_get_ghost_time(forest::t8_forest_t, ghosts_sent::Ptr{Cint})::Cdouble
 end
 
 """
@@ -13574,7 +13574,7 @@ double t8_forest_profile_get_ghostexchange_waittime (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_ghostexchange_waittime(forest)
-    @ccall libt8.t8_forest_profile_get_ghostexchange_waittime(forest::Cint)::Cdouble
+    @ccall libt8.t8_forest_profile_get_ghostexchange_waittime(forest::t8_forest_t)::Cdouble
 end
 
 """
@@ -13586,7 +13586,7 @@ double t8_forest_profile_get_cmesh_offsets_runtime (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_cmesh_offsets_runtime(forest)
-    @ccall libt8.t8_forest_profile_get_cmesh_offsets_runtime(forest::Cint)::Cdouble
+    @ccall libt8.t8_forest_profile_get_cmesh_offsets_runtime(forest::t8_forest_t)::Cdouble
 end
 
 """
@@ -13598,7 +13598,7 @@ double t8_forest_profile_get_forest_offsets_runtime (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_forest_offsets_runtime(forest)
-    @ccall libt8.t8_forest_profile_get_forest_offsets_runtime(forest::Cint)::Cdouble
+    @ccall libt8.t8_forest_profile_get_forest_offsets_runtime(forest::t8_forest_t)::Cdouble
 end
 
 """
@@ -13610,7 +13610,7 @@ double t8_forest_profile_get_first_descendant_runtime (t8_forest_t forest);
 ```
 """
 function t8_forest_profile_get_first_descendant_runtime(forest)
-    @ccall libt8.t8_forest_profile_get_first_descendant_runtime(forest::Cint)::Cdouble
+    @ccall libt8.t8_forest_profile_get_first_descendant_runtime(forest::t8_forest_t)::Cdouble
 end
 
 """
@@ -16348,7 +16348,7 @@ void t8_forest_init_search (t8_forest_search_c_wrapper search, t8_search_element
 ```
 """
 function t8_forest_init_search(search, element_callback, forest)
-    @ccall libt8.t8_forest_init_search(search::t8_forest_search_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_init_search(search::t8_forest_search_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -16360,7 +16360,7 @@ void t8_forest_search_update_forest (t8_forest_search_c_wrapper search, const t8
 ```
 """
 function t8_forest_search_update_forest(search, forest)
-    @ccall libt8.t8_forest_search_update_forest(search::t8_forest_search_c_wrapper, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_search_update_forest(search::t8_forest_search_c_wrapper, forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -16426,7 +16426,7 @@ void t8_forest_init_search_with_queries (t8_forest_search_with_queries_c_wrapper
 ```
 """
 function t8_forest_init_search_with_queries(search_with_queries, element_callback, queries_callback, queries, num_queries, forest)
-    @ccall libt8.t8_forest_init_search_with_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_init_search_with_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -16438,7 +16438,7 @@ void t8_forest_search_with_queries_update_forest (t8_forest_search_with_queries_
 ```
 """
 function t8_forest_search_with_queries_update_forest(search_with_queries, forest)
-    @ccall libt8.t8_forest_search_with_queries_update_forest(search_with_queries::t8_forest_search_with_queries_c_wrapper, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_search_with_queries_update_forest(search_with_queries::t8_forest_search_with_queries_c_wrapper, forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -16522,7 +16522,7 @@ void t8_forest_init_search_with_batched_queries (t8_forest_search_with_batched_q
 ```
 """
 function t8_forest_init_search_with_batched_queries(search_with_queries, element_callback, queries_callback, queries, num_queries, forest)
-    @ccall libt8.t8_forest_init_search_with_batched_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_batched_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_init_search_with_batched_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_batched_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -16534,7 +16534,7 @@ void t8_forest_search_with_batched_queries_update_forest ( t8_forest_search_with
 ```
 """
 function t8_forest_search_with_batched_queries_update_forest(search_with_queries, forest)
-    @ccall libt8.t8_forest_search_with_batched_queries_update_forest(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, forest::Cint)::Cvoid
+    @ccall libt8.t8_forest_search_with_batched_queries_update_forest(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, forest::t8_forest_t)::Cvoid
 end
 
 """

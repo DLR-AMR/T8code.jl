@@ -12,12 +12,16 @@ set -euxo pipefail
 # Fix MPI types that have been wrongly converted to Julia types
 sed -i "s/mpicomm::Cint/mpicomm::MPI_Comm/g" "${LIB_JL}"
 sed -i "s/\bcomm::Cint/comm::MPI_Comm/g" "${LIB_JL}"
-sed -i "s/\bcomm::Cint/comm::MPI_Comm/g" "${LIB_JL}"
 sed -i "s/\bintranode::Ptr{Cint}/intranode::Ptr{MPI_Comm}/g" "${LIB_JL}"
 sed -i "s/\binternode::Ptr{Cint}/internode::Ptr{MPI_Comm}/g" "${LIB_JL}"
 sed -i "s/mpifile::Cint/mpifile::MPI_File/g" "${LIB_JL}"
 
 sed -i "s/t8_forest_get_mpicomm(forest::t8_forest_t)::Cint/t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm/g" "${LIB_JL}"
+
+# Remove struct t8_forest definition and replace by forward declaration
+sed -i -z 's/\nstruct t8_forest.*stats_computed::Cint\nend/\n# This struct is not supposed to be read and modified directly.\n# Besides, there is a circular dependency with `t8_forest_t`\n# leading to an error output by Julia.\nmutable struct t8_forest end/g' "${LIB_JL}"
+
+sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
 
 # Remove Fortran macros
 sed -i "/INTEGER(KIND/d" "${LIB_JL}"
@@ -50,6 +54,3 @@ sed -i "/= MPI_File_/d" "${LIB_JL}"
 sed -i "/= MPI_Aint/d" "${LIB_JL}"
 
 sed -i "s/= MPI_/= MPI./" "${LIB_JL}"
-
-# remove struct t8_forest definition and replace by forward declaration
-sed -i -z 's/\nstruct t8_forest.*stats_computed::Cint\nend/\n# This struct is not supposed to be read and modified directly.\n# Besides, there is a circular dependency with `t8_forest_t`\n# leading to an error output by Julia.\nmutable struct t8_forest end/g' "${LIB_JL}"

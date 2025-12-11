@@ -8225,7 +8225,7 @@ Return the patch version number of t8code.
 
 
 # Returns
-The patch version unmber of t8code. negative on error.
+The patch version number of t8code. negative on error.
 ### Prototype
 ```c
 int t8_get_version_patch ();
@@ -13283,7 +13283,7 @@ end
 """
     t8_cmesh_trees_finish_part(trees, proc)
 
-After all classes of trees and ghosts have been set and after the number of tree attributes was set and their total size (per tree) stored temporarily in the att\\_offset variable we grow the part array by the needed amount of memory and set the offsets appropriately. The workflow should be: call t8_cmesh_trees_start_part, set tree and ghost classes maually via t8_cmesh_trees_add_tree and t8_cmesh_trees_add_ghost, call t8_cmesh_trees_init_attributes, then call this function. Afterwards successively call t8_cmesh_trees_add_attribute for each attribute and also set all face neighbors (TODO: write function).
+After all classes of trees and ghosts have been set and after the number of tree attributes was set and their total size (per tree) stored temporarily in the att\\_offset variable we grow the part array by the needed amount of memory and set the offsets appropriately. The workflow should be: call t8_cmesh_trees_start_part, set tree and ghost classes manually via t8_cmesh_trees_add_tree and t8_cmesh_trees_add_ghost, call t8_cmesh_trees_init_attributes, then call this function. Afterwards successively call t8_cmesh_trees_add_attribute for each attribute and also set all face neighbors (TODO: write function).
 
 # Arguments
 * `trees`:\\[in,out\\] The trees structure to be updated.
@@ -14860,7 +14860,7 @@ const t8_forest_adapt_t = Ptr{Cvoid}
 """
     t8_forest_init(pforest)
 
-Create a new forest with reference count one. This forest needs to be specialized with the t8\\_forest\\_set\\_* calls. Currently it is manatory to either call the functions t8_forest_set_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
+Create a new forest with reference count one. This forest needs to be specialized with the t8\\_forest\\_set\\_* calls. Currently it is mandatory to either call the functions t8_forest_set_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
 
 # Arguments
 * `pforest`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new forest.
@@ -17707,7 +17707,7 @@ end
 Definition of an analytic geometry function. This function maps reference coordinates to physical coordinates.
 
 ```c++
- [0,1]^\\mathrm{dim} 
+ [0,1]^\\mathrm{dim}
 ```
 
 .
@@ -17728,19 +17728,19 @@ const t8_geom_analytic_fn = Ptr{Cvoid}
 Definition for the jacobian of an analytic geometry function.
 
 ```c++
- [0,1]^\\mathrm{dim} 
+ [0,1]^\\mathrm{dim}
 ```
 
 .
 
 ```c++
- \\mathrm{dim} 
+ \\mathrm{dim}
 ```
 
 to map.
 
 ```c++
- \\mathrm{dim} \\cdot 3 
+ \\mathrm{dim} \\cdot 3
 ```
 
 x *num_coords*. Indices
@@ -17752,31 +17752,31 @@ x *num_coords*. Indices
 ,
 
 ```c++
- 3 \\cdot i+1 
+ 3 \\cdot i+1
 ```
 
 ,
 
 ```c++
- 3 \\cdot i+2 
+ 3 \\cdot i+2
 ```
 
 correspond to the
 
 ```c++
- i 
+ i
 ```
 
 -th column of the jacobian (Entry
 
 ```c++
- 3 \\cdot i + j 
+ 3 \\cdot i + j
 ```
 
 is
 
 ```c++
- \\frac{\\partial f_j}{\\partial x_i} 
+ \\frac{\\partial f_j}{\\partial x_i}
 ```
 
 ).

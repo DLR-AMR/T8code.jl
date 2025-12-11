@@ -104,7 +104,7 @@ function t8_step6_build_forest(comm, dim, level)
 end
 
 # Allocate and fill the element data array with `heights` from an arbitrary
-# mathematical function. Returns a pointer to the array which is then ownded by
+# mathematical function. Returns a pointer to the array which is then owned by
 # the calling scope.
 function t8_step6_create_element_data(forest)
     # Check that the forest is a committed.
@@ -383,7 +383,7 @@ mpiret = MPI.Init()
 comm = MPI.COMM_WORLD
 
 # Initialize the sc library, has to happen before we initialize t8code.
-sc_init(comm, 1, 1, C_NULL, SC_LP_ESSENTIAL)
+sc_init(comm, 0, 1, C_NULL, SC_LP_ESSENTIAL)
 # Initialize t8code with log level SC_LP_PRODUCTION. See sc.h for more info on the log levels.
 t8_init(SC_LP_PRODUCTION)
 

@@ -2,11 +2,6 @@ module Libt8
 
 using CEnum: CEnum, @cenum
 
-to_c_type(t::Type) = t
-to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
-    :(va_list[$ind]::$type)
-end
-
 using t8code_jll: t8code_jll
 export t8code_jll
 
@@ -107,11 +102,6 @@ function sc_abort_verbose(filename, lineno, msg)
     @ccall libt8.sc_abort_verbose(filename::Cstring, lineno::Cint, msg::Cstring)::Cvoid
 end
 
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_abort_verbosef(filename, lineno, fmt, va_list...)
-        :(@ccall(libt8.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
 """
     sc_malloc(package, size)
 
@@ -189,11 +179,6 @@ void sc_log (const char *filename, int lineno, int package, int category, int pr
 function sc_log(filename, lineno, package, category, priority, msg)
     @ccall libt8.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, msg::Cstring)::Cvoid
 end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_logf(filename, lineno, package, category, priority, fmt, va_list...)
-        :(@ccall(libt8.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
 
 """
     sc_array
@@ -977,11 +962,6 @@ void sc_strcopy (char *dest, size_t size, const char *src);
 function sc_strcopy(dest, size, src)
     @ccall libt8.sc_strcopy(dest::Cstring, size::Csize_t, src::Cstring)::Cvoid
 end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_snprintf(str, size, format, va_list...)
-        :(@ccall(libt8.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
 
 """
     sc_version()
@@ -2936,11 +2916,6 @@ Communication tags used internal to t8code.
     T8_MPI_TAG_LAST = 302
 end
 
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_logf(category, priority, fmt, va_list...)
-        :(@ccall(libt8.t8_logf(category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
 """
     t8_log_indent_push()
 
@@ -2968,46 +2943,6 @@ void t8_log_indent_pop (void);
 function t8_log_indent_pop()
     @ccall libt8.t8_log_indent_pop()::Cvoid
 end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_global_errorf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_global_essentialf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_essentialf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_global_productionf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_global_infof(fmt, va_list...)
-        :(@ccall(libt8.t8_global_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_infof(fmt, va_list...)
-        :(@ccall(libt8.t8_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_productionf(fmt, va_list...)
-        :(@ccall(libt8.t8_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_debugf(fmt, va_list...)
-        :(@ccall(libt8.t8_debugf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function t8_errorf(fmt, va_list...)
-        :(@ccall(libt8.t8_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
 
 """
     t8_set_external_log_fcn(log_fcn)
@@ -5583,11 +5518,6 @@ Open modes for sc_io_open
     SC_IO_WRITE_APPEND = 2
 end
 
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_sink_new(iotype, iomode, ioencode, va_list...)
-        :(@ccall(libt8.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
-    end
-
 """
     sc_io_sink_destroy(sink)
 
@@ -5682,11 +5612,6 @@ int sc_io_sink_align (sc_io_sink_t * sink, size_t bytes_align);
 function sc_io_sink_align(sink, bytes_align)
     @ccall libt8.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
 end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_io_source_new(iotype, ioencode, va_list...)
-        :(@ccall(libt8.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
-    end
 
 """
     sc_io_source_destroy(source)
@@ -10385,11 +10310,6 @@ sc_keyvalue_t *sc_keyvalue_new ();
 function sc_keyvalue_new()
     @ccall libt8.sc_keyvalue_new()::Ptr{sc_keyvalue_t}
 end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_keyvalue_newf(dummy, va_list...)
-        :(@ccall(libt8.sc_keyvalue_newf(dummy::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_keyvalue_t}))
-    end
 
 """
     sc_keyvalue_destroy(kv)
@@ -15666,11 +15586,6 @@ function sc_flops_count(fi)
     @ccall libt8.sc_flops_count(fi::Ptr{sc_flopinfo_t})::Cvoid
 end
 
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_flops_shotv(fi, va_list...)
-        :(@ccall(libt8.sc_flops_shotv(fi::Ptr{sc_flopinfo_t}; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
 mutable struct sc_options end
 
 """The options data structure is opaque."""
@@ -17143,29 +17058,7 @@ const SC_VERSION_MINOR = 0
 
 const SC_VERSION_POINT = 0
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Skipping MacroDefinition: _sc_const const
 
 const sc_MPI_COMM_WORLD = MPI.COMM_WORLD
 
@@ -17201,8 +17094,6 @@ const sc_MPI_FLOAT = MPI.FLOAT
 
 const sc_MPI_DOUBLE = MPI.DOUBLE
 
-
-
 const sc_MPI_Comm = MPI.Comm
 
 const sc_MPI_Group = MPI.Group
@@ -17211,37 +17102,9 @@ const sc_MPI_Datatype = MPI.Datatype
 
 const sc_MPI_Info = MPI.Info
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const sc_MPI_File = MPI.File
 
 const sc_MPI_FILE_NULL = MPI.FILE_NULL
-
-
-
-
-
-
-
-
-
-
 
 const SC_EPS = 2.220446049250313e-16
 
@@ -17275,8 +17138,6 @@ const SC_LP_SILENT = 9
 
 const SC_LP_THRESHOLD = SC_LP_INFO
 
-
-
 const T8_MPI_LOCIDX = sc_MPI_INT
 
 const T8_LOCIDX_MAX = INT32_MAX
@@ -17307,41 +17168,41 @@ const T8_ECLASS_MAX_CORNERS = 8
 
 const T8_ECLASS_MAX_DIM = 3
 
-
-
-
-
+# Skipping MacroDefinition: T8_FACE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 2 , 4 , 6 } , { 1 , 3 , 5 , 7 } , { 0 , 1 , 4 , 5 } , { 2 , 3 , 6 , 7 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } } , /* hex */ { { 1 , 2 , 3 } , { 0 , 2 , 3 } , { 0 , 1 , 3 } , { 0 , 1 , 2 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { 0 , 2 , 4 } , { 1 , 3 , 4 } , { 0 , 1 , 4 } , { 2 , 3 , 4 } , { 0 , 1 , 2 , 3 } } /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_FACE_EDGE_TO_TREE_EDGE_VALUES { { { - 1 } } , /* vertex */ { { 0 } } , /* line */ { { 0 } , { 1 } , { 2 } , { 3 } } , /* quad */ { { 0 } , { 1 } , { 2 } } , /* triangle */ { { 8 , 10 , 4 , 6 } , { 9 , 11 , 5 , 7 } , { 8 , 9 , 0 , 2 } , { 10 , 11 , 1 , 3 } , { 4 , 5 , 0 , 1 } , { 6 , 7 , 2 , 3 } } , /* hex */ { { 3 , 4 , 5 } , { 1 , 2 , 5 } , { 0 , 2 , 4 } , { 0 , 1 , 3 } } , /* tet */ { { 0 , 7 , 3 , 6 } , { 1 , 8 , 4 , 7 } , { 2 , 6 , 5 , 8 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_FACE_TO_EDGE_NEIGHBOR_VALUES { { { - 1 } } , /* vertex */ { { - 1 } } , /* line */ { { 2 , 3 } , { 2 , 3 } , { 0 , 1 } , { 0 , 1 } } , /* quad */ { { 2 , 1 } , { 2 , 0 } , { 1 , 0 } } , /* triangle */ { { 0 , 1 , 2 , 3 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } , { 4 , 5 , 6 , 7 } , { 8 , 9 , 10 , 11 } , { 8 , 9 , 10 , 11 } } , /* hex */ { { 0 , 1 , 2 } , { 0 , 3 , 4 } , { 1 , 3 , 5 } , { 2 , 4 , 5 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 6 , 7 , 8 } , { 6 , 7 , 8 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_EDGE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 1 } , { 2 , 3 } , { 4 , 5 } , { 6 , 7 } , { 0 , 2 } , { 1 , 3 } , { 4 , 6 } , { 5 , 7 } , { 0 , 4 } , { 1 , 5 } , { 2 , 6 } , { 3 , 7 } } , /* hex */ { { 0 , 1 } , { 0 , 2 } , { 0 , 3 } , { 1 , 2 } , { 1 , 3 } , { 2 , 3 } } , /* tet */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } , { 4 , 5 } , { 3 , 5 } , { 3 , 4 } , { 1 , 4 } , { 2 , 5 } , { 0 , 3 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_EDGE_TO_FACE_VALUES { { { - 1 } } , /* vertex */ { { 0 } } , /* line */ { { 0 } , { 1 } , { 2 } , { 3 } } , /* quad */ { { 0 } , { 1 } , { 2 } } , /* triangle */ { { 2 , 4 } , { 3 , 4 } , { 2 , 5 } , { 3 , 5 } , { 0 , 4 } , { 1 , 4 } , { 0 , 5 } , { 1 , 5 } , { 0 , 2 } , { 1 , 2 } , { 0 , 3 } , { 1 , 3 } } , /* hex */ { { 2 , 3 } , { 1 , 3 } , { 1 , 2 } , { 0 , 3 } , { 0 , 2 } , { 0 , 1 } } , /* tet */ { { 0 , 3 } , { 1 , 3 } , { 2 , 3 } , { 0 , 4 } , { 1 , 4 } , { 2 , 4 } , { 0 , 2 } , { 0 , 1 } , { 1 , 2 } } , /* prism */ { { - 1 } } , /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_ECLASS_FACE_ORIENTATION_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 0 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 0 , 0 , 0 , - 1 , - 1 } , /* quad */ { 0 , 0 , 0 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 1 , 0 , 0 , 1 } , /* hex */ { 0 , 1 , 0 , 1 , - 1 , - 1 } , /* tet */ { 1 , 0 , 1 , 0 , 1 , - 1 } , /* prism */ { 0 , 1 , 1 , 0 , 0 , - 1 } /* pyramid */ \
 #}
 
-
-
-
-
+# Skipping MacroDefinition: T8_ECLASS_VTK_TO_T8_CORNER_NUMBER_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 1 , 3 , 2 , - 1 , - 1 , - 1 , - 1 } , /* quad */ { 0 , 1 , 2 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 3 , 2 , 4 , 5 , 7 , 6 } , /* hex */ { 0 , 2 , 1 , 3 , - 1 , - 1 , - 1 , - 1 } , /* tet */ { 0 , 2 , 1 , 3 , 5 , 4 , - 1 , - 1 } , /* prism */ { 0 , 1 , 3 , 2 , 4 , - 1 , - 1 , - 1 } /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_ECLASS_T8_TO_VTK_CORNER_NUMBER_VALUES { { 0 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 1 , - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 0 , 1 , 3 , 2 , - 1 , - 1 , - 1 , - 1 } , /* quad */ { 0 , 1 , 2 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* triangle */ { 0 , 1 , 3 , 2 , 4 , 5 , 7 , 6 } , /* hex */ { 0 , 2 , 1 , 3 , - 1 , - 1 , - 1 , - 1 } , /* tet */ { 0 , 2 , 1 , 3 , 5 , 4 , - 1 , - 1 } , /* prism */ { 0 , 1 , 3 , 2 , 4 , - 1 , - 1 , - 1 } /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_ECLASS_FACE_TYPES_VALUES { { - 1 , - 1 , - 1 , - 1 , - 1 , - 1 } , /* vertex */ { 0 , 0 , - 1 , - 1 , - 1 , - 1 } , /* line */ { 1 , 1 , 1 , 1 , - 1 , - 1 } , /* quad */ { 1 , 1 , 1 , - 1 , - 1 , - 1 } , /* triangle */ { 2 , 2 , 2 , 2 , 2 , 2 } , /* hex */ { 3 , 3 , 3 , 3 , - 1 , - 1 } , /* tet */ { 2 , 2 , 2 , 3 , 3 , - 1 } , /* prism */ { 3 , 3 , 3 , 3 , 2 , - 1 } /* pyramid */ \
 #}
 
+# Skipping MacroDefinition: T8_ECLASS_BOUNDARY_COUNT_VALUES { { 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 } , /* vertex */ { 2 , 0 , 0 , 0 , 0 , 0 , 0 , 0 } , /* line */ { 4 , 4 , 0 , 0 , 0 , 0 , 0 , 0 } , /* quad */ { 3 , 3 , 0 , 0 , 0 , 0 , 0 , 0 } , /* triangle */ { 8 , 12 , 6 , 0 , 0 , 0 , 0 , 0 } , /* hex */ { 4 , 6 , 0 , 4 , 0 , 0 , 0 , 0 } , /* tet */ { 6 , 9 , 3 , 2 , 0 , 0 , 0 , 0 } , /* prism */ { 5 , 8 , 1 , 4 , 0 , 0 , 0 , 0 } /* pyramid */ \
 #}
-
 
 # Skipping MacroDefinition: T8_MPI_ELEMENT_SHAPE_TYPE ( T8_ASSERT ( sizeof ( int ) == sizeof ( t8_element_shape_t ) ) , sc_MPI_INT )
 
 const T8_ELEMENT_SHAPE_MAX_FACES = 6
 
 const T8_ELEMENT_SHAPE_MAX_CORNERS = 8
-
 
 const T8_VTK_LOCIDX = "Int32"
 
@@ -17429,7 +17290,6 @@ const P4EST_MPI_QCOORD = sc_MPI_INT
 
 const P4EST_VTK_QCOORD = "Int32"
 
-
 const P4EST_QCOORD_MIN = INT32_MIN
 
 const P4EST_QCOORD_MAX = INT32_MAX
@@ -17443,7 +17303,6 @@ const P4EST_TOPIDX_BITS = 32
 const P4EST_MPI_TOPIDX = sc_MPI_INT
 
 const P4EST_VTK_TOPIDX = "Int32"
-
 
 const P4EST_TOPIDX_MIN = INT32_MIN
 
@@ -17461,7 +17320,6 @@ const P4EST_MPI_LOCIDX = sc_MPI_INT
 
 const P4EST_VTK_LOCIDX = "Int32"
 
-
 const P4EST_LOCIDX_MIN = INT32_MIN
 
 const P4EST_LOCIDX_MAX = INT32_MAX
@@ -17476,16 +17334,11 @@ const P4EST_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
 
 const P4EST_VTK_GLOIDX = "Int64"
 
-
 const P4EST_GLOIDX_MIN = INT64_MIN
 
 const P4EST_GLOIDX_MAX = INT64_MAX
 
 const P4EST_GLOIDX_1 = p4est_gloidx_t(1)
-
-
-
-
 
 const P4EST_DIM = 2
 
@@ -17546,8 +17399,6 @@ const T8_PROFILE_NUM_STATS = 17
 const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 2
 
 const T8_CMESH_FORMAT = 0x0002
-
-
 
 # exports
 const PREFIXES = ["t8_", "T8_"]

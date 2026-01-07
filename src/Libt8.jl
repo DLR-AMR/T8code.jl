@@ -2,6 +2,11 @@ module Libt8
 
 using CEnum: CEnum, @cenum
 
+to_c_type(t::Type) = t
+to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
+    :(va_list[$ind]::$type)
+end
+
 using t8code_jll: t8code_jll
 export t8code_jll
 
@@ -102,6 +107,11 @@ function sc_abort_verbose(filename, lineno, msg)
     @ccall libt8.sc_abort_verbose(filename::Cstring, lineno::Cint, msg::Cstring)::Cvoid
 end
 
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_abort_verbosef(filename, lineno, fmt, va_list...)
+        :(@ccall(libt8.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
 """
     sc_malloc(package, size)
 
@@ -179,6 +189,11 @@ void sc_log (const char *filename, int lineno, int package, int category, int pr
 function sc_log(filename, lineno, package, category, priority, msg)
     @ccall libt8.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, msg::Cstring)::Cvoid
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_logf(filename, lineno, package, category, priority, fmt, va_list...)
+        :(@ccall(libt8.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
 
 """
     sc_array
@@ -962,6 +977,11 @@ void sc_strcopy (char *dest, size_t size, const char *src);
 function sc_strcopy(dest, size, src)
     @ccall libt8.sc_strcopy(dest::Cstring, size::Csize_t, src::Cstring)::Cvoid
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_snprintf(str, size, format, va_list...)
+        :(@ccall(libt8.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
 
 """
     sc_version()
@@ -2916,6 +2936,11 @@ Communication tags used internal to t8code.
     T8_MPI_TAG_LAST = 302
 end
 
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_logf(category, priority, fmt, va_list...)
+        :(@ccall(libt8.t8_logf(category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
 """
     t8_log_indent_push()
 
@@ -2943,6 +2968,46 @@ void t8_log_indent_pop (void);
 function t8_log_indent_pop()
     @ccall libt8.t8_log_indent_pop()::Cvoid
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_global_errorf(fmt, va_list...)
+        :(@ccall(libt8.t8_global_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_global_essentialf(fmt, va_list...)
+        :(@ccall(libt8.t8_global_essentialf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_global_productionf(fmt, va_list...)
+        :(@ccall(libt8.t8_global_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_global_infof(fmt, va_list...)
+        :(@ccall(libt8.t8_global_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_infof(fmt, va_list...)
+        :(@ccall(libt8.t8_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_productionf(fmt, va_list...)
+        :(@ccall(libt8.t8_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_debugf(fmt, va_list...)
+        :(@ccall(libt8.t8_debugf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function t8_errorf(fmt, va_list...)
+        :(@ccall(libt8.t8_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
 
 """
     t8_set_external_log_fcn(log_fcn)
@@ -5518,6 +5583,11 @@ Open modes for sc_io_open
     SC_IO_WRITE_APPEND = 2
 end
 
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_io_sink_new(iotype, iomode, ioencode, va_list...)
+        :(@ccall(libt8.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
+    end
+
 """
     sc_io_sink_destroy(sink)
 
@@ -5612,6 +5682,11 @@ int sc_io_sink_align (sc_io_sink_t * sink, size_t bytes_align);
 function sc_io_sink_align(sink, bytes_align)
     @ccall libt8.sc_io_sink_align(sink::Ptr{sc_io_sink_t}, bytes_align::Csize_t)::Cint
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_io_source_new(iotype, ioencode, va_list...)
+        :(@ccall(libt8.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
+    end
 
 """
     sc_io_source_destroy(source)
@@ -10310,6 +10385,11 @@ sc_keyvalue_t *sc_keyvalue_new ();
 function sc_keyvalue_new()
     @ccall libt8.sc_keyvalue_new()::Ptr{sc_keyvalue_t}
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_keyvalue_newf(dummy, va_list...)
+        :(@ccall(libt8.sc_keyvalue_newf(dummy::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_keyvalue_t}))
+    end
 
 """
     sc_keyvalue_destroy(kv)
@@ -15585,6 +15665,11 @@ void sc_flops_count (sc_flopinfo_t * fi);
 function sc_flops_count(fi)
     @ccall libt8.sc_flops_count(fi::Ptr{sc_flopinfo_t})::Cvoid
 end
+
+# automatic type deduction for variadic arguments may not be what you want, please use with caution
+@generated function sc_flops_shotv(fi, va_list...)
+        :(@ccall(libt8.sc_flops_shotv(fi::Ptr{sc_flopinfo_t}; $(to_c_type_pairs(va_list)...))::Cvoid))
+    end
 
 mutable struct sc_options end
 

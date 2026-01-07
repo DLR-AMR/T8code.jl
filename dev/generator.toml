@@ -343,7 +343,8 @@ opaque_as_mutable_struct = true
 use_ccall_macro = true
 
 # if true, variadic functions are wrapped with `@ccall` macro. Otherwise variadic functions are ignored.
-wrap_variadic_function = false
+# needed e.g. for t8_global_productionf
+wrap_variadic_function = true
 
 # Generate getproperty/setproperty! methods for the types in the following list.
 # Warning: the generated methods will only work on the architecture that they

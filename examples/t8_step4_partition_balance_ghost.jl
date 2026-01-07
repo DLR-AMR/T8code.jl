@@ -193,7 +193,7 @@ mpiret = MPI.Init()
 comm = MPI.COMM_WORLD
 
 # Initialize the sc library, has to happen before we initialize t8code.
-sc_init(comm, 1, 1, C_NULL, SC_LP_ESSENTIAL)
+sc_init(comm, 0, 1, C_NULL, SC_LP_ESSENTIAL)
 # Initialize t8code with log level SC_LP_PRODUCTION. See sc.h for more info on the log levels.
 t8_init(SC_LP_PRODUCTION)
 
@@ -252,8 +252,8 @@ forest = t8_step4_partition_ghost(forest)
 t8_global_productionf(" [step4] Repartitioned forest and built ghost layer.\n")
 t8_step3_print_forest_information(forest)
 
-# Write forest to vtu files.
-t8_forest_write_vtk(forest, prefix_partition_ghost)
+# Write forest to vtu files, including ghost layer.
+t8_forest_write_vtk_ext(forest, prefix_partition_ghost, 1, 1, 1, 1, 1, 0, 1, 0, C_NULL);
 
 #
 # Balance

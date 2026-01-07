@@ -144,7 +144,7 @@ function t8_step6_create_element_data(forest)
         for ielement in 0:(num_elements_in_tree - 1)
             current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.
 
-            element = t8_forest_get_element_in_tree(forest, itree, ielement)
+            element = t8_forest_get_leaf_element_in_tree(forest, itree, ielement)
 
             level = t8_element_get_level(scheme, tree_class, element)
             volume = t8_forest_element_volume(forest, itree, element)
@@ -205,7 +205,7 @@ function t8_step6_compute_stencil(forest, element_data)
         for ielement in 0:(num_elements_in_tree - 1)
             current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.
 
-            element = t8_forest_get_element_in_tree(forest, itree, ielement)
+            element = t8_forest_get_leaf_element_in_tree(forest, itree, ielement)
 
             # Gather center point of the 3x3 stencil.
             stencil[2, 2] = element_data[current_index].height

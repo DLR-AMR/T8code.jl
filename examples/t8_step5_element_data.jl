@@ -129,7 +129,7 @@ function t8_step5_create_element_data(forest)
         tree_class = t8_forest_get_tree_class(forest, itree)
 
         # Get the number of elements of this tree.
-        num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
+        num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
         # This loop iterates through all the local elements of the forest in the current tree.
         for ielement in 0:(num_elements_in_tree - 1)
             current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.

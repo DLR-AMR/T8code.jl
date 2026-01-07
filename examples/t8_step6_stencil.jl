@@ -138,7 +138,7 @@ function t8_step6_create_element_data(forest)
         tree_class = t8_forest_get_tree_class(forest, itree)
 
         # Get the number of elements of this tree.
-        num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
+        num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
 
         # Loop over all local elements in the tree.
         for ielement in 0:(num_elements_in_tree - 1)
@@ -199,7 +199,7 @@ function t8_step6_compute_stencil(forest, element_data)
         tree_class = t8_forest_get_tree_class(forest, itree)
         eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
 
-        num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
+        num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
 
         # Loop over all local elements in the tree.
         for ielement in 0:(num_elements_in_tree - 1)

@@ -217,7 +217,7 @@ function t8_step6_compute_stencil(forest, element_data)
             for iface in 1:num_faces
                 neighids_ref = Ref{Ptr{t8_locidx_t}}()
                 neighbors_ref = Ref{Ptr{Ptr{t8_element}}}()
-                neigh_scheme_ref = Ref{Ptr{t8_eclass_t}}()
+                neigh_scheme_ref = Ref{t8_eclass_t}()
 
                 dual_faces_ref = Ref{Ptr{Cint}}()
                 num_neighbors_ref = Ref{Cint}()

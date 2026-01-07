@@ -38,7 +38,7 @@ julia +1.7 build_tarballs.jl --debug --verbose x86_64-linux-gnu --deploy=local
 
 This requires a local Julia installation and Julia version 1.7. You can use any other
 eligible platform triple instead of `x86_64-linux-gnu`. Adding `--deploy=local` will add
-the created binaries to your local Julia aritfacts folder.
+the created binaries to your local Julia artifacts folder.
 
 
 ## Updating `Tcode.jl`
@@ -60,11 +60,15 @@ The crucial ingredients are the `t8code` header files, which are expected in a s
 - If you are developing `t8code` locally, you can copy and rename `t8code`'s `include`
   directory from its current prefix path. You will have to comment lines 5 and 6 (dealing with artifacts) in `generator.jl` then.
 - If your pull request to Yggdrasil has already been merged, you can find the newly built
-  binary packages at https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases. Pick an
-  asset and use its URL and hash to replace the current settings in `Artifacts.toml`.
+  binary packages at https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases. Copy an
+  entry of https://github.com/JuliaBinaryWrappers/t8code_jll.jl/blob/main/Artifacts.toml to
+  the local `Artifacts.toml` file. The exact choice of the platform triplet should not
+  matter since we use only the header files which are the same on each system. However,
+  they may matter in the presence of MPI headers since we apply some custom `fixes.sh`
+  afterwards.
 - If your pull request has not yet been accepted, you can instead use artifacts of the
   buildkite pipeline, see above.  
-- If you ran BindaryBuilder locally, you can somehow use your local atifacts. But how?
+- If you ran BindaryBuilder locally, you can somehow use your local artifacts. But how?
 
 In any case run
 ```shell

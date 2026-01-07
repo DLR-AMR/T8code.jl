@@ -27,14 +27,15 @@ on:
       - '.gitignore'
 
 # Cancel redundant CI tests automatically
-#concurrency:
-#  group: ${{ github.workflow }}-${{ github.ref }}
-#  cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         julia-version: ['1.9', '1', 'nightly']
         julia-arch: [x64, x86]

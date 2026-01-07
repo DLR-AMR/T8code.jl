@@ -217,13 +217,12 @@ function t8_step6_compute_stencil(forest, element_data)
             for iface in 1:num_faces
                 neighids_ref = Ref{Ptr{t8_locidx_t}}()
                 neighbors_ref = Ref{Ptr{Ptr{t8_element}}}()
-                neigh_scheme_ref = Ref{Ptr{t8_eclass_scheme}}()
+                neigh_scheme_ref = Ref{Ptr{t8_eclass_t}}()
 
                 dual_faces_ref = Ref{Ptr{Cint}}()
                 num_neighbors_ref = Ref{Cint}()
 
                 forest_is_balanced = Cint(1)
-
                 t8_forest_leaf_face_neighbors(forest, itree, element,
                                               neighbors_ref, iface - 1, dual_faces_ref,
                                               num_neighbors_ref,

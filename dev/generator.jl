@@ -8,7 +8,7 @@ cp(joinpath(artifact"t8code", "include"), "t8code_include"; force = true)
 using Glob
 
 # This loads the artifact described in `Artifacts.toml`.
-# See REAMDE.md for instructions on how to update.
+# See README.md for instructions on how to update.
 
 using Clang.Generators
 # using Clang.LibClang.Clang_jll  # replace this with your jll package

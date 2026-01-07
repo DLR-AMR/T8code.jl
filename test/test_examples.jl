@@ -27,15 +27,14 @@ end
 # https://github.com/DLR-AMR/T8code.jl/issues/26,
 # https://github.com/DLR-AMR/T8code.jl/issues/30,
 # https://github.com/DLR-AMR/T8code.jl/issues/104.
-# Until they are resolved, the two cases are skipped.
 
-# @testset "t8_step5_element_data" begin
-#     include("../examples/t8_step5_element_data.jl")
-# end
+@testset "t8_step5_element_data" begin
+    include("../examples/t8_step5_element_data.jl")
+end
 
-# @testset "t8_step6_stencil" begin
-#     include("../examples/t8_step6_stencil.jl")
-# end
+@testset "t8_step6_stencil" begin
+    include("../examples/t8_step6_stencil.jl")
+end
 
 @testset "t8_tutorial_build_cmesh" begin
     include("../examples/t8_tutorial_build_cmesh.jl")

@@ -191,14 +191,14 @@ function t8_step6_compute_stencil(forest, element_data)
     dx = Vector{Cdouble}(undef, 3)
     dy = Vector{Cdouble}(undef, 3)
 
+    scheme = t8_forest_get_scheme(forest)
+
     # Loop over all local trees in the forest. For each local tree the element
     # data (level, midpoint[3], dx, dy, volume, height, schlieren, curvature) of
     # each element is calculated and stored into the element data array.
     current_index = 0
     for itree in 0:(num_local_trees - 1)
         tree_class = t8_forest_get_tree_class(forest, itree)
-        eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
-
         num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
 
         # Loop over all local elements in the tree.
@@ -213,7 +213,7 @@ function t8_step6_compute_stencil(forest, element_data)
             dy[2] = element_data[current_index].dy
 
             # Loop over all faces of an element.
-            num_faces = t8_element_num_faces(eclass_scheme, element)
+            num_faces = t8_element_get_num_faces(scheme, tree_class, element)
             for iface in 1:num_faces
                 neighids_ref = Ref{Ptr{t8_locidx_t}}()
                 neighbors_ref = Ref{Ptr{Ptr{t8_element}}}()

@@ -71,7 +71,7 @@ end
 #                    partitioned across the processes in \a comm.
 function t8_step2_build_uniform_forest(comm, cmesh, level)
     # /* Create the refinement scheme. */
-    scheme = t8_scheme_new_default_cxx()
+    scheme = t8_scheme_new_default()
     # /* Creat the uniform forest. */
     forest = t8_forest_new_uniform(cmesh, scheme, level, 0, comm)
 

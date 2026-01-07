@@ -59,7 +59,7 @@ end
 
 function t8_step5_build_forest(comm, level)
     cmesh = t8_cmesh_new_hypercube_hybrid(comm, 0, 0)
-    scheme = t8_scheme_new_default_cxx()
+    scheme = t8_scheme_new_default()
 
     adapt_data = t8_step3_adapt_data_t((0.5, 0.5, 1.0),      # Midpoints of the sphere.
                                        0.2,                  # Refine if inside this radius.
@@ -118,6 +118,8 @@ function t8_step5_create_element_data(forest)
     # Get the number of trees that have elements of this process.
     num_local_trees = t8_forest_get_num_local_trees(forest)
 
+    scheme = t8_forest_get_scheme(forest)
+
     current_index = 0
     for itree in 0:(num_local_trees - 1)
         # This loop iterates through all local trees in the forest.
@@ -125,7 +127,6 @@ function t8_step5_create_element_data(forest)
         # also a different way to interpret its elements. In order to be able to handle elements
         # of a tree, we need to get its eclass_scheme, and in order to so we first get its eclass.
         tree_class = t8_forest_get_tree_class(forest, itree)
-        eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
 
         # Get the number of elements of this tree.
         num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
@@ -141,7 +142,7 @@ function t8_step5_create_element_data(forest)
 
             # We want to store the elements level and its volume as data. We compute these
             # via the eclass_scheme and the forest_element interface.
-            level = t8_element_level(eclass_scheme, element)
+            level = t8_element_get_level(scheme, tree_class, element)
             volume = t8_forest_element_volume(forest, itree, element)
 
             element_data[current_index] = t8_step5_data_per_element_t(level, volume)

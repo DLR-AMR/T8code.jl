@@ -78,7 +78,7 @@ end
 function t8_step6_build_forest(comm, dim, level)
     cmesh = t8_cmesh_new_periodic(comm, dim)
 
-    scheme = t8_scheme_new_default_cxx()
+    scheme = t8_scheme_new_default()
 
     adapt_data = t8_step3_adapt_data_t((0.0, 0.0, 0.0),      # Midpoints of the sphere.
                                        0.5,                  # Refine if inside this radius.
@@ -130,11 +130,12 @@ function t8_step6_create_element_data(forest)
     # Element Midpoint
     midpoint = Vector{Cdouble}(undef, 3)
 
+    scheme = t8_forest_get_scheme(forest)
+
     # Loop over all local trees in the forest.
     current_index = 0
     for itree in 0:(num_local_trees - 1)
         tree_class = t8_forest_get_tree_class(forest, itree)
-        eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
 
         # Get the number of elements of this tree.
         num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
@@ -145,16 +146,16 @@ function t8_step6_create_element_data(forest)
 
             element = t8_forest_get_element_in_tree(forest, itree, ielement)
 
-            level = t8_element_level(eclass_scheme, element)
+            level = t8_element_get_level(scheme, tree_class, element)
             volume = t8_forest_element_volume(forest, itree, element)
 
             t8_forest_element_centroid(forest, itree, element, pointer(midpoint))
 
-            t8_element_vertex_reference_coords(eclass_scheme, element, 0,
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 0,
                                                @view(verts[:, 1]))
-            t8_element_vertex_reference_coords(eclass_scheme, element, 1,
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 1,
                                                @view(verts[:, 2]))
-            t8_element_vertex_reference_coords(eclass_scheme, element, 2,
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 2,
                                                @view(verts[:, 3]))
 
             dx = verts[1, 2] - verts[1, 1]

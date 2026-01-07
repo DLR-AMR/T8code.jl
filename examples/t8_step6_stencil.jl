@@ -111,7 +111,7 @@ function t8_step6_create_element_data(forest)
     @T8_ASSERT(t8_forest_is_committed(forest)==1)
 
     # Get the number of local elements of forest.
-    num_local_elements = t8_forest_get_local_num_elements(forest)
+    num_local_elements = t8_forest_get_local_num_leaf_elements(forest)
     # Get the number of ghost elements of forest.
     num_ghost_elements = t8_forest_get_num_ghosts(forest)
 

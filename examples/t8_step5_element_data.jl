@@ -88,7 +88,7 @@ function t8_step5_create_element_data(forest)
     @T8_ASSERT(t8_forest_is_committed(forest)==1)
 
     # Get the number of local elements of forest.
-    num_local_elements = t8_forest_get_local_num_elements(forest)
+    num_local_elements = t8_forest_get_local_num_leaf_elements(forest)
     # Get the number of ghost elements of forest.
     num_ghost_elements = t8_forest_get_num_ghosts(forest)
 
@@ -179,7 +179,7 @@ end
 # We support two types: T8_VTK_SCALAR - One double per element
 #                  and  T8_VTK_VECTOR - 3 doubles per element
 function t8_step5_output_data_to_vtu(forest, element_data, prefix)
-    num_elements = t8_forest_get_local_num_elements(forest)
+    num_elements = t8_forest_get_local_num_leaf_elements(forest)
     # We need to allocate a new array to store the volumes on their own.
     # This array has one entry per local element. */
     element_volumes = Vector{Cdouble}(undef, num_elements)
@@ -256,7 +256,7 @@ element_data = t8_step5_create_element_data(forest)
 
 t8_global_productionf(" [step5] Computed level and volume data for local elements.\n")
 
-if t8_forest_get_local_num_elements(forest) > 0
+if t8_forest_get_local_num_leaf_elements(forest) > 0
     # Output the stored data of the first local element (if it exists).
     t8_global_productionf(" [step5] Element 0 has level %i and volume %e.\n",
                           element_data[1].level, element_data[1].volume)
@@ -270,7 +270,7 @@ t8_global_productionf(" [step5] Exchanged ghost data.\n")
 
 if t8_forest_get_num_ghosts(forest) > 0
     # Output the data of the first ghost element (if it exists).
-    first_ghost_index = t8_forest_get_local_num_elements(forest)
+    first_ghost_index = t8_forest_get_local_num_leaf_elements(forest)
     t8_global_productionf(" [step5] Ghost 0 has level %i and volume %e.\n",
                           element_data[first_ghost_index + 1].level,
                           element_data[first_ghost_index + 1].volume)

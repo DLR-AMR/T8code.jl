@@ -152,11 +152,11 @@ function t8_step6_create_element_data(forest)
             t8_forest_element_centroid(forest, itree, element, pointer(midpoint))
 
             t8_element_get_vertex_reference_coords(scheme, tree_class, element, 0,
-                                               @view(verts[:, 1]))
+                                                   @view(verts[:, 1]))
             t8_element_get_vertex_reference_coords(scheme, tree_class, element, 1,
-                                               @view(verts[:, 2]))
+                                                   @view(verts[:, 2]))
             t8_element_get_vertex_reference_coords(scheme, tree_class, element, 2,
-                                               @view(verts[:, 3]))
+                                                   @view(verts[:, 3]))
 
             dx = verts[1, 2] - verts[1, 1]
             dy = verts[2, 3] - verts[2, 1]

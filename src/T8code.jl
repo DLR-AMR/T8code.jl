@@ -262,14 +262,15 @@ function t8_free(ptr)
     Libt8.sc_free(t8_get_package_id(), ptr)
 end
 
-# typedef int         (*t8_forest_adapt_t) (t8_forest_t forest,
-#                                           t8_forest_t forest_from,
-#                                           t8_locidx_t which_tree,
-#                                           t8_locidx_t lelement_id,
-#                                           t8_eclass_scheme_c *ts,
-#                                           const int is_family,
-#                                           const int num_elements,
-#                                           t8_element_t *elements[]);
+# typedef int (*t8_forest_adapt_t) (t8_forest_t forest,
+#                                   t8_forest_t forest_from,
+#                                   t8_locidx_t which_tree,
+#                                   const t8_eclass_t tree_class,
+#                                   t8_locidx_t lelement_id,
+#                                   const t8_scheme_c *scheme,
+#                                   const int is_family,
+#                                   const int num_elements,
+#                                   t8_element_t *elements[]);
 """
     @t8_adapt_callback(callback)
 
@@ -278,8 +279,8 @@ signature required for callback functions in [`t8_forest_adapt`](@ref).
 """
 macro t8_adapt_callback(callback)
     :(@cfunction($callback, Cint,
-                 (Ptr{t8_forest}, Ptr{t8_forest}, t8_locidx_t, t8_locidx_t,
-                  Ptr{t8_eclass_scheme}, Cint, Cint, Ptr{Ptr{t8_element}})))
+                 (Ptr{t8_forest}, Ptr{t8_forest}, t8_locidx_t, t8_eclass_t, t8_locidx_t,
+                  Ptr{t8_scheme}, Cint, Cint, Ptr{Ptr{t8_element}})))
 end
 
 # typedef void        (*t8_forest_replace_t) (t8_forest_t forest_old,

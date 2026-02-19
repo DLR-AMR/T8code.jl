@@ -70,6 +70,8 @@ const INT64_MAX = typemax(Clonglong)
 """
     sc_extern_c_hack_1()
 
+We want to export the whole implementation to be callable from "C".
+
 ### Prototype
 ```c
 SC_EXTERN_C_BEGIN;
@@ -289,6 +291,7 @@ This enumeration contains all possible element classes.
 
 | Enumerator             | Note                                                                                                               |
 | :--------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| T8\\_ECLASS\\_ZERO     | Zero-dimensional element class.                                                                                    |
 | T8\\_ECLASS\\_VERTEX   | The vertex is the only zero-dimensional element class.                                                             |
 | T8\\_ECLASS\\_LINE     | The line is the only one-dimensional element class.                                                                |
 | T8\\_ECLASS\\_QUAD     | The quadrilateral is one of two element classes in two dimensions.                                                 |
@@ -2906,6 +2909,9 @@ function sc_recycle_array_remove(rec_array, position)
     @ccall libt8.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t}, position::Csize_t)::Ptr{Cvoid}
 end
 
+"""A type for holding process ids."""
+const t8_procidx_t = Cint
+
 """A type for storing SFC indices"""
 const t8_linearidx_t = UInt64
 
@@ -2914,15 +2920,18 @@ const t8_linearidx_t = UInt64
 
 Communication tags used internal to t8code.
 
-| Enumerator                                  | Note                                                |
-| :------------------------------------------ | :-------------------------------------------------- |
-| T8\\_MPI\\_PARTITION\\_CMESH                | Used for coarse mesh partitioning                   |
-| T8\\_MPI\\_PARTITION\\_FOREST               | Used for forest partitioning                        |
-| T8\\_MPI\\_GHOST\\_FOREST                   | Used for for ghost layer creation                   |
-| T8\\_MPI\\_GHOST\\_EXC\\_FOREST             | Used for ghost data exchange                        |
-| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_START | Used for cmesh uniform bounds computation.          |
-| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_END   |                                                     |
-| T8\\_MPI\\_TEST\\_ELEMENT\\_PACK\\_TAG      | Used for testing mpi pack and unpack functionality  |
+| Enumerator                                  | Note                                                     |
+| :------------------------------------------ | :------------------------------------------------------- |
+| T8\\_MPI\\_TAG\\_FIRST                      | Dummy first MPT tag.                                     |
+| T8\\_MPI\\_PARTITION\\_CMESH                | Used for coarse mesh partitioning                        |
+| T8\\_MPI\\_PARTITION\\_FOREST               | Used for forest partitioning                             |
+| T8\\_MPI\\_GHOST\\_FOREST                   | Used for for ghost layer creation                        |
+| T8\\_MPI\\_GHOST\\_EXC\\_FOREST             | Used for ghost data exchange                             |
+| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_START | Used for cmesh uniform bounds computation.               |
+| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_END   |                                                          |
+| T8\\_MPI\\_TEST\\_ELEMENT\\_PACK\\_TAG      | Used for testing mpi pack and unpack functionality       |
+| T8\\_MPI\\_PFC\\_TAG                        | Used for data exchange during partition for coarsening.  |
+| T8\\_MPI\\_TAG\\_LAST                       | Dummy last MPI tag.                                      |
 """
 @cenum t8_MPI_tag_t::UInt32 begin
     T8_MPI_TAG_FIRST = 214
@@ -2933,7 +2942,8 @@ Communication tags used internal to t8code.
     T8_MPI_CMESH_UNIFORM_BOUNDS_START = 299
     T8_MPI_CMESH_UNIFORM_BOUNDS_END = 300
     T8_MPI_TEST_ELEMENT_PACK_TAG = 301
-    T8_MPI_TAG_LAST = 302
+    T8_MPI_PFC_TAG = 302
+    T8_MPI_TAG_LAST = 303
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
@@ -3980,6 +3990,16 @@ function t8_get_version_patch()
     @ccall libt8.t8_get_version_patch()::Cint
 end
 
+"""
+    t8_vtk_data_type_t
+
+TODO: Add support for integer data type.
+
+| Enumerator        | Note                          |
+| :---------------- | :---------------------------- |
+| T8\\_VTK\\_SCALAR | One double value per element  |
+| T8\\_VTK\\_VECTOR | 3 double values per element   |
+"""
 @cenum t8_vtk_data_type_t::UInt32 begin
     T8_VTK_SCALAR = 0
     T8_VTK_VECTOR = 1
@@ -4003,6 +4023,8 @@ end
 
 """
     t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
+
+Writes the pvtu header file that links to the processor local files. It is used by the cmesh and forest vtk routines. This function should only be called by one process. Return 0 on success.
 
 ### Prototype
 ```c
@@ -4681,10 +4703,11 @@ This enumeration contains all modes in which we can open a saved cmesh. The cmes
 
 | Enumerator         | Note                                                                                                                                                                                                                      |
 | :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T8\\_LOAD\\_FIRST  | First mode.                                                                                                                                                                                                               |
 | T8\\_LOAD\\_SIMPLE | In simple mode, the first n processes load the file                                                                                                                                                                       |
 | T8\\_LOAD\\_BGQ    | In BGQ mode, the file is loaded on n nodes and from one process of each node. This needs MPI Version 3.1 or higher.                                                                                                       |
 | T8\\_LOAD\\_STRIDE | Every n-th process loads a file. Handle with care, we introduce it, since on Juqueen MPI-3 was not available. The parameter n has to be passed as an extra parameter.  # See also [`t8_cmesh_load_and_distribute`](@ref)  |
-| T8\\_LOAD\\_COUNT  |                                                                                                                                                                                                                           |
+| T8\\_LOAD\\_COUNT  | Number of modes in which we can open a saved cmesh.                                                                                                                                                                       |
 """
 @cenum t8_load_mode::UInt32 begin
     T8_LOAD_FIRST = 0
@@ -9929,11 +9952,11 @@ end
 
 ### Prototype
 ```c
-void t8_shmem_init (sc_MPI_Comm comm);
+int t8_shmem_init (sc_MPI_Comm comm);
 ```
 """
 function t8_shmem_init(comm)
-    @ccall libt8.t8_shmem_init(comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_shmem_init(comm::MPI_Comm)::Cint
 end
 
 """
@@ -11027,15 +11050,18 @@ end
 | Field                          | Note                                                                                                                                                                                                                                                                                           |
 | :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | rc                             | Reference counter.                                                                                                                                                                                                                                                                             |
+| set\\_partition\\_offset       | Flag indicating whether the partition range was set manually.                                                                                                                                                                                                                                  |
+| set\\_first\\_global\\_element | If set\\_partition\\_offset is true, the global ID of the first local element after partitioning.                                                                                                                                                                                              |
 | set\\_level                    | Level to use in new construction.                                                                                                                                                                                                                                                              |
 | set\\_for\\_coarsening         | Change partition to allow for one round of coarsening                                                                                                                                                                                                                                          |
+| weight\\_function              | Pointer to user defined element weight function. Nullptr for standard, element-based partitioning.                                                                                                                                                                                             |
 | cmesh                          | Coarse mesh to use.                                                                                                                                                                                                                                                                            |
 | scheme                         | Scheme for element types.                                                                                                                                                                                                                                                                      |
 | maxlevel                       | The maximum allowed refinement level for elements in this forest.                                                                                                                                                                                                                              |
-| maxlevel\\_existing            | If >= 0, the maximum occurring refinemnent level of a forest element.                                                                                                                                                                                                                          |
+| maxlevel\\_existing            | If >= 0, the maximum occurring refinement level of a forest element.                                                                                                                                                                                                                           |
 | do\\_dup                       | Communicator shall be duped.                                                                                                                                                                                                                                                                   |
 | dimension                      | Dimension inferred from **cmesh**.                                                                                                                                                                                                                                                             |
-| incomplete\\_trees             | Flag to check whether the forest has (potential) incomplete trees. A tree is incomplete if an element has been removed from it. Once an element got removed, the flag sets to 1 (true) and stays.  For a committed forest this flag is either true on all ranks or false on all ranks.         |
+| incomplete\\_trees             | Flag to check whether the forest has (potential) incomplete trees. A tree is incomplete if an element has been removed from it. Once an element got removed, the flag sets to 1 (true) and stays. For a committed forest this flag is either true on all ranks or false on all ranks.          |
 | set\\_from                     | Temporarily store source forest.                                                                                                                                                                                                                                                               |
 | from\\_method                  | Method to derive from **set_from**.                                                                                                                                                                                                                                                            |
 | set\\_adapt\\_fn               | refinement and coarsen function. Called when **from_method** is set to [`T8_FOREST_FROM_ADAPT`](@ref).                                                                                                                                                                                         |
@@ -11050,7 +11076,7 @@ end
 | committed                      | t8_forest_commit called?                                                                                                                                                                                                                                                                       |
 | mpisize                        | Number of MPI processes.                                                                                                                                                                                                                                                                       |
 | mpirank                        | Number of this MPI process.                                                                                                                                                                                                                                                                    |
-| first\\_local\\_tree           | The global index of the first local tree on this process.  If first\\_local\\_tree is larger than last\\_local\\_tree then  this processor/forest is empty. See https://github.com/DLR-AMR/t8code/wiki/Tree-indexing                                                                           |
+| first\\_local\\_tree           | The global index of the first local tree on this process. If first\\_local\\_tree is larger than last\\_local\\_tree then this processor/forest is empty. See https://github.com/DLR-AMR/t8code/wiki/Tree-indexing                                                                             |
 | last\\_local\\_tree            | The global index of the last local tree on this process. -1 if this processor is empty.                                                                                                                                                                                                        |
 | global\\_num\\_trees           | The total number of global trees.                                                                                                                                                                                                                                                              |
 | trees                          | The array of trees.                                                                                                                                                                                                                                                                            |
@@ -11133,12 +11159,16 @@ end
 
 # typedef void ( * t8_generic_function_pointer ) ( void )
 """
-This typedef is needed as a helper construct to  properly be able to define a function that returns a pointer to a void fun(void) function.
+This typedef is needed as a helper construct to properly be able to define a function that returns a pointer to a void fun(void) function.
 
 # See also
 [`t8_forest_get_user_function`](@ref).
 """
 const t8_generic_function_pointer = Ptr{Cvoid}
+
+# typedef double ( t8_weight_fcn_t ) ( t8_forest_t , t8_locidx_t , t8_locidx_t )
+"""The prototype of a weight function for the partition algorithm. The function should be pure, and return a positive weight given a forest, a local tree index and an element index within the local tree"""
+const t8_weight_fcn_t = Cvoid
 
 # typedef void ( * t8_forest_replace_t ) ( t8_forest_t forest_old , t8_forest_t forest_new , t8_locidx_t which_tree , const t8_eclass_t tree_class , const t8_scheme_c * scheme , const int refine , const int num_outgoing , const t8_locidx_t first_outgoing , const int num_incoming , const t8_locidx_t first_incoming )
 """
@@ -11146,7 +11176,7 @@ Callback function prototype to replace one set of elements with another.
 
 This is used by the replace routine which can be called after adapt, when the elements of an existing, valid forest are changed. The callback allows the user to make changes to the elements of the new forest that are either refined, coarsened or the same as elements in the old forest.
 
-If an element is being refined, *refine* and *num_outgoing* will be 1 and  *num_incoming* will be the number of children. If a family is being coarsened, *refine* will be -1, *num_outgoing* will be  the number of family members and *num_incoming* will be 1.  If an element is being removed, *refine* and *num_outgoing* will be 1 and  *num_incoming* will be 0.  Else *refine* will be 0 and *num_outgoing* and *num_incoming* will both be 1.
+If an element is being refined, *refine* and *num_outgoing* will be 1 and *num_incoming* will be the number of children. If a family is being coarsened, *refine* will be -1, *num_outgoing* will be the number of family members and *num_incoming* will be 1. If an element is being removed, *refine* and *num_outgoing* will be 1 and *num_incoming* will be 0. Else *refine* will be 0 and *num_outgoing* and *num_incoming* will both be 1.
 
 # Arguments
 * `forest_old`:\\[in\\] The forest that is adapted
@@ -11166,14 +11196,14 @@ const t8_forest_replace_t = Ptr{Cvoid}
 
 # typedef int ( * t8_forest_adapt_t ) ( t8_forest_t forest , t8_forest_t forest_from , t8_locidx_t which_tree , const t8_eclass_t tree_class , t8_locidx_t lelement_id , const t8_scheme_c * scheme , const int is_family , const int num_elements , t8_element_t * elements [ ] )
 """
-Callback function prototype to decide for refining and coarsening. If *is_family* equals 1, the first *num_elements* in *elements* form a family and we decide whether this family should be coarsened or only the first element should be refined. Otherwise *is_family* must equal zero and we consider the first entry of the element array for refinement.  Entries of the element array beyond the first *num_elements* are undefined.
+Callback function prototype to decide for refining and coarsening. If *is_family* equals 1, the first *num_elements* in *elements* form a family and we decide whether this family should be coarsened or only the first element should be refined. Otherwise *is_family* must equal zero and we consider the first entry of the element array for refinement. Entries of the element array beyond the first *num_elements* are undefined.
 
 # Arguments
 * `forest`:\\[in\\] The forest to which the new elements belong.
 * `forest_from`:\\[in\\] The forest that is adapted.
 * `which_tree`:\\[in\\] The local tree containing *elements*.
 * `tree_class`:\\[in\\] The eclass of *which_tree*.
-* `lelement_id`:\\[in\\] The local element id in *forest_old* in the tree of the current element.
+* `lelement_id`:\\[in\\] The local element id in *forest_from* in the tree of the current element.
 * `scheme`:\\[in\\] The scheme of the forest.
 * `is_family`:\\[in\\] If 1, the first *num_elements* entries in *elements* form a family. If 0, they do not.
 * `num_elements`:\\[in\\] The number of entries in *elements* that are defined
@@ -11191,7 +11221,7 @@ Create a new forest with reference count one. This forest needs to be specialize
 # Arguments
 * `pforest`:\\[in,out\\] On input, this pointer must be non-NULL. On return, this pointer set to the new forest.
 # See also
-t8\\_forest\\_set\\_mpicomm,  t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
+t8\\_forest\\_set\\_mpicomm, t8_forest_set_cmesh, and t8_forest_set_scheme, or to call one of t8_forest_set_copy, t8_forest_set_adapt, or t8_forest_set_partition. It is illegal to mix these calls, or to call more than one of the three latter functions Then it needs to be set up with t8_forest_commit.
 
 ### Prototype
 ```c
@@ -11252,7 +11282,7 @@ Check whether the forest has local overlapping elements.
 # Returns
 True if *forest* has no elements which are inside each other.
 # See also
-[`t8_forest_partition_test_boundary_element`](@ref) if you also want to test for  global overlap across the process boundaries.
+[`t8_forest_partition_test_boundary_element`](@ref) if you also want to test for global overlap across the process boundaries.
 
 ### Prototype
 ```c
@@ -11497,6 +11527,29 @@ function t8_forest_set_partition(forest, set_from, set_for_coarsening)
 end
 
 """
+    t8_forest_set_partition_weight_function(forest, weight_callback)
+
+Set a user-defined weight function to guide the partitioning.
+
+\\pre *weight_callback* must be free of side effects (like changing the forest, some global state, etc.), the behavior is undefined otherwise.
+
+!!! note
+
+    If *weight_callback* is null, then all the elements are assumed to have the same weight
+
+# Arguments
+* `forest`:\\[in,out\\] The forest.
+* `weight_callback`:\\[in\\] A callback function defining element weights for the partitioning.
+### Prototype
+```c
+void t8_forest_set_partition_weight_function (t8_forest_t forest, t8_weight_fcn_t *weight_callback);
+```
+"""
+function t8_forest_set_partition_weight_function(forest, weight_callback)
+    @ccall libt8.t8_forest_set_partition_weight_function(forest::t8_forest_t, weight_callback::Ptr{t8_weight_fcn_t})::Cvoid
+end
+
+"""
     t8_forest_set_balance(forest, set_from, no_repartition)
 
 Set a source forest to be balanced during commit. A forest is said to be balanced if each element has face neighbors of level at most +1 or -1 of the element's level.
@@ -11732,7 +11785,7 @@ Given a global tree id compute the forest local id of this tree. If the tree is 
 * `forest`:\\[in\\] The forest.
 * `gtreeid`:\\[in\\] The global id of a tree.
 # Returns
-The tree's local id in *forest*, if it is a local tree. A negative number if not. Ghosts trees are not considered  as local.
+The tree's local id in *forest*, if it is a local tree. A negative number if not. Ghosts trees are not considered as local.
 # See also
 [`t8_forest_get_local_or_ghost_id`](@ref) for ghost trees., https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
 
@@ -11968,7 +12021,7 @@ if (num\\_neighbors > 0) { scheme->element\\_destroy (pneigh\\_eclass, num\\_nei
 * `pneigh_eclass`:\\[out\\] On output the eclass of the neighbor elements.
 * `forest_is_balanced`:\\[in\\] True if we know that *forest* is balanced, false otherwise.
 * `gneigh_tree`:\\[out\\] The global tree IDs of the neighbor trees.
-* `orientation`:\\[out\\] If not NULL on input, the face orientation is computed and stored here.  Thus, if the face connection is an inter-tree connection the orientation of the tree-to-tree connection is stored.  Otherwise, the value 0 is stored. All other parameters and behavior are identical to t8_forest_leaf_face_neighbors.
+* `orientation`:\\[out\\] If not NULL on input, the face orientation is computed and stored here. Thus, if the face connection is an inter-tree connection the orientation of the tree-to-tree connection is stored. Otherwise, the value 0 is stored. All other parameters and behavior are identical to t8_forest_leaf_face_neighbors.
 ### Prototype
 ```c
 void t8_forest_leaf_face_neighbors_ext (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leaves[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass, int forest_is_balanced, t8_gloidx_t *gneigh_tree, int *orientation);
@@ -12446,7 +12499,7 @@ Query whether a batch of points lies inside an element. For bilinearly interpola
 
 !!! note
 
-    For 2D quadrilateral elements this function is only an approximation. It is correct if the four vertices lie in the same plane, but it may produce only approximate results if  the vertices do not lie in the same plane.
+    For 2D quadrilateral elements this function is only an approximation. It is correct if the four vertices lie in the same plane, but it may produce only approximate results if the vertices do not lie in the same plane.
 
 # Arguments
 * `forest`:\\[in\\] The forest.
@@ -12454,7 +12507,7 @@ Query whether a batch of points lies inside an element. For bilinearly interpola
 * `element`:\\[in\\] The element.
 * `points`:\\[in\\] 3-dimensional coordinates of the points to check
 * `num_points`:\\[in\\] The number of points to check
-* `is_inside`:\\[in,out\\] An array of length *num_points*, filled with 0/1 on output. True (non-zero) if a *point*  lies within an *element*, false otherwise. The return value is also true if the point  lies on the element boundary. Thus, this function may return true for different leaf  elements, if they are neighbors and the point lies on the common boundary.
+* `is_inside`:\\[in,out\\] An array of length *num_points*, filled with 0/1 on output. True (non-zero) if a *point* lies within an *element*, false otherwise. The return value is also true if the point lies on the element boundary. Thus, this function may return true for different leaf elements, if they are neighbors and the point lies on the common boundary.
 * `tolerance`:\\[in\\] Tolerance that we allow the point to not exactly match the element. If this value is larger we detect more points. If it is zero we probably do not detect points even if they are inside due to rounding errors.
 ### Prototype
 ```c
@@ -13286,7 +13339,7 @@ end
 """
     t8_forest_partition(forest)
 
-Populate a forest with the partitioned elements of forest->set\\_from. Currently the elements are distributed evenly (each element has the same weight).
+Populate a forest with the partitioned elements of forest->set\\_from.
 
 # Arguments
 * `forest`:\\[in,out\\] The forest.
@@ -13297,6 +13350,46 @@ void t8_forest_partition (t8_forest_t forest);
 """
 function t8_forest_partition(forest)
     @ccall libt8.t8_forest_partition(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_new_gather(forest_from, gather_rank)
+
+Create a new forest that gathers a given forest on one process.
+
+This functionality is mostly required for comparison purposes and sanity checks within the testing framework.
+
+# Arguments
+* `forest_from`:\\[in\\] the forest that should be gathered on one rank
+* `gather_rank`:\\[in\\] the rank of the process the forest will be gathered on
+# Returns
+The gathered forest: The same as *forest_from*, but all elements are on rank *gather_rank*.
+### Prototype
+```c
+t8_forest_t t8_forest_new_gather (const t8_forest_t forest_from, const int gather_rank);
+```
+"""
+function t8_forest_new_gather(forest_from, gather_rank)
+    @ccall libt8.t8_forest_new_gather(forest_from::t8_forest_t, gather_rank::Cint)::t8_forest_t
+end
+
+"""
+    t8_forest_set_partition_offset(forest, first_global_element)
+
+Manually set the partition offset of the current process.
+
+If set, the next partitioning of the forest will use the manually defined element offsets.
+
+# Arguments
+* `forest`:\\[in,out\\] the considered forest
+* `first_global_element`:\\[in\\] the global ID that will become the first local element
+### Prototype
+```c
+void t8_forest_set_partition_offset (t8_forest_t forest, const t8_gloidx_t first_global_element);
+```
+"""
+function t8_forest_set_partition_offset(forest, first_global_element)
+    @ccall libt8.t8_forest_set_partition_offset(forest::t8_forest_t, first_global_element::t8_gloidx_t)::Cvoid
 end
 
 """
@@ -13407,6 +13500,24 @@ void t8_forest_partition_test_boundary_element (const t8_forest_t forest);
 """
 function t8_forest_partition_test_boundary_element(forest)
     @ccall libt8.t8_forest_partition_test_boundary_element(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_pfc_correction_offsets(forest)
+
+Correct the partitioning if element families are split accorss process boundaries.
+
+The default partitioning distributes the elements into equally-sized partitions. For coarsening, however, all elements of a family have to be on the same process in order to be coarsened into their parent element. This function corrects the partitioning such that no families are split across process boundaries. The price to be paid is a slight deviation from the optimal balance of elements among processors.
+
+# Arguments
+* `forest`:\\[in,out\\] the forest. On input, it has been partitioned into equally-sized element partitions. On output, the partitioning has been adjusted such that no element families are split across the process boundaries.
+### Prototype
+```c
+void t8_forest_pfc_correction_offsets (t8_forest_t forest);
+```
+"""
+function t8_forest_pfc_correction_offsets(forest)
+    @ccall libt8.t8_forest_pfc_correction_offsets(forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -13675,155 +13786,6 @@ const t8_profile_struct_t = t8_profile
 
 """This struct stores various information about a forest's ghost elements and ghost trees."""
 const t8_forest_ghost_struct_t = t8_forest_ghost
-
-# typedef int ( * t8_fortran_adapt_coordinate_callback ) ( double x , double y , double z , int is_family )
-const t8_fortran_adapt_coordinate_callback = Ptr{Cvoid}
-
-const MPI_T8_Fint = Cint
-
-"""
-    t8_fortran_init_all(comm)
-
-### Prototype
-```c
-void t8_fortran_init_all (sc_MPI_Comm *comm);
-```
-"""
-function t8_fortran_init_all(comm)
-    @ccall libt8.t8_fortran_init_all(comm::Ptr{Cint})::Cvoid
-end
-
-# no prototype is found for this function at t8_fortran_interface.h:67:1, please use with caution
-"""
-    t8_fortran_finalize()
-
-Finalize sc. This wraps [`sc_finalize`](@ref) in order to have consistent naming with [`t8_fortran_init_all`](@ref).
-
-### Prototype
-```c
-void t8_fortran_finalize ();
-```
-"""
-function t8_fortran_finalize()
-    @ccall libt8.t8_fortran_finalize()::Cvoid
-end
-
-"""
-    t8_fortran_cmesh_commit(cmesh, comm)
-
-### Prototype
-```c
-void t8_fortran_cmesh_commit (t8_cmesh_t cmesh, sc_MPI_Comm *comm);
-```
-"""
-function t8_fortran_cmesh_commit(cmesh, comm)
-    @ccall libt8.t8_fortran_cmesh_commit(cmesh::t8_cmesh_t, comm::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_fortran_cmesh_set_join_by_stash_noConn(cmesh, do_both_directions)
-
-This function calls [`t8_cmesh_set_join_by_stash`](@ref) with connectivity = NULL.
-
-!!! warning
-
-    This routine might be too expensive for very large meshes. In this case,  consider to use a fully featured mesh generator.
-
-!!! note
-
-    This routine does not detect periodic boundaries.
-
-# Arguments
-* `cmesh`:\\[in,out\\] Pointer to a t8code cmesh object. If set to NULL this argument is ignored.
-* `do_both_directions`:\\[in\\] Compute the connectivity from both neighboring sides. Takes much longer to compute.
-### Prototype
-```c
-void t8_fortran_cmesh_set_join_by_stash_noConn (t8_cmesh_t cmesh, const int do_both_directions);
-```
-"""
-function t8_fortran_cmesh_set_join_by_stash_noConn(cmesh, do_both_directions)
-    @ccall libt8.t8_fortran_cmesh_set_join_by_stash_noConn(cmesh::t8_cmesh_t, do_both_directions::Cint)::Cvoid
-end
-
-"""
-    t8_fortran_MPI_Comm_new(Fcomm)
-
-### Prototype
-```c
-sc_MPI_Comm * t8_fortran_MPI_Comm_new (MPI_T8_Fint Fcomm);
-```
-"""
-function t8_fortran_MPI_Comm_new(Fcomm)
-    @ccall libt8.t8_fortran_MPI_Comm_new(Fcomm::MPI_T8_Fint)::Ptr{Cint}
-end
-
-"""
-    t8_fortran_MPI_Comm_delete(Ccomm)
-
-### Prototype
-```c
-void t8_fortran_MPI_Comm_delete (sc_MPI_Comm *Ccomm);
-```
-"""
-function t8_fortran_MPI_Comm_delete(Ccomm)
-    @ccall libt8.t8_fortran_MPI_Comm_delete(Ccomm::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_cmesh_new_periodic_tri_wrap(Ccomm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic_tri_wrap (sc_MPI_Comm *Ccomm);
-```
-"""
-function t8_cmesh_new_periodic_tri_wrap(Ccomm)
-    @ccall libt8.t8_cmesh_new_periodic_tri_wrap(Ccomm::Ptr{Cint})::t8_cmesh_t
-end
-
-"""
-    t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
-
-### Prototype
-```c
-t8_forest_t t8_forest_new_uniform_default (t8_cmesh_t cmesh, int level, int do_face_ghost, sc_MPI_Comm *comm);
-```
-"""
-function t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
-    @ccall libt8.t8_forest_new_uniform_default(cmesh::t8_cmesh_t, level::Cint, do_face_ghost::Cint, comm::Ptr{Cint})::t8_forest_t
-end
-
-"""
-    t8_forest_adapt_by_coordinates(forest, recursive, callback)
-
-# Arguments
-* `forest`:\\[in,out\\] The forest
-* `recursive`:\\[in\\] A flag specifying whether adaptation is to be done recursively or not. If the value is zero, adaptation is not recursive and it is recursive otherwise.
-* `callback`:\\[in\\] A pointer to a user defined function. t8code will never touch the function.
-### Prototype
-```c
-t8_forest_t t8_forest_adapt_by_coordinates (t8_forest_t forest, int recursive, t8_fortran_adapt_coordinate_callback callback);
-```
-"""
-function t8_forest_adapt_by_coordinates(forest, recursive, callback)
-    @ccall libt8.t8_forest_adapt_by_coordinates(forest::t8_forest_t, recursive::Cint, callback::t8_fortran_adapt_coordinate_callback)::t8_forest_t
-end
-
-"""
-    t8_global_productionf_noargs(string)
-
-Log a message on the root rank with priority [`SC_LP_PRODUCTION`](@ref).
-
-# Arguments
-* `string`:\\[in\\] String to log.
-### Prototype
-```c
-void t8_global_productionf_noargs (const char *string);
-```
-"""
-function t8_global_productionf_noargs(string)
-    @ccall libt8.t8_global_productionf_noargs(string::Cstring)::Cvoid
-end
 
 """
     t8_geometry_type
@@ -14506,23 +14468,23 @@ function t8_element_get_num_siblings(scheme, tree_class, element)
 end
 
 """
-    t8_element_get_sibling(scheme, tree_class, element, sibid, sibling)
+    t8_element_get_sibling(scheme, tree_class, elem, sibid, sibling)
 
 Compute a specific sibling of a given element **element** and store it in **sibling**. **sibling** needs to be an existing element. No memory is allocated by this function. **element** and **sibling** can point to the same element, then the entries of **element** are overwritten by the ones of its i-th sibling.
 
 # Arguments
 * `scheme`:\\[in\\] The scheme of the forest.
 * `tree_class`:\\[in\\] The eclass of tree the elements are part of.
-* `element`:\\[in\\] The element whose sibling will be computed.
+* `elem`:\\[in\\] The element whose sibling will be computed.
 * `sibid`:\\[in\\] The id of the sibling computed.
 * `sibling`:\\[in,out\\] This element's entries will be overwritten by those of **element**'s sibid-th sibling. The storage for this element must exist and match the element class of the sibling.
 ### Prototype
 ```c
-void t8_element_get_sibling (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const int sibid, t8_element_t *sibling);
+void t8_element_get_sibling (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *elem, const int sibid, t8_element_t *sibling);
 ```
 """
-function t8_element_get_sibling(scheme, tree_class, element, sibid, sibling)
-    @ccall libt8.t8_element_get_sibling(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, sibid::Cint, sibling::Ptr{t8_element_t})::Cvoid
+function t8_element_get_sibling(scheme, tree_class, elem, sibid, sibling)
+    @ccall libt8.t8_element_get_sibling(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem::Ptr{t8_element_t}, sibid::Cint, sibling::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -15237,6 +15199,39 @@ function t8_element_get_vertex_reference_coords(scheme, tree_class, element, ver
 end
 
 """
+    t8_element_get_reference_coords(scheme, tree_class, element, ref_coords, num_coords, out_coords)
+
+Convert points in the reference space of an element to points in the reference space of the tree.
+
+```c++
+ [0,1]^\\mathrm{dim} 
+```
+
+of the point in the reference space of the element.
+
+```c++
+ dim
+```
+
+-sized coordinates to evaluate.
+
+# Arguments
+* `scheme`:\\[in\\] The scheme of the forest.
+* `tree_class`:\\[in\\] The eclass of the current tree.
+* `element`:\\[in\\] The element.
+* `ref_coords`:\\[in\\] The coordinates
+* `num_coords`:\\[in\\] Number of
+* `out_coords`:\\[out\\] The coordinates of the points in the reference space of the tree.
+### Prototype
+```c
+void t8_element_get_reference_coords (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const double *ref_coords, const size_t num_coords, double out_coords[]);
+```
+"""
+function t8_element_get_reference_coords(scheme, tree_class, element, ref_coords, num_coords, out_coords)
+    @ccall libt8.t8_element_get_reference_coords(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+end
+
+"""
     t8_element_count_leaves(scheme, tree_class, element, level)
 
 Count how many leaf descendants of a given uniform level an element would produce.
@@ -15279,6 +15274,26 @@ t8_gloidx_t t8_element_count_leaves_from_root (const t8_scheme_c *scheme, const 
 """
 function t8_element_count_leaves_from_root(scheme, tree_class, level)
     @ccall libt8.t8_element_count_leaves_from_root(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, level::Cint)::t8_gloidx_t
+end
+
+"""
+    t8_element_to_string(scheme, tree_class, element, debug_string, string_size)
+
+Fill a string with readable information about the element
+
+# Arguments
+* `scheme`:\\[in\\] The scheme of the forest.
+* `tree_class`:\\[in\\] The eclass of the current tree.
+* `element`:\\[in\\] The element to translate into human-readable information.
+* `debug_string`:\\[in,out\\] The string to fill.
+* `string_size`:\\[in\\] The length of *debug_string*.
+### Prototype
+```c
+void t8_element_to_string (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, char *debug_string, const int string_size);
+```
+"""
+function t8_element_to_string(scheme, tree_class, element, debug_string, string_size)
+    @ccall libt8.t8_element_to_string(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, debug_string::Cstring, string_size::Cint)::Cvoid
 end
 
 """
@@ -15338,7 +15353,7 @@ Initialize an array of allocated elements.
 * `length`:\\[in\\] The number of elements to be initialized.
 * `elem`:\\[in,out\\] On input an array of *length* many allocated elements.
 # See also
-[`t8_element_init`](@ref) must be matched by a call to, t8\\_element\\_deinit, t8\\_element\\_deinit, [`t8_element_new`](@ref), t8\\_element\\_is\\_valid
+[`t8_element_init`](@ref) must be matched by a call to, [`t8_element_deinit`](@ref), [`t8_element_deinit`](@ref), [`t8_element_new`](@ref), t8\\_element\\_is\\_valid
 
 ### Prototype
 ```c
@@ -15347,6 +15362,32 @@ void t8_element_init (const t8_scheme_c *scheme, const t8_eclass_t tree_class, c
 """
 function t8_element_init(scheme, tree_class, length, elem)
     @ccall libt8.t8_element_init(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elem::Ptr{t8_element_t})::Cvoid
+end
+
+"""
+    t8_element_deinit(scheme, tree_class, length, elems)
+
+Deinitialize an array of allocated elements.
+
+!!! note
+
+    Call this function if you called t8_element_init on the element pointers.
+
+# Arguments
+* `scheme`:\\[in\\] The scheme to use.
+* `tree_class`:\\[in\\] The eclass of the current tree.
+* `length`:\\[in\\] The number of elements to be deinitialized.
+* `elems`:\\[in,out\\] On input an array of *length* many allocated and initialized elements, on output an array of *length* many allocated, but not initialized elements.
+# See also
+[`t8_element_init`](@ref)
+
+### Prototype
+```c
+void t8_element_deinit (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const int length, t8_element_t *elems);
+```
+"""
+function t8_element_deinit(scheme, tree_class, length, elems)
+    @ccall libt8.t8_element_deinit(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elems::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -15426,6 +15467,17 @@ end
     vtk_file_type
 
 Enumerator for all types of files readable by t8code.
+
+| Enumerator                           | Note                                           |
+| :----------------------------------- | :--------------------------------------------- |
+| VTK\\_FILE\\_ERROR                   | For Testing purpose.                           |
+| VTK\\_SERIAL\\_FILE                  | VTK file type of serial files.                 |
+| VTK\\_UNSTRUCTURED\\_FILE            | Unstructured file type is the same as serial.  |
+| VTK\\_POLYDATA\\_FILE                | VTK polydata file type.                        |
+| VTK\\_PARALLEL\\_FILE                | VTK file type of parallel files.               |
+| VTK\\_PARALLEL\\_UNSTRUCTURED\\_FILE | For parallel unstructured files.               |
+| VTK\\_PARALLEL\\_POLYDATA\\_FILE     | VTK polydata parallel file type.               |
+| VTK\\_NUM\\_TYPES                    | Number of different vtk file types supported.  |
 """
 @cenum vtk_file_type::Int32 begin
     VTK_FILE_ERROR = -1
@@ -15445,6 +15497,11 @@ const vtk_file_type_t = vtk_file_type
     vtk_read_success
 
 Enumerator for the success of reading a vtk file. This is used to indicate whether the reading was successful or not.
+
+| Enumerator     | Note                                             |
+| :------------- | :----------------------------------------------- |
+| read\\_failure | Indicates that file reading was not successful.  |
+| read\\_success | Indicates that file reading was successful.      |
 """
 @cenum vtk_read_success::UInt32 begin
     read_failure = 0
@@ -17045,11 +17102,11 @@ function t8_eclass_scheme_is_default(scheme, eclass)
     @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{Cint}, eclass::t8_eclass_t)::Cint
 end
 
-const SC_CC = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/x86_64-linux-gnu-gcc"
+const SC_CC = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc"
 
-const SC_CFLAGS = " "
+const SC_CFLAGS = " -pthread"
 
-const SC_CPP = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/x86_64-linux-gnu-gcc -E"
+const SC_CPP = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc -E"
 
 const SC_CPPFLAGS = ""
 
@@ -17107,7 +17164,7 @@ const SC_SIZEOF_VOID_P = 8
 
 const SC_MEMALIGN_BYTES = SC_SIZEOF_VOID_P
 
-const SC_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/destdir/lib"
+const SC_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
 
 const SC_LIBS = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/lib/libz.so m"
 
@@ -17117,13 +17174,13 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 0.0.0"
+const SC_PACKAGE_STRING = "libsc 2.8.6.999"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "0.0.0"
+const SC_PACKAGE_VERSION = "2.8.6.999"
 
 const SC_SIZEOF_INT = 4
 
@@ -17135,13 +17192,13 @@ const SC_SIZEOF_UNSIGNED_LONG = 8
 
 const SC_SIZEOF_LONG_LONG = 8
 
-const SC_VERSION = "0.0.0"
+const SC_VERSION = "2.8.6.999"
 
-const SC_VERSION_MAJOR = 0
+const SC_VERSION_MAJOR = 2
 
-const SC_VERSION_MINOR = 0
+const SC_VERSION_MINOR = 8
 
-const SC_VERSION_POINT = 0
+const SC_VERSION_POINT = 6
 
 # Skipping MacroDefinition: _sc_const const
 
@@ -17223,13 +17280,19 @@ const SC_LP_SILENT = 9
 
 const SC_LP_THRESHOLD = SC_LP_INFO
 
+#const T8_LOCIDX_FORMAT = PRId32
+
 const T8_MPI_LOCIDX = sc_MPI_INT
 
 const T8_LOCIDX_MAX = INT32_MAX
 
+#const T8_GLOIDX_FORMAT = PRId64
+
 const T8_MPI_GLOIDX = sc_MPI_LONG_LONG_INT
 
 const T8_GLOIDX_MAX = INT64_MAX
+
+#const T8_LINEARIDX_FORMAT = PRIu64
 
 const T8_MPI_LINEARIDX = sc_MPI_UNSIGNED_LONG_LONG
 
@@ -17252,6 +17315,8 @@ const T8_ECLASS_MAX_CORNERS_2D = 4
 const T8_ECLASS_MAX_CORNERS = 8
 
 const T8_ECLASS_MAX_DIM = 3
+
+const T8_ECLASS_MAX_CHILDREN = 10
 
 # Skipping MacroDefinition: T8_FACE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 2 , 4 , 6 } , { 1 , 3 , 5 , 7 } , { 0 , 1 , 4 , 5 } , { 2 , 3 , 6 , 7 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } } , /* hex */ { { 1 , 2 , 3 } , { 0 , 2 , 3 } , { 0 , 1 , 3 } , { 0 , 1 , 2 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { 0 , 2 , 4 } , { 1 , 3 , 4 } , { 0 , 1 , 4 } , { 2 , 3 , 4 } , { 0 , 1 , 2 , 3 } } /* pyramid */ \
 #}
@@ -17299,13 +17364,39 @@ const T8_VTK_FLOAT_TYPE = Float32
 
 const T8_VTK_FORMAT_STRING = "ascii"
 
+# Skipping MacroDefinition: T8_THROW_ERROR_WITH @ "Invalid usage of T8_WITH_*. Use T8_ENABLE_* instead."
+
+#const T8_WITH_DEBUG = T8_THROW_ERROR_WITH
+
+#const T8_WITH_VTK = T8_THROW_ERROR_WITH
+
+#const T8_WITH_NETCDF = T8_THROW_ERROR_WITH
+
+#const T8_WITH_NETCDF_PAR = T8_THROW_ERROR_WITH
+
+#const T8_WITH_OCC = T8_THROW_ERROR_WITH
+
+#const T8_WITH_METIS = T8_THROW_ERROR_WITH
+
+#const T8_WITH_MPI = T8_THROW_ERROR_WITH
+
+#const T8_WITH_MPIIO = T8_THROW_ERROR_WITH
+
+#const T8_WITH_FORTRAN = T8_THROW_ERROR_WITH
+
+#const T8_WITH_CPPSTD = T8_THROW_ERROR_WITH
+
+#const T8_WITH_MODDIR = T8_THROW_ERROR_WITH
+
+#const T8_WITH_CUSTOM_TEST_COMMAND = T8_THROW_ERROR_WITH
+
 const sc_mpi_read = sc_io_read
 
 const sc_mpi_write = sc_io_write
 
 const P4EST_CC = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc"
 
-const P4EST_CFLAGS = " "
+const P4EST_CFLAGS = " -pthread"
 
 const P4EST_CPP = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc -E"
 
@@ -17337,11 +17428,13 @@ const P4EST_ENABLE_VTK_COMPRESSION = 1
 
 const P4EST_HAVE_FSYNC = 1
 
+const HAVE_LPTHREAD = 1
+
 const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
 
-const P4EST_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/destdir/lib"
+const P4EST_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
 
 const P4EST_LIBS = "   m"
 
@@ -17351,21 +17444,21 @@ const P4EST_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const P4EST_PACKAGE_NAME = "p4est"
 
-const P4EST_PACKAGE_STRING = "p4est 0.0.0"
+const P4EST_PACKAGE_STRING = "p4est 2.8.6.999"
 
 const P4EST_PACKAGE_TARNAME = "p4est"
 
 const P4EST_PACKAGE_URL = ""
 
-const P4EST_PACKAGE_VERSION = "0.0.0"
+const P4EST_PACKAGE_VERSION = "2.8.6.999"
 
-const P4EST_VERSION = "0.0.0"
+const P4EST_VERSION = "2.8.6.999"
 
-const P4EST_VERSION_MAJOR = 0
+const P4EST_VERSION_MAJOR = 2
 
-const P4EST_VERSION_MINOR = 0
+const P4EST_VERSION_MINOR = 8
 
-const P4EST_VERSION_POINT = 0
+const P4EST_VERSION_POINT = 6
 
 const p4est_qcoord_compare = sc_int32_compare
 
@@ -17481,7 +17574,7 @@ const T8_FOREST_BALANCE_NO_REPART = 2
 
 const T8_PROFILE_NUM_STATS = 17
 
-const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 2
+const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 1
 
 const T8_CMESH_FORMAT = 0x0002
 

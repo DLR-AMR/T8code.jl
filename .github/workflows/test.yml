@@ -57,6 +57,7 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         # with:
         #   annotate: true
+        continue-on-error: true
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3

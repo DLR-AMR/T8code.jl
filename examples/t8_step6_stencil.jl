@@ -78,7 +78,7 @@ end
 function t8_step6_build_forest(comm, dim, level)
     cmesh = t8_cmesh_new_periodic(comm, dim)
 
-    scheme = t8_scheme_new_default_cxx()
+    scheme = t8_scheme_new_default()
 
     adapt_data = t8_step3_adapt_data_t((0.0, 0.0, 0.0),      # Midpoints of the sphere.
                                        0.5,                  # Refine if inside this radius.
@@ -111,7 +111,7 @@ function t8_step6_create_element_data(forest)
     @T8_ASSERT(t8_forest_is_committed(forest)==1)
 
     # Get the number of local elements of forest.
-    num_local_elements = t8_forest_get_local_num_elements(forest)
+    num_local_elements = t8_forest_get_local_num_leaf_elements(forest)
     # Get the number of ghost elements of forest.
     num_ghost_elements = t8_forest_get_num_ghosts(forest)
 
@@ -130,32 +130,33 @@ function t8_step6_create_element_data(forest)
     # Element Midpoint
     midpoint = Vector{Cdouble}(undef, 3)
 
+    scheme = t8_forest_get_scheme(forest)
+
     # Loop over all local trees in the forest.
     current_index = 0
     for itree in 0:(num_local_trees - 1)
         tree_class = t8_forest_get_tree_class(forest, itree)
-        eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
 
         # Get the number of elements of this tree.
-        num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
+        num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
 
         # Loop over all local elements in the tree.
         for ielement in 0:(num_elements_in_tree - 1)
             current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.
 
-            element = t8_forest_get_element_in_tree(forest, itree, ielement)
+            element = t8_forest_get_leaf_element_in_tree(forest, itree, ielement)
 
-            level = t8_element_level(eclass_scheme, element)
+            level = t8_element_get_level(scheme, tree_class, element)
             volume = t8_forest_element_volume(forest, itree, element)
 
             t8_forest_element_centroid(forest, itree, element, pointer(midpoint))
 
-            t8_element_vertex_reference_coords(eclass_scheme, element, 0,
-                                               @view(verts[:, 1]))
-            t8_element_vertex_reference_coords(eclass_scheme, element, 1,
-                                               @view(verts[:, 2]))
-            t8_element_vertex_reference_coords(eclass_scheme, element, 2,
-                                               @view(verts[:, 3]))
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 0,
+                                                   @view(verts[:, 1]))
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 1,
+                                                   @view(verts[:, 2]))
+            t8_element_get_vertex_reference_coords(scheme, tree_class, element, 2,
+                                                   @view(verts[:, 3]))
 
             dx = verts[1, 2] - verts[1, 1]
             dy = verts[2, 3] - verts[2, 1]
@@ -190,21 +191,21 @@ function t8_step6_compute_stencil(forest, element_data)
     dx = Vector{Cdouble}(undef, 3)
     dy = Vector{Cdouble}(undef, 3)
 
+    scheme = t8_forest_get_scheme(forest)
+
     # Loop over all local trees in the forest. For each local tree the element
     # data (level, midpoint[3], dx, dy, volume, height, schlieren, curvature) of
     # each element is calculated and stored into the element data array.
     current_index = 0
     for itree in 0:(num_local_trees - 1)
         tree_class = t8_forest_get_tree_class(forest, itree)
-        eclass_scheme = t8_forest_get_eclass_scheme(forest, tree_class)
-
-        num_elements_in_tree = t8_forest_get_tree_num_elements(forest, itree)
+        num_elements_in_tree = t8_forest_get_tree_num_leaf_elements(forest, itree)
 
         # Loop over all local elements in the tree.
         for ielement in 0:(num_elements_in_tree - 1)
             current_index += 1 # Note: Julia has 1-based indexing, while C/C++ starts with 0.
 
-            element = t8_forest_get_element_in_tree(forest, itree, ielement)
+            element = t8_forest_get_leaf_element_in_tree(forest, itree, ielement)
 
             # Gather center point of the 3x3 stencil.
             stencil[2, 2] = element_data[current_index].height
@@ -212,17 +213,16 @@ function t8_step6_compute_stencil(forest, element_data)
             dy[2] = element_data[current_index].dy
 
             # Loop over all faces of an element.
-            num_faces = t8_element_num_faces(eclass_scheme, element)
+            num_faces = t8_element_get_num_faces(scheme, tree_class, element)
             for iface in 1:num_faces
                 neighids_ref = Ref{Ptr{t8_locidx_t}}()
                 neighbors_ref = Ref{Ptr{Ptr{t8_element}}}()
-                neigh_scheme_ref = Ref{Ptr{t8_eclass_scheme}}()
+                neigh_scheme_ref = Ref{t8_eclass_t}()
 
                 dual_faces_ref = Ref{Ptr{Cint}}()
                 num_neighbors_ref = Ref{Cint}()
 
                 forest_is_balanced = Cint(1)
-
                 t8_forest_leaf_face_neighbors(forest, itree, element,
                                               neighbors_ref, iface - 1, dual_faces_ref,
                                               num_neighbors_ref,

@@ -3,3 +3,4 @@ consistend = "consistend" # is used in API function names...
 Inout = "Inout"
 leafs = "leafs"
 packageid = "packageid"
+WRONLY = "WRONLY" # used in "sc_MPI_MODE_WRONLY"

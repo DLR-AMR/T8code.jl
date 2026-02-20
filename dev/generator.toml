@@ -29,14 +29,13 @@ module_name = "Libt8"
 # using jll_pkg_name
 # export jll_pkg_name
 # We do not set this option since we want to customize it in prologue.jl.
-# jll_pkg_name = "P4est_jll"
+# jll_pkg_name = "t8code_jll"
 jll_pkg_name = ""
 
 # for packages that have extra JLL package dependencies
 jll_pkg_extra = []
 
 # identifiers that starts with the string listed in this entry will be exported.
-# export_symbol_prefixes = ["t8_", "p4est_", "p6est_", "p8est_", "sc_", "T8_", "P4EST_", "P6EST_", "P8EST_", "SC_"]
 export_symbol_prefixes = ["t8_", "T8_"]
 
 # the code in the following file will be copy-pasted to `output_file_path` before the generated code.
@@ -45,28 +44,42 @@ prologue_file_path = "./prologue.jl"
 
 # the code in the following file will be copy-pasted to `output_file_path` after the generated code.
 # this is often used for applying custom patches.
-epilogue_file_path = "./epilogue.jl"
+epilogue_file_path = ""
 
 # node with an id in the `output_ignorelist` will be ignored in the printing passes.
 # this is very useful for custom editing.
 output_ignorelist = [
   "_sc_restrict",
-  "sc_extern_c_hack_3",
-  "sc_extern_c_hack_4",
+  "SC_GCC_VERSION",
   "SC_EXTERN_C_BEGIN",
   "SC_EXTERN_C_END",
-  "SC_GCC_VERSION",
-  "PLATFORM_COMPILER_VERSION",
-  "__PLATFORM_COMPILER_GNU_VERSION_STR",
-  "_p4est_const",
-  "sc_MPI_2INT",
   "sc_MPI_SUCCESS",
+  "sc_MPI_ERR_ARG",
+  "sc_MPI_ERR_COUNT",
+  "sc_MPI_ERR_UNKNOWN",
   "sc_MPI_ERR_OTHER",
+  "sc_MPI_ERR_NO_MEM",
+  "sc_MPI_MAX_ERROR_STRING",
+  "sc_MPI_ERR_FILE",
+  "sc_MPI_ERR_NOT_SAME",
+  "sc_MPI_ERR_AMODE",
+  "sc_MPI_ERR_UNSUPPORTED_DATAREP",
+  "sc_MPI_ERR_UNSUPPORTED_OPERATION",
+  "sc_MPI_ERR_NO_SUCH_FILE",
+  "sc_MPI_ERR_FILE_EXISTS",
+  "sc_MPI_ERR_BAD_FILE",
+  "sc_MPI_ERR_ACCESS",
+  "sc_MPI_ERR_NO_SPACE",
+  "sc_MPI_ERR_QUOTA",
+  "sc_MPI_ERR_READ_ONLY",
+  "sc_MPI_ERR_FILE_IN_USE",
+  "sc_MPI_ERR_DUP_DATAREP",
+  "sc_MPI_ERR_CONVERSION",
+  "sc_MPI_ERR_IO",
+  "sc_MPI_ERR_LASTCODE",
+  "sc_MPI_Aint",
   "sc_MPI_COMM_NULL",
-  # "sc_MPI_COMM_WORLD",
-  # "sc_MPI_COMM_SELF",
   "sc_MPI_COMM_TYPE_SHARED",
-  "sc_MPI_GROUP",
   "sc_MPI_GROUP_NULL",
   "sc_MPI_GROUP_EMPTY",
   "sc_MPI_IDENT",
@@ -78,24 +91,11 @@ output_ignorelist = [
   "sc_MPI_STATUS_IGNORE",
   "sc_MPI_STATUSES_IGNORE",
   "sc_MPI_REQUEST_NULL",
-  "sc_MPI_INFO_NULL",
   "sc_MPI_DATATYPE_NULL",
-  # "sc_MPI_CHAR",
-  # "sc_MPI_SIGNED_CHAR",
-  # "sc_MPI_UNSIGNED_CHAR",
-  # "sc_MPI_BYTE",
-  # "sc_MPI_SHORT",
-  # "sc_MPI_UNSIGNED_SHORT",
-  # "sc_MPI_INT",
-  # "sc_MPI_UNSIGNED",
-  # "sc_MPI_LONG",
-  # "sc_MPI_UNSIGNED_LONG",
-  # "sc_MPI_LONG_LONG_INT",
-  # "sc_MPI_UNSIGNED_LONG_LONG",
-  # "sc_MPI_FLOAT",
-  # "sc_MPI_DOUBLE",
   "sc_MPI_LONG_DOUBLE",
-  "sc_MPI_Op",
+  "sc_MPI_2INT",
+  "sc_MPI_DOUBLE_INT",
+  "sc_MPI_PACKED",
   "sc_MPI_OP_NULL",
   "sc_MPI_MAX",
   "sc_MPI_MIN",
@@ -112,7 +112,10 @@ output_ignorelist = [
   "sc_MPI_PROD",
   "sc_MPI_UNDEFINED",
   "sc_MPI_KEYVAL_INVALID",
+  "sc_MPI_Op",
+  "sc_MPI_Request",
   "sc_MPI_Status",
+  "sc_MPI_INFO_NULL",
   "sc_MPI_Init",
   "sc_MPI_Finalize",
   "sc_MPI_Abort",
@@ -155,7 +158,6 @@ output_ignorelist = [
   "sc_MPI_Allreduce",
   "sc_MPI_Scan",
   "sc_MPI_Exscan",
-  "sc_MPI_Request",
   "sc_MPI_Recv",
   "sc_MPI_Irecv",
   "sc_MPI_Send",
@@ -167,11 +169,60 @@ output_ignorelist = [
   "sc_MPI_Wait",
   "sc_MPI_Waitsome",
   "sc_MPI_Waitall",
-  "sc_MPI_Init_thread",
+  "sc_MPI_Type_size",
+  "sc_MPI_Pack",
+  "sc_MPI_Unpack",
+  "sc_MPI_Pack_size",
+  "sc_MPI_Aint_diff",
   "sc_MPI_THREAD_SINGLE",
   "sc_MPI_THREAD_FUNNELED",
   "sc_MPI_THREAD_SERIALIZED",
   "sc_MPI_THREAD_MULTIPLE",
+  "sc_MPI_Init_thread",
+  "sc_MPI_MODE_RDONLY",
+  "sc_MPI_MODE_RDWR",
+  "sc_MPI_MODE_WRONLY",
+  "sc_MPI_MODE_CREATE",
+  "sc_MPI_MODE_EXCL",
+  "sc_MPI_MODE_DELETE_ON_CLOSE",
+  "sc_MPI_MODE_UNIQUE_OPEN",
+  "sc_MPI_MODE_SEQUENTIAL",
+  "sc_MPI_MODE_APPEND",
+  "sc_MPI_SEEK_SET",
+  "sc_MPI_SEEK_CUR",
+  "sc_MPI_SEEK_END",
+  "sc_MPI_Offset",
+  "sc_MPI_File_open",
+  "sc_MPI_File_close",
+  "sc_MPI_File_get_view",
+  "sc_MPI_File_set_view",
+  "sc_MPI_File_write_all",
+  "sc_MPI_File_read_all",
+  "sc_MPI_File_write_at_all",
+  "sc_MPI_File_read_at_all",
+  "sc_MPI_File_get_size",
+  "sc_MPI_File_set_size",
+  "t8_const",
+  "t8_restrict",
+  "T8_ECLASS_TO_DIMENSION_VALUES",
+  "T8_ECLASS_NUM_FACES_VALUES",
+  "T8_ECLASS_MAX_NUM_FACES_VALUES",
+  "T8_ECLASS_MAX_NUM_CHILDREN_VALUES",
+  "T8_REFERENCE_FACE_NORMAL_TET_VALUES",
+  "T8_ECLASS_NUM_VERTICES_VALUES",
+  "T8_ECLASS_NUM_EDGES_VALUES",
+  "T8_ECLASS_VTK_TYPE_VALUES",
+  "T8_ECLASS_TO_STRING_VALUES",
+  "T8_VERSION_POINT_STRING",
+  "_p4est_const",
+  "P4EST_F90_QCOORD",
+  "P4EST_F90_TOPIDX",
+  "P4EST_F90_LOCIDX",
+  "P4EST_F90_GLOIDX",
+  "P4EST_GLOBAL_NOTICE",
+  "P4EST_GLOBAL_NOTICEF",
+  "P4EST_NOTICE",
+  "P4EST_NOTICEF",
 ]
 
 # Julia's `@enum` do not allow duplicated values, so by default, C enums are translated to
@@ -195,6 +246,9 @@ use_deterministic_symbol = true
 # if you'd like to generate all of the symbols in the system headers, please set this option to false.
 is_local_header_only = true
 
+# set this option to false if you'd like to ignore the symbols(even if necessary) in the system headers.
+generate_isystem_symbols = true
+
 # if this option is set to true, C code with a style of
 # ```c
 # typedef struct {
@@ -215,6 +269,9 @@ is_local_header_only = true
 # const my_struct = var"##Ctag#NUM"
 # ```
 smart_de_anonymize = true
+
+# if set to true, static functions will be ignored
+skip_static_functions = false
 
 # EXPERIMENTAL
 # if this option is set to true, those structs that are not necessary to be an
@@ -242,8 +299,17 @@ auto_mutability_includelist = []
 # note: by default, Clang only parses doxygen comment, pass `-fparse-all-comments` to Clang in order to parse non-doxygen comments.
 extract_c_comment_style = "doxygen"
 
+# Pass a function to explicitly generate documentation. It will be called like
+# `callback_documentation(node::ExprNode, doc::Vector{String})` if it is
+# set. The `doc` argument will contain the docs parsed from the headers if
+# `extract_c_comment_style` is set, otherwise it will be an empty vector.
+#
+# Do *not* set this in the TOML file, it should be set in the generator script
+# to a function that takes in an ExprNode and returns a String[] (string
+# vector).
+# callback_documentation = ""
+
 # if set to true, single line comment will be printed as """comment""" instead of """\ncomment\n"""
-# fold_single_line_comment = false
 fold_single_line_comment = true
 
 # if set to "outofline", documentation of struct fields will be collected at the "Fields" section of the struct
@@ -277,9 +343,14 @@ opaque_as_mutable_struct = true
 use_ccall_macro = true
 
 # if true, variadic functions are wrapped with `@ccall` macro. Otherwise variadic functions are ignored.
+# needed e.g. for t8_global_productionf
 wrap_variadic_function = true
 
-# generate getproperty/setproperty! methods for the types in the following list
+# Generate getproperty/setproperty! methods for the types in the following list.
+# Warning: the generated methods will only work on the architecture that they
+# were generated on. i.e. if you generate them on a 64bit machine they are not
+# guaranteed to work on 32bit machines. See
+# https://github.com/JuliaInterop/Clang.jl/issues/512 for more details.
 field_access_method_list = []
 
 # the generator will prefix the function argument names in the following list with a "_" to
@@ -291,21 +362,13 @@ function_argument_conflict_symbols = []
 add_record_constructors = []
 
 [codegen.macro]
-# it‘s highly recommended to set this entry to "basic".
+# it's highly recommended to set this entry to "basic".
 # if you'd like to skip all of the macros, please set this entry to "disable".
 # if you'd like to translate function-like macros to Julia, please set this entry to "aggressive".
 macro_mode = "basic"
 
 # function-like macros in the following list will always be translated.
-functionlike_macro_includelist = [
-    "P4EST_QUADRANT_LEN",
-    "P4EST_QUADRANT_MASK",
-    "P4EST_LAST_OFFSET",
-    "P8EST_QUADRANT_LEN",
-    "P8EST_QUADRANT_MASK",
-    "P8EST_LAST_OFFSET"
-    # "CINDEX_VERSION_ENCODE",
-]
+functionlike_macro_includelist = []
 
 # if true, the generator prints the following message as comments.
 # "# Skipping MacroDefinition: ..."

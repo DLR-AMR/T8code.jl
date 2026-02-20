@@ -71,7 +71,7 @@ end
 #                    partitioned across the processes in \a comm.
 function t8_step2_build_uniform_forest(comm, cmesh, level)
     # /* Create the refinement scheme. */
-    scheme = t8_scheme_new_default_cxx()
+    scheme = t8_scheme_new_default()
     # /* Creat the uniform forest. */
     forest = t8_forest_new_uniform(cmesh, scheme, level, 0, comm)
 
@@ -127,9 +127,9 @@ cmesh = t8_step2_build_prismcube_coarse_mesh(mpicom)
 # Build the uniform forest, it is automatically partitioned among the processes.
 forest = t8_step2_build_uniform_forest(mpicom, cmesh, level)
 # Get the local number of elements.
-local_num_elements = t8_forest_get_local_num_elements(forest)
+local_num_elements = t8_forest_get_local_num_leaf_elements(forest)
 # Get the global number of elements.
-global_num_elements = t8_forest_get_global_num_elements(forest)
+global_num_elements = t8_forest_get_global_num_leaf_elements(forest)
 
 # Print information on the forest.
 t8_global_productionf(" [step2] Created uniform forest.\n")

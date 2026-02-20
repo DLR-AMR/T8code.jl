@@ -25,6 +25,13 @@ on:
       - '.github/workflows/CompatHelper.yml'
       - '.github/workflows/TagBot.yml'
       - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
 
 # Cancel redundant CI tests automatically
 concurrency:
@@ -50,3 +57,7 @@ jobs:
       - uses: julia-actions/julia-runtest@v1
         # with:
         #   annotate: true
+      # Enable tmate debugging of manually-triggered workflows if the input option was provided
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}

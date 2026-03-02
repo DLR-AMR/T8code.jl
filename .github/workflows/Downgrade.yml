@@ -52,7 +52,7 @@ jobs:
       - uses: julia-actions/cache@v2
       - uses: julia-actions/julia-downgrade-compat@v2
         with:
-          skip: Test
+          skip: Test,UUIDs,Libdl
           projects: ., test
           mode: forcedeps
       # We run the tests manually instead of using julia-action/julia-builpkg and julia-action/julia-runtest

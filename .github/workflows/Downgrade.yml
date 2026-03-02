@@ -50,7 +50,7 @@ jobs:
           arch: ${{ matrix.arch }}
       - run: julia -e 'using InteractiveUtils; versioninfo(verbose=true)'
       - uses: julia-actions/cache@v2
-      - uses: julia-actions/julia-downgrade-compat@v2.1
+      - uses: julia-actions/julia-downgrade-compat@v2.2.0
         with:
           projects: ., test
       - uses: julia-actions/julia-buildpkg@v1

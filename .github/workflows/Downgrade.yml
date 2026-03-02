@@ -64,5 +64,5 @@ jobs:
             import Pkg
             Pkg.instantiate()
             Pkg.status(; mode = Pkg.PKGMODE_MANIFEST)
-            Pkt.test()
+            Pkg.test()
           '

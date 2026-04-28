@@ -16,17 +16,18 @@ end
 #   return > 0 -> The first element should get refined.
 #   return = 0 -> The first element should not get refined.
 #   return < 0 -> The whole family should get coarsened.
-#  
+#
 # \param [in] forest       The current forest that is in construction.
 # \param [in] forest_from  The forest from which we adapt the current forest (in our case, the uniform forest)
 # \param [in] which_tree   The process local id of the current tree.
+# \param [in] tree_class   The eclass of \a which_tree.
 # \param [in] lelement_id  The tree local index of the current element (or the first of the family).
-# \param [in] ts           The refinement scheme for this tree's element class.
-# \param [in] is_family    if 1, the first \a num_elements entries in \a elements form a family. If 0, they do not.
+# \param [in] scheme       The refinement scheme for this tree's element class.
+# \param [in] is_family    If 1, the first \a num_elements entries in \a elements form a family. If 0, they do not.
 # \param [in] num_elements The number of entries in \a elements elements that are defined.
 # \param [in] elements     The element or family of elements to consider for refinement/coarsening.
-function t8_step3_adapt_callback(forest, forest_from, which_tree, lelement_id,
-                                 ts, is_family, num_elements, elements_ptr)::Cint
+function t8_step3_adapt_callback(forest, forest_from, which_tree, tree_class, lelement_id,
+                                 scheme, is_family, num_elements, elements_ptr)::Cint
     # Our adaptation criterion is to look at the midpoint coordinates of the current element and if
     # they are inside a sphere around a given midpoint we refine, if they are outside, we coarsen.
 
@@ -96,9 +97,9 @@ function t8_step3_print_forest_information(forest)
     @T8_ASSERT(t8_forest_is_committed(forest)==1)
 
     # Get the local number of elements.
-    local_num_elements = t8_forest_get_local_num_elements(forest)
+    local_num_elements = t8_forest_get_local_num_leaf_elements(forest)
     # Get the global number of elements.
-    global_num_elements = t8_forest_get_global_num_elements(forest)
+    global_num_elements = t8_forest_get_global_num_leaf_elements(forest)
 
     t8_global_productionf(" [step3] Local number of elements:\t\t%i\n", local_num_elements)
     t8_global_productionf(" [step3] Global number of elements:\t%li\n", global_num_elements)

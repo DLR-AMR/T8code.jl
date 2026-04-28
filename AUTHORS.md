@@ -11,6 +11,7 @@ hereby called the "T8code Authors".
 The following people contributed major additions or modifications to T8code.jl:
 
 - [Joshua Lampert](https://github.com/JoshuaLampert).
+- [Benedict Geihe](https://github.com/benegee).
 
 The software is an adapted fork of P4est.jl which is maintained by
 

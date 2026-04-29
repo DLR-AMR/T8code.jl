@@ -12,6 +12,11 @@ MPI.Init()
 
 comm = MPI.COMM_WORLD
 
+# Check whether we run CI in the cloud with Windows or Mac, see also
+# https://docs.github.com/en/actions/learn-github-actions/environment-variables
+CI_ON_WINDOWS = (get(ENV, "GITHUB_ACTIONS", false) == "true") && Sys.iswindows()
+CI_ON_MACOS = (get(ENV, "GITHUB_ACTIONS", false) == "true") && Sys.isapple()
+
 @testset "init" begin
     include("test_init.jl")
 end

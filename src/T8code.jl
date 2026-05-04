@@ -182,6 +182,22 @@ mutable struct ForestWrapper
     function ForestWrapper(pointer::Ptr{t8_forest})
         wrapper = new(pointer)
 
+        # This finalizer will only run manually when `finalize` is called,
+        # or through `clean_up` at the end of the session. As long as the
+        # wrapper is registered in the `T8CODE_OBJECT_TRACKER`, 
+        # it will not be collected by the GC.
+        finalizer(wrapper) do w
+            w.pointer == C_NULL && return
+            # When finalizing, `forest`, `scheme`, `cmesh`, and `geometry` are
+            # also cleaned up from within `t8code`. The cleanup code for
+            # `cmesh` does some MPI calls for deallocating shared memory
+            # arrays.
+            t8_forest_unref(Ref(w.pointer))
+            w.pointer = C_NULL
+            idx = findfirst(x -> x === w, T8CODE_OBJECT_TRACKER)
+            idx !== nothing && deleteat!(T8CODE_OBJECT_TRACKER, idx)
+        end
+
         # Register the T8codeForestWrapper with the object tracker.
         push!(T8CODE_OBJECT_TRACKER, wrapper)
 
@@ -211,11 +227,7 @@ MPI.add_finalize_hook(T8code.clean_up)
 function clean_up()
     while !isempty(T8CODE_OBJECT_TRACKER)
         wrapper = pop!(T8CODE_OBJECT_TRACKER)
-        # When finalizing, `forest`, `scheme`, `cmesh`, and `geometry` are
-        # also cleaned up from within `t8code`. The cleanup code for
-        # `cmesh` does some MPI calls for deallocating shared memory
-        # arrays.
-        t8_forest_unref(Ref(wrapper.pointer))
+        finalize(wrapper)
     end
 end
 

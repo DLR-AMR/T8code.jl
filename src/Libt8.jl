@@ -11373,17 +11373,13 @@ function t8_forest_leaf_face_orientation(forest, ltreeid, scheme, leaf, face)
 end
 
 """
-    t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, forest_is_balanced)
+    t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass)
 
-Compute the leaf face neighbors of a forest.
-
-!!! note
-
-    If there are no face neighbors, then *neighbor\\_leaves = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
+Compute the leaf face neighbors of a forest leaf element or ghost leaf.
 
 !!! note
 
-    Currently *forest* must be balanced.
+    If there are no face neighbors, then *pneighbor\\_leaves = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
 
 !!! note
 
@@ -11391,13 +11387,17 @@ Compute the leaf face neighbors of a forest.
 
 !!! note
 
+    If *forest* does not have a ghost layer then leaf elements at the process boundaries have 0 neighbors along the boundary face. (The function output for leaf elements then depends on the parallel partition.)
+
+!!! note
+
     Important! This routine allocates memory which must be freed. Do it like this:
 
-if (num\\_neighbors > 0) { scheme->element\\_destroy (pneigh\\_eclass, num\\_neighbors, pneighbor\\_leaves); [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@ref) (pelement\\_indices); [`T8_FREE`](@ref) (dual\\_faces); }
+if (num\\_neighbors > 0) { [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@ref) (pelement\\_indices); [`T8_FREE`](@ref) (dual\\_faces); }
 
 # Arguments
-* `forest`:\\[in\\] The forest. Must have a valid ghost layer.
-* `ltreeid`:\\[in\\] A local tree id.
+* `forest`:\\[in\\] The forest.
+* `ltreeid`:\\[in\\] A local tree id (could also be a ghost tree). 0 <= *ltreeid* < num\\_local trees+num\\_ghost\\_trees
 * `leaf`:\\[in\\] A leaf in tree *ltreeid* of *forest*.
 * `pneighbor_leaves`:\\[out\\] Unallocated on input. On output the neighbor leaves are stored here.
 * `face`:\\[in\\] The index of the face across which the face neighbors are searched.
@@ -11405,28 +11405,23 @@ if (num\\_neighbors > 0) { scheme->element\\_destroy (pneigh\\_eclass, num\\_nei
 * `num_neighbors`:\\[out\\] On output the number of neighbor leaves.
 * `pelement_indices`:\\[out\\] Unallocated on input. On output the element indices of the neighbor leaves are stored here. 0, 1, ... num\\_local\\_el - 1 for local leaves and num\\_local\\_el , ... , num\\_local\\_el + num\\_ghosts - 1 for ghosts.
 * `pneigh_eclass`:\\[out\\] On output the eclass of the neighbor elements.
-* `forest_is_balanced`:\\[in\\] True if we know that *forest* is balanced, false otherwise.
 ### Prototype
 ```c
-void t8_forest_leaf_face_neighbors (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leaves[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass, int forest_is_balanced);
+void t8_forest_leaf_face_neighbors (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *leaf, const t8_element_t **pneighbor_leaves[], const int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass);
 ```
 """
-function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, forest_is_balanced)
-    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t}, forest_is_balanced::Cint)::Cvoid
+function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass)
+    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t})::Cvoid
 end
 
 """
-    t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, forest_is_balanced, gneigh_tree, orientation)
+    t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf_or_ghost, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, gneigh_tree, orientation)
 
 Like t8_forest_leaf_face_neighbors but also provides information about the global neighbors and the orientation.
 
 !!! note
 
-    If there are no face neighbors, then *neighbor\\_leaves = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
-
-!!! note
-
-    Currently *forest* must be balanced.
+    If there are no face neighbors, then *pneighbor\\_leaves = NULL, num\\_neighbors = 0, and *pelement\\_indices = NULL on output.
 
 !!! note
 
@@ -11436,28 +11431,53 @@ Like t8_forest_leaf_face_neighbors but also provides information about the globa
 
     Important! This routine allocates memory which must be freed. Do it like this:
 
-if (num\\_neighbors > 0) { scheme->element\\_destroy (pneigh\\_eclass, num\\_neighbors, pneighbor\\_leaves); [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@ref) (pelement\\_indices); [`T8_FREE`](@ref) (dual\\_faces); }
+if (num\\_neighbors > 0) { [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@ref) (pelement\\_indices); [`T8_FREE`](@ref) (dual\\_faces); }
 
 # Arguments
 * `forest`:\\[in\\] The forest. Must have a valid ghost layer.
-* `ltreeid`:\\[in\\] A local tree id.
-* `leaf`:\\[in\\] A leaf in tree *ltreeid* of *forest*.
+* `ltreeid`:\\[in\\] A local tree id (could also be a ghost tree). 0 <= *ltreeid* < num\\_local trees+num\\_ghost\\_trees
+* `leaf_or_ghost`:\\[in\\] A leaf or ghost leaf element in tree *ltreeid* of *forest*.
 * `pneighbor_leaves`:\\[out\\] Unallocated on input. On output the neighbor leaves are stored here.
 * `face`:\\[in\\] The index of the face across which the face neighbors are searched.
 * `dual_faces`:\\[out\\] On output the face id's of the neighboring elements' faces.
 * `num_neighbors`:\\[out\\] On output the number of neighbor leaves.
 * `pelement_indices`:\\[out\\] Unallocated on input. On output the element indices of the neighbor leaves are stored here. 0, 1, ... num\\_local\\_el - 1 for local leaves and num\\_local\\_el , ... , num\\_local\\_el + num\\_ghosts - 1 for ghosts.
 * `pneigh_eclass`:\\[out\\] On output the eclass of the neighbor elements.
-* `forest_is_balanced`:\\[in\\] True if we know that *forest* is balanced, false otherwise.
 * `gneigh_tree`:\\[out\\] The global tree IDs of the neighbor trees.
 * `orientation`:\\[out\\] If not NULL on input, the face orientation is computed and stored here. Thus, if the face connection is an inter-tree connection the orientation of the tree-to-tree connection is stored. Otherwise, the value 0 is stored. All other parameters and behavior are identical to t8_forest_leaf_face_neighbors.
 ### Prototype
 ```c
-void t8_forest_leaf_face_neighbors_ext (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, t8_element_t **pneighbor_leaves[], int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass, int forest_is_balanced, t8_gloidx_t *gneigh_tree, int *orientation);
+void t8_forest_leaf_face_neighbors_ext (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *leaf_or_ghost, const t8_element_t **pneighbor_leaves[], const int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass, t8_gloidx_t *gneigh_tree, int *orientation);
 ```
 """
-function t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, forest_is_balanced, gneigh_tree, orientation)
-    @ccall libt8.t8_forest_leaf_face_neighbors_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t}, forest_is_balanced::Cint, gneigh_tree::Ptr{t8_gloidx_t}, orientation::Ptr{Cint})::Cvoid
+function t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf_or_ghost, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, gneigh_tree, orientation)
+    @ccall libt8.t8_forest_leaf_face_neighbors_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf_or_ghost::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t}, gneigh_tree::Ptr{t8_gloidx_t}, orientation::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_forest_same_level_leaf_face_neighbor_index(forest, element_index, face_index, global_treeid, dual_face)
+
+Given a leaf element or ghost index in "all local elements + ghosts" enumeration compute the index of the face neighbor of the element - provided that only one or no face neighbors exists. HANDLE WITH CARE. DO NOT CALL IF THE FOREST IS NOT UNIFORM.
+
+!!! note
+
+    Do not call if you are unsure about the number of face neighbors. In particular if the forest is not uniform.
+
+# Arguments
+* `forest`:\\[in\\] The forest. Must be committed.
+* `element_index`:\\[in\\] Index of an element in *forest*. Must have only one or no facen neighbors across the given face. 0 <= *element_index* < num\\_local\\_elements + num\\_ghosts
+* `face_index`:\\[in\\] Index of a face of *element*.
+* `global_treeid`:\\[in\\] Global index of the tree that contains *element*.
+* `dual_face`:\\[out\\] Return value, the dual\\_face index of the face neighbor.
+# Returns
+The index of the face neighbor leaf (local element or ghost).
+### Prototype
+```c
+t8_locidx_t t8_forest_same_level_leaf_face_neighbor_index (const t8_forest_t forest, const t8_locidx_t element_index, const int face_index, const t8_gloidx_t global_treeid, int *dual_face);
+```
+"""
+function t8_forest_same_level_leaf_face_neighbor_index(forest, element_index, face_index, global_treeid, dual_face)
+    @ccall libt8.t8_forest_same_level_leaf_face_neighbor_index(forest::t8_forest_t, element_index::t8_locidx_t, face_index::Cint, global_treeid::t8_gloidx_t, dual_face::Ptr{Cint})::t8_locidx_t
 end
 
 """
@@ -11863,18 +11883,18 @@ end
 """
     t8_forest_element_neighbor_eclass(forest, ltreeid, elem, face)
 
-Return the eclass of the tree in which a face neighbor of a given element lies.
+Return the eclass of the tree in which a face neighbor of a given element or ghost lies.
 
 # Arguments
 * `forest`:\\[in\\] A committed forest.
-* `ltreeid`:\\[in\\] The local tree in which the element lies.
-* `elem`:\\[in\\] An element in the tree *ltreeid*.
+* `ltreeid`:\\[in\\] The local tree or ghost tree in which the element lies. 0 <= *ltreeid* < num\\_local\\_trees + num\\_ghost\\_trees
+* `elem`:\\[in\\] An element or ghost in the tree *ltreeid*.
 * `face`:\\[in\\] A face number of *elem*.
 # Returns
-The local tree id of the tree in which the face neighbor of *elem* across *face* lies.
+The eclass of the local tree or ghost tree that is face neighbor of *elem* across *face*. T8\\_ECLASS\\_INVALID if no neighbor exists.
 ### Prototype
 ```c
-t8_eclass_t t8_forest_element_neighbor_eclass (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *elem, int face);
+t8_eclass_t t8_forest_element_neighbor_eclass (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *elem, const int face);
 ```
 """
 function t8_forest_element_neighbor_eclass(forest, ltreeid, elem, face)
@@ -11895,7 +11915,7 @@ Construct the face neighbor of an element, possibly across tree boundaries. Retu
 * `face`:\\[in\\] The number of the face along which the neighbor should be constructed.
 * `neigh_face`:\\[out\\] The number of the face viewed from perspective of *neigh*.
 # Returns
-The global tree-id of the tree in which *neigh* is in. -1 if there exists no neighbor across that face.
+The global tree-id of the tree in which *neigh* is in. -1 if there exists no neighbor across that face. Domain boundary. -2 if the neighbor is not in a local tree or ghost tree. Process/Ghost boundary.
 ### Prototype
 ```c
 t8_gloidx_t t8_forest_element_face_neighbor (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *elem, t8_element_t *neigh, const t8_eclass_t neigh_eclass, int face, int *neigh_face);
@@ -12294,7 +12314,7 @@ Get a pointer to the ghost leaf element array of a ghost tree.
 
 # Arguments
 * `forest`:\\[in\\] The forest. Ghost layer must exist.
-* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree.
+* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree. 0 <= *lghost_tree* < num\\_ghost\\_trees
 # Returns
 A pointer to the array of ghost leaf elements of the tree. *forest* must be committed before calling this function.
 ### Prototype
@@ -12638,7 +12658,7 @@ function t8_forest_write_vtk(forest, fileprefix)
     @ccall libt8.t8_forest_write_vtk(forest::t8_forest_t, fileprefix::Cstring)::Cint
 end
 
-# typedef int ( * t8_forest_iterate_face_fn ) ( const t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int face , void * user_data , const t8_locidx_t tree_leaf_index )
+# typedef int ( * t8_forest_iterate_face_fn ) ( const t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int face , const int is_leaf , const t8_element_array_t * leaf_elements , const t8_locidx_t tree_leaf_index , void * user_data )
 """
 Callback function used in
 
@@ -12647,8 +12667,10 @@ Callback function used in
 * `ltreeid`:\\[in\\] Local index of the tree containing the *element*.
 * `element`:\\[in\\] The considered element.
 * `face`:\\[in\\] The integer index of the considered face of *element*.
+* `is_leaf`:\\[in\\] True if and only if the currently considered element is a leaf element.
+* `leaf_elements`:\\[in\\] The array of leaf elements that are descendants of *element*. Sorted by linear index.
+* `tree_leaf_index`:\\[in\\] Tree-local index of the first leaf.
 * `user_data`:\\[in\\] Some user-defined data, as void pointer.
-* `tree_leaf_index`:\\[in\\] Tree-local index the first leaf.
 # Returns
 Nonzero if the element may touch the face and the top-down search shall be continued, zero otherwise.
 # See also
@@ -12741,9 +12763,13 @@ function t8_forest_split_array(element, leaf_elements, offsets)
 end
 
 """
-    t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements, user_data, tree_lindex_of_first_leaf, callback)
+    t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements, tree_lindex_of_first_leaf, callback, user_data)
 
 Iterate over all leaves of an element that touch a given face of the element. Callback is called in each recursive step with element as input. leaf\\_index is only not negative if element is a leaf, in which case it indicates the index of the leaf in the leaves of the tree. If it is negative, it is - (index + 1) Top-down iteration and callback is called on each intermediate level. If it returns false, the current element is not traversed further
+
+!!! note
+
+    *tree_lindex_of_first_leaf* is not an index in *leaf_elements*. *leaf_elements* may only be a part of the tree's leaves.
 
 # Arguments
 * `forest`:\\[in\\] A committed forest.
@@ -12751,16 +12777,16 @@ Iterate over all leaves of an element that touch a given face of the element. Ca
 * `element`:\\[in\\] The considered element.
 * `face`:\\[in\\] The integer index of the considered face of *element*.
 * `leaf_elements`:\\[in\\] The array of leaf elements that are descendants of *element*. Sorted by linear index.
-* `user_data`:\\[in\\] The user data passed to the *callback* function.
-* `tree_lindex_of_first_leaf`:\\[in\\] Tree-local index of the first leaf.
+* `tree_lindex_of_first_leaf`:\\[in\\] Index of the first leaf of *element* in the tree's leaves. The corresponding leaf does not necessarily lie on the face of *element*.
 * `callback`:\\[in\\] The callback function.
+* `user_data`:\\[in\\] The user data passed to the *callback* function.
 ### Prototype
 ```c
-void t8_forest_iterate_faces (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *element, const int face, const t8_element_array_t *leaf_elements, void *user_data, const t8_locidx_t tree_lindex_of_first_leaf, const t8_forest_iterate_face_fn callback);
+void t8_forest_iterate_faces (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *element, const int face, const t8_element_array_t *const leaf_elements, const t8_locidx_t tree_lindex_of_first_leaf, const t8_forest_iterate_face_fn callback, void *user_data);
 ```
 """
-function t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements, user_data, tree_lindex_of_first_leaf, callback)
-    @ccall libt8.t8_forest_iterate_faces(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, leaf_elements::Ptr{t8_element_array_t}, user_data::Ptr{Cvoid}, tree_lindex_of_first_leaf::t8_locidx_t, callback::t8_forest_iterate_face_fn)::Cvoid
+function t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements, tree_lindex_of_first_leaf, callback, user_data)
+    @ccall libt8.t8_forest_iterate_faces(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, leaf_elements::Ptr{t8_element_array_t}, tree_lindex_of_first_leaf::t8_locidx_t, callback::t8_forest_iterate_face_fn, user_data::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -17210,11 +17236,11 @@ function t8_eclass_scheme_is_default(scheme, eclass)
     @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{Cint}, eclass::t8_eclass_t)::Cint
 end
 
-const SC_CC = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/x86_64-linux-gnu-gcc"
+const SC_CC = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc"
 
-const SC_CFLAGS = " "
+const SC_CFLAGS = " -pthread"
 
-const SC_CPP = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/x86_64-linux-gnu-gcc -E"
+const SC_CPP = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc -E"
 
 const SC_CPPFLAGS = ""
 
@@ -17272,7 +17298,7 @@ const SC_SIZEOF_VOID_P = 8
 
 const SC_MEMALIGN_BYTES = SC_SIZEOF_VOID_P
 
-const SC_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/destdir/lib"
+const SC_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
 
 const SC_LIBS = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/lib/libz.so m"
 
@@ -17410,7 +17436,7 @@ const sc_mpi_write = sc_io_write
 
 const P4EST_CC = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc"
 
-const P4EST_CFLAGS = " "
+const P4EST_CFLAGS = " -pthread"
 
 const P4EST_CPP = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc -E"
 
@@ -17442,11 +17468,13 @@ const P4EST_ENABLE_VTK_COMPRESSION = 1
 
 const P4EST_HAVE_FSYNC = 1
 
+const HAVE_LPTHREAD = 1
+
 const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
 
-const P4EST_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+mpich/destdir/lib"
+const P4EST_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
 
 const P4EST_LIBS = "   m"
 

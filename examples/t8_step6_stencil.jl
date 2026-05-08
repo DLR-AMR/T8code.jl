@@ -222,12 +222,10 @@ function t8_step6_compute_stencil(forest, element_data)
                 dual_faces_ref = Ref{Ptr{Cint}}()
                 num_neighbors_ref = Ref{Cint}()
 
-                forest_is_balanced = Cint(1)
                 t8_forest_leaf_face_neighbors(forest, itree, element,
                                               neighbors_ref, iface - 1, dual_faces_ref,
                                               num_neighbors_ref,
-                                              neighids_ref, neigh_scheme_ref,
-                                              forest_is_balanced)
+                                              neighids_ref, neigh_scheme_ref)
 
                 num_neighbors = num_neighbors_ref[]
                 dual_faces = 1 .+ unsafe_wrap(Array, dual_faces_ref[], num_neighbors)

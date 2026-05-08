@@ -126,11 +126,10 @@ function t8_step4_partition_ghost(forest)
     # in such a way that afterwards each process has the same number of elements
     # (+- 1 if the number of elements is not divisible by the number of processes).
     #
-    # The third 0 argument is the flag 'partition_for_coarsening' which is currently not
-    # implemented. Once it is, this will ensure that a family of elements will not be split
-    # across multiple processes and thus one level coarsening is always possible (see also the
-    # comments on coarsening in t8_step3).
-    t8_forest_set_partition(new_forest, forest, 0)
+    # The third 0 argument is the flag 'partition_for_coarsening' which ensures that a
+    # family of elements will not be split across multiple processes and thus one level
+    # coarsening is always possible (see also the comments on coarsening in t8_step3).
+    t8_forest_set_partition(new_forest, forest, 1)
 
     # Tell the new_forest to create a ghost layer.
     # This will gather those face neighbor elements of process local element that reside

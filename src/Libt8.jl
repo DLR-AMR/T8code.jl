@@ -180,9 +180,12 @@ end
 The central log function to be called by all packages. Dispatches the log calls by package and filters by category and priority.
 
 # Arguments
+* `filename`:\\[in\\] Usually used with a \\_\\_FILE\\_\\_ argument.
+* `lineno`:\\[in\\] Usually used with a \\_\\_LINE\\_\\_ argument.
 * `package`:\\[in\\] Must be a registered package id or -1.
 * `category`:\\[in\\] Must be [`SC_LC_NORMAL`](@ref) or [`SC_LC_GLOBAL`](@ref).
 * `priority`:\\[in\\] Must be > [`SC_LP_ALWAYS`](@ref) and < [`SC_LP_SILENT`](@ref).
+* `msg`:\\[in\\] Nul-terminated string to print.
 ### Prototype
 ```c
 void sc_log (const char *filename, int lineno, int package, int category, int priority, const char *msg);
@@ -306,6 +309,38 @@ void sc_shmem_free (int package, void *array, sc_MPI_Comm comm);
 """
 function sc_shmem_free(package, array, comm)
     @ccall libsc.sc_shmem_free(package::Cint, array::Ptr{Cvoid}, comm::MPI_Comm)::Cvoid
+end
+
+"""
+    sc_mpi_is_enabled()
+
+Return whether MPI is configured.
+
+# Returns
+Boolean corresponding to define [`SC_ENABLE_MPI`](@ref).
+### Prototype
+```c
+int sc_mpi_is_enabled (void);
+```
+"""
+function sc_mpi_is_enabled()
+    @ccall libsc.sc_mpi_is_enabled()::Cint
+end
+
+"""
+    sc_mpi_is_shared()
+
+Return whether MPI supports type split and shared windows.
+
+# Returns
+Boolean corresponding to #define [`SC_ENABLE_MPISHARED`](@ref).
+### Prototype
+```c
+int sc_mpi_is_shared (void);
+```
+"""
+function sc_mpi_is_shared()
+    @ccall libsc.sc_mpi_is_shared()::Cint
 end
 
 """
@@ -472,10 +507,8 @@ function sc_mpi_comm_get_and_attach(comm)
     @ccall libsc.sc_mpi_comm_get_and_attach(comm::MPI_Comm)::Cint
 end
 
-# typedef void ( * sc_handler_t ) ( void * data )
-const sc_handler_t = Ptr{Cvoid}
-
 # typedef void ( * sc_log_handler_t ) ( FILE * log_stream , const char * filename , int lineno , int package , int category , int priority , const char * msg )
+"""Type of the log handler function."""
 const sc_log_handler_t = Ptr{Cvoid}
 
 # typedef void ( * sc_abort_handler_t ) ( void )
@@ -795,6 +828,7 @@ Set the logging verbosity of a registered package. This can be called at any poi
 
 # Arguments
 * `package_id`:\\[in\\] Must be a registered package identifier.
+* `log_priority`:\\[in\\] The minimum priority required to output.
 ### Prototype
 ```c
 void sc_package_set_verbosity (int package_id, int log_priority);
@@ -1023,6 +1057,22 @@ function sc_version_minor()
 end
 
 """
+    sc_is_littleendian()
+
+Perform a runtime check for the integer endian convention.
+
+# Returns
+True if byte order is little endian, false otherwise.
+### Prototype
+```c
+int sc_is_littleendian (void);
+```
+"""
+function sc_is_littleendian()
+    @ccall libsc.sc_is_littleendian()::Cint
+end
+
+"""
     sc_have_zlib()
 
 Return a boolean indicating whether zlib has been configured.
@@ -1052,6 +1102,22 @@ int sc_have_json (void);
 """
 function sc_have_json()
     @ccall libsc.sc_have_json()::Cint
+end
+
+"""
+    sc_sleep(milliseconds)
+
+Portable function to sleep a prescribed amount of milliseconds.
+
+# Arguments
+* `milliseconds`:\\[in\\] The number of milliseconds to sleep.
+### Prototype
+```c
+void sc_sleep (unsigned milliseconds);
+```
+"""
+function sc_sleep(milliseconds)
+    @ccall libsc.sc_sleep(milliseconds::Cuint)::Cvoid
 end
 
 # typedef unsigned int ( * sc_hash_function_t ) ( const void * v , const void * u )
@@ -3163,6 +3229,30 @@ function sc_shmem_prefix(sendbuf, recvbuf, count, type, op, comm)
     @ccall libsc.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
+"""
+    t8_load_mode
+
+This enumeration contains all modes in which we can open a saved cmesh. The cmesh can be loaded with more processes than it was saved and the mode controls, which of the processes open files and distribute the data.
+
+| Enumerator         | Note                                                                                                                                                                                                                      |
+| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T8\\_LOAD\\_FIRST  | First mode.                                                                                                                                                                                                               |
+| T8\\_LOAD\\_SIMPLE | In simple mode, the first n processes load the file                                                                                                                                                                       |
+| T8\\_LOAD\\_BGQ    | In BGQ mode, the file is loaded on n nodes and from one process of each node. This needs MPI Version 3.1 or higher.                                                                                                       |
+| T8\\_LOAD\\_STRIDE | Every n-th process loads a file. Handle with care, we introduce it, since on Juqueen MPI-3 was not available. The parameter n has to be passed as an extra parameter.  # See also [`t8_cmesh_load_and_distribute`](@ref)  |
+| T8\\_LOAD\\_COUNT  | Number of modes in which we can open a saved cmesh.                                                                                                                                                                       |
+"""
+@cenum t8_load_mode::UInt32 begin
+    T8_LOAD_FIRST = 0
+    T8_LOAD_SIMPLE = 0
+    T8_LOAD_BGQ = 1
+    T8_LOAD_STRIDE = 2
+    T8_LOAD_COUNT = 3
+end
+
+"""This enumeration contains all modes in which we can open a saved cmesh. The cmesh can be loaded with more processes than it was saved and the mode controls, which of the processes open files and distribute the data."""
+const t8_load_mode_t = t8_load_mode
+
 mutable struct t8_cmesh end
 
 """Forward pointer reference to hidden cmesh implementation. This reference needs to be known by [`t8_geometry`](@ref), hence we  put it before the include."""
@@ -3863,7 +3953,11 @@ Save the cmesh to a file with the given fileprefix.
 
 !!! note
 
-    Currently, it is only legal to save cmeshes that use the linear geometry.
+    IMPORTANT: Currently, this functionality is deactivated, because it is outdated. Calling it will thus result in an error.
+
+!!! note
+
+    So far, it was only legal to save cmeshes that use the linear geometry.
 
 # Arguments
 * `cmesh`:\\[in\\] The cmesh to save.
@@ -3888,30 +3982,6 @@ t8_cmesh_t t8_cmesh_load (const char *filename, sc_MPI_Comm comm);
 function t8_cmesh_load(filename, comm)
     @ccall libt8.t8_cmesh_load(filename::Cstring, comm::MPI_Comm)::t8_cmesh_t
 end
-
-"""
-    t8_load_mode
-
-This enumeration contains all modes in which we can open a saved cmesh. The cmesh can be loaded with more processes than it was saved and the mode controls, which of the processes open files and distribute the data.
-
-| Enumerator         | Note                                                                                                                                                                                                                      |
-| :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| T8\\_LOAD\\_FIRST  | First mode.                                                                                                                                                                                                               |
-| T8\\_LOAD\\_SIMPLE | In simple mode, the first n processes load the file                                                                                                                                                                       |
-| T8\\_LOAD\\_BGQ    | In BGQ mode, the file is loaded on n nodes and from one process of each node. This needs MPI Version 3.1 or higher.                                                                                                       |
-| T8\\_LOAD\\_STRIDE | Every n-th process loads a file. Handle with care, we introduce it, since on Juqueen MPI-3 was not available. The parameter n has to be passed as an extra parameter.  # See also [`t8_cmesh_load_and_distribute`](@ref)  |
-| T8\\_LOAD\\_COUNT  | Number of modes in which we can open a saved cmesh.                                                                                                                                                                       |
-"""
-@cenum t8_load_mode::UInt32 begin
-    T8_LOAD_FIRST = 0
-    T8_LOAD_SIMPLE = 0
-    T8_LOAD_BGQ = 1
-    T8_LOAD_STRIDE = 2
-    T8_LOAD_COUNT = 3
-end
-
-"""This enumeration contains all modes in which we can open a saved cmesh. The cmesh can be loaded with more processes than it was saved and the mode controls, which of the processes open files and distribute the data."""
-const t8_load_mode_t = t8_load_mode
 
 """
     t8_cmesh_load_and_distribute(fileprefix, num_files, comm, mode, procs_per_node)
@@ -5776,6 +5846,29 @@ The *\\_to\\_attr arrays may have arbitrary contents defined by the user. We do 
 const p4est_connectivity_t = p4est_connectivity
 
 """
+    p4est_connectivity_shared
+
+| Field | Note                                                       |
+| :---- | :--------------------------------------------------------- |
+| conn  | The members of this connectivity are MPI3 shared windows.  |
+"""
+struct p4est_connectivity_shared
+    conn::Ptr{p4est_connectivity_t}
+    win_vertices::Cint
+    win_tree_to_vertex::Cint
+    win_tree_to_attr::Cint
+    win_tree_to_tree::Cint
+    win_tree_to_face::Cint
+    win_tree_to_corner::Cint
+    win_ctt_offset::Cint
+    win_corner_to_tree::Cint
+    win_corner_to_corner::Cint
+end
+
+"""Management information for a connectivity shared by MPI3."""
+const p4est_connectivity_shared_t = p4est_connectivity_shared
+
+"""
     p4est_connectivity_memory_used(conn)
 
 Calculate memory usage of a connectivity structure.
@@ -6022,6 +6115,25 @@ function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, verti
 end
 
 """
+    p4est_connectivity_copy(input, copy_attr)
+
+Deep copy a connectivity structure.
+
+# Arguments
+* `input`:\\[in\\] Valid connectivity.
+* `copy_attr`:\\[in\\] If true, we copy the tree attribute data. Otherwise, the result has empty attributes.
+# Returns
+A connectivity equal to the first one except, depending on *copy_attry*, for its attributes.
+### Prototype
+```c
+p4est_connectivity_t *p4est_connectivity_copy (p4est_connectivity_t *input, int copy_attr);
+```
+"""
+function p4est_connectivity_copy(input, copy_attr)
+    @ccall libp4est.p4est_connectivity_copy(input::Ptr{p4est_connectivity_t}, copy_attr::Cint)::Ptr{p4est_connectivity_t}
+end
+
+"""
     p4est_connectivity_bcast(conn_in, root, comm)
 
 ### Prototype
@@ -6045,6 +6157,46 @@ void p4est_connectivity_destroy (p4est_connectivity_t * connectivity);
 """
 function p4est_connectivity_destroy(connectivity)
     @ccall libp4est.p4est_connectivity_destroy(connectivity::Ptr{p4est_connectivity_t})::Cvoid
+end
+
+"""
+    p4est_connectivity_share(conn_in, root, comm)
+
+### Prototype
+```c
+p4est_connectivity_shared_t *p4est_connectivity_share (p4est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+```
+"""
+function p4est_connectivity_share(conn_in, root, comm)
+    @ccall libp4est.p4est_connectivity_share(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_shared_t}
+end
+
+"""
+    p4est_connectivity_mission(conn_in, split_type, world_comm)
+
+### Prototype
+```c
+p4est_connectivity_shared_t * p4est_connectivity_mission (p4est_connectivity_t *conn_in, int split_type, sc_MPI_Comm world_comm);
+```
+"""
+function p4est_connectivity_mission(conn_in, split_type, world_comm)
+    @ccall libp4est.p4est_connectivity_mission(conn_in::Ptr{p4est_connectivity_t}, split_type::Cint, world_comm::Cint)::Ptr{p4est_connectivity_shared_t}
+end
+
+"""
+    p4est_connectivity_shared_destroy(cshare)
+
+Destroy a shared connectivity structure. Call this eventually on the result of p4est_connectivity_share or p4est_connectivity_mission (which calls the former internally).
+
+# Arguments
+* `cshare`:\\[in\\] Valid shared connectivity structure; cf. p4est_connectivity_share.
+### Prototype
+```c
+void p4est_connectivity_shared_destroy (p4est_connectivity_shared_t *cshare);
+```
+"""
+function p4est_connectivity_shared_destroy(cshare)
+    @ccall libp4est.p4est_connectivity_shared_destroy(cshare::Ptr{p4est_connectivity_shared_t})::Cvoid
 end
 
 """
@@ -6985,6 +7137,33 @@ The *\\_to\\_attr arrays may have arbitrary contents defined by the user.
 const p8est_connectivity_t = p8est_connectivity
 
 """
+    p8est_connectivity_shared
+
+| Field | Note                                                       |
+| :---- | :--------------------------------------------------------- |
+| conn  | The members of this connectivity are MPI3 shared windows.  |
+"""
+struct p8est_connectivity_shared
+    conn::Ptr{p8est_connectivity_t}
+    win_vertices::Cint
+    win_tree_to_vertex::Cint
+    win_tree_to_attr::Cint
+    win_tree_to_tree::Cint
+    win_tree_to_face::Cint
+    win_tree_to_edge::Cint
+    win_ett_offset::Cint
+    win_edge_to_tree::Cint
+    win_edge_to_edge::Cint
+    win_tree_to_corner::Cint
+    win_ctt_offset::Cint
+    win_corner_to_tree::Cint
+    win_corner_to_corner::Cint
+end
+
+"""Management information for a connectivity shared by MPI3."""
+const p8est_connectivity_shared_t = p8est_connectivity_shared
+
+"""
     p8est_connectivity_memory_used(conn)
 
 Calculate memory usage of a connectivity structure.
@@ -7377,6 +7556,25 @@ function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_cor
 end
 
 """
+    p8est_connectivity_copy(input, copy_attr)
+
+Deep copy a connectivity structure.
+
+# Arguments
+* `input`:\\[in\\] Valid connectivity.
+* `copy_attr`:\\[in\\] If true, we copy the tree attribute data. Otherwise, the result has empty attributes.
+# Returns
+A connectivity equal to the first one except, depending on *copy_attry*, for its attributes.
+### Prototype
+```c
+p8est_connectivity_t *p8est_connectivity_copy (p8est_connectivity_t *input, int copy_attr);
+```
+"""
+function p8est_connectivity_copy(input, copy_attr)
+    @ccall libp4est.p8est_connectivity_copy(input::Ptr{p8est_connectivity_t}, copy_attr::Cint)::Ptr{p8est_connectivity_t}
+end
+
+"""
     p8est_connectivity_bcast(conn_in, root, comm)
 
 ### Prototype
@@ -7400,6 +7598,46 @@ void p8est_connectivity_destroy (p8est_connectivity_t * connectivity);
 """
 function p8est_connectivity_destroy(connectivity)
     @ccall libp4est.p8est_connectivity_destroy(connectivity::Ptr{p8est_connectivity_t})::Cvoid
+end
+
+"""
+    p8est_connectivity_share(conn_in, root, comm)
+
+### Prototype
+```c
+p8est_connectivity_shared_t *p8est_connectivity_share (p8est_connectivity_t * conn_in, int root, sc_MPI_Comm comm);
+```
+"""
+function p8est_connectivity_share(conn_in, root, comm)
+    @ccall libp4est.p8est_connectivity_share(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_shared_t}
+end
+
+"""
+    p8est_connectivity_mission(conn_in, split_type, world_comm)
+
+### Prototype
+```c
+p8est_connectivity_shared_t * p8est_connectivity_mission (p8est_connectivity_t *conn_in, int split_type, sc_MPI_Comm world_comm);
+```
+"""
+function p8est_connectivity_mission(conn_in, split_type, world_comm)
+    @ccall libp4est.p8est_connectivity_mission(conn_in::Ptr{p8est_connectivity_t}, split_type::Cint, world_comm::Cint)::Ptr{p8est_connectivity_shared_t}
+end
+
+"""
+    p8est_connectivity_shared_destroy(cshare)
+
+Destroy a shared connectivity structure. Call this eventually on the result of p8est_connectivity_share or p8est_connectivity_mission (which calls the former internally).
+
+# Arguments
+* `cshare`:\\[in\\] Valid shared connectivity structure; cf. p8est_connectivity_share.
+### Prototype
+```c
+void p8est_connectivity_shared_destroy (p8est_connectivity_shared_t *cshare);
+```
+"""
+function p8est_connectivity_shared_destroy(cshare)
+    @ccall libp4est.p8est_connectivity_shared_destroy(cshare::Ptr{p8est_connectivity_shared_t})::Cvoid
 end
 
 """
@@ -11913,7 +12151,7 @@ Construct the face neighbor of an element, possibly across tree boundaries. Retu
 * `neigh`:\\[in,out\\] On input an allocated element of the scheme of the face\\_neighbors eclass. On output, this element's data is filled with the data of the face neighbor. If the neighbor does not exist the data could be modified arbitrarily.
 * `neigh_eclass`:\\[in\\] The eclass of *neigh*.
 * `face`:\\[in\\] The number of the face along which the neighbor should be constructed.
-* `neigh_face`:\\[out\\] The number of the face viewed from perspective of *neigh*.
+* `neigh_face`:\\[out\\] The number of the face viewed from perspective of *neigh*. Can be nullptr, in which case the output is discarded.
 # Returns
 The global tree-id of the tree in which *neigh* is in. -1 if there exists no neighbor across that face. Domain boundary. -2 if the neighbor is not in a local tree or ghost tree. Process/Ghost boundary.
 ### Prototype
@@ -13299,6 +13537,130 @@ const t8_profile_struct_t = t8_profile
 
 """This struct stores various information about a forest's ghost elements and ghost trees."""
 const t8_forest_ghost_struct_t = t8_forest_ghost
+
+# typedef int ( * t8_fortran_adapt_coordinate_callback ) ( double x , double y , double z , int is_family )
+const t8_fortran_adapt_coordinate_callback = Ptr{Cvoid}
+
+const MPI_T8_Fint = Cint
+
+"""
+    t8_fortran_init_all(comm)
+
+### Prototype
+```c
+void t8_fortran_init_all (sc_MPI_Comm *comm);
+```
+"""
+function t8_fortran_init_all(comm)
+    @ccall libt8.t8_fortran_init_all(comm::Ptr{Cint})::Cvoid
+end
+
+# no prototype is found for this function at t8_fortran_interface.h:67:1, please use with caution
+"""
+    t8_fortran_finalize()
+
+Finalize sc. This wraps [`sc_finalize`](@ref) in order to have consistent naming with [`t8_fortran_init_all`](@ref).
+
+### Prototype
+```c
+void t8_fortran_finalize ();
+```
+"""
+function t8_fortran_finalize()
+    @ccall libt8.t8_fortran_finalize()::Cvoid
+end
+
+"""
+    t8_fortran_cmesh_commit(cmesh, comm)
+
+### Prototype
+```c
+void t8_fortran_cmesh_commit (t8_cmesh_t cmesh, sc_MPI_Comm *comm);
+```
+"""
+function t8_fortran_cmesh_commit(cmesh, comm)
+    @ccall libt8.t8_fortran_cmesh_commit(cmesh::t8_cmesh_t, comm::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_fortran_MPI_Comm_new(Fcomm)
+
+### Prototype
+```c
+sc_MPI_Comm * t8_fortran_MPI_Comm_new (MPI_T8_Fint Fcomm);
+```
+"""
+function t8_fortran_MPI_Comm_new(Fcomm)
+    @ccall libt8.t8_fortran_MPI_Comm_new(Fcomm::MPI_T8_Fint)::Ptr{Cint}
+end
+
+"""
+    t8_fortran_MPI_Comm_delete(Ccomm)
+
+### Prototype
+```c
+void t8_fortran_MPI_Comm_delete (sc_MPI_Comm *Ccomm);
+```
+"""
+function t8_fortran_MPI_Comm_delete(Ccomm)
+    @ccall libt8.t8_fortran_MPI_Comm_delete(Ccomm::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_cmesh_new_periodic_tri_wrap(Ccomm)
+
+### Prototype
+```c
+t8_cmesh_t t8_cmesh_new_periodic_tri_wrap (sc_MPI_Comm *Ccomm);
+```
+"""
+function t8_cmesh_new_periodic_tri_wrap(Ccomm)
+    @ccall libt8.t8_cmesh_new_periodic_tri_wrap(Ccomm::Ptr{Cint})::t8_cmesh_t
+end
+
+"""
+    t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
+
+### Prototype
+```c
+t8_forest_t t8_forest_new_uniform_default (t8_cmesh_t cmesh, int level, int do_face_ghost, sc_MPI_Comm *comm);
+```
+"""
+function t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
+    @ccall libt8.t8_forest_new_uniform_default(cmesh::t8_cmesh_t, level::Cint, do_face_ghost::Cint, comm::Ptr{Cint})::t8_forest_t
+end
+
+"""
+    t8_forest_adapt_by_coordinates(forest, recursive, callback)
+
+# Arguments
+* `forest`:\\[in,out\\] The forest
+* `recursive`:\\[in\\] A flag specifying whether adaptation is to be done recursively or not. If the value is zero, adaptation is not recursive and it is recursive otherwise.
+* `callback`:\\[in\\] A pointer to a user defined function. t8code will never touch the function.
+### Prototype
+```c
+t8_forest_t t8_forest_adapt_by_coordinates (t8_forest_t forest, int recursive, t8_fortran_adapt_coordinate_callback callback);
+```
+"""
+function t8_forest_adapt_by_coordinates(forest, recursive, callback)
+    @ccall libt8.t8_forest_adapt_by_coordinates(forest::t8_forest_t, recursive::Cint, callback::t8_fortran_adapt_coordinate_callback)::t8_forest_t
+end
+
+"""
+    t8_global_productionf_noargs(string)
+
+Log a message on the root rank with priority [`SC_LP_PRODUCTION`](@ref).
+
+# Arguments
+* `string`:\\[in\\] String to log.
+### Prototype
+```c
+void t8_global_productionf_noargs (const char *string);
+```
+"""
+function t8_global_productionf_noargs(string)
+    @ccall libt8.t8_global_productionf_noargs(string::Cstring)::Cvoid
+end
 
 """
     t8_geometry_type
@@ -15745,642 +16107,6 @@ function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_ca
     @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
 end
 
-struct sc_flopinfo
-    seconds::Cdouble
-    cwtime::Cdouble
-    crtime::Cfloat
-    cptime::Cfloat
-    cflpops::Clonglong
-    iwtime::Cdouble
-    irtime::Cfloat
-    iptime::Cfloat
-    iflpops::Clonglong
-    mflops::Cfloat
-    use_papi::Cint
-end
-
-const sc_flopinfo_t = sc_flopinfo
-
-"""
-    sc_flops_snap(fi, snapshot)
-
-Call [`sc_flops_count`](@ref) (fi) and copies fi into snapshot.
-
-# Arguments
-* `fi`:\\[in,out\\] Members will be updated.
-* `snapshot`:\\[out\\] On output is a copy of fi.
-### Prototype
-```c
-void sc_flops_snap (sc_flopinfo_t * fi, sc_flopinfo_t * snapshot);
-```
-"""
-function sc_flops_snap(fi, snapshot)
-    @ccall libsc.sc_flops_snap(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
-end
-
-"""
-    sc_flops_shot(fi, snapshot)
-
-Call [`sc_flops_count`](@ref) (fi) and override snapshot interval timings with the differences since the previous call to [`sc_flops_snap`](@ref). The interval mflop rate is computed by iflpops / 1e6 / irtime. The cumulative timings in snapshot are copied form fi.
-
-# Arguments
-* `fi`:\\[in,out\\] Members will be updated.
-* `snapshot`:\\[in,out\\] Interval timings measured since [`sc_flops_snap`](@ref).
-### Prototype
-```c
-void sc_flops_shot (sc_flopinfo_t * fi, sc_flopinfo_t * snapshot);
-```
-"""
-function sc_flops_shot(fi, snapshot)
-    @ccall libsc.sc_flops_shot(fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t})::Cvoid
-end
-
-"""
-    sc_flops_papi(rtime, ptime, flpops, mflops)
-
-Calls PAPI\\_flops. Aborts on PAPI error. The first call sets up the performance counters. Subsequent calls return cumulative real and process times, cumulative floating point operations and the flop rate since the last call. This is a compatibility wrapper: users should only need to use the [`sc_flopinfo_t`](@ref) interface functions below.
-
-### Prototype
-```c
-void sc_flops_papi (float *rtime, float *ptime, long long *flpops, float *mflops);
-```
-"""
-function sc_flops_papi(rtime, ptime, flpops, mflops)
-    @ccall libsc.sc_flops_papi(rtime::Ptr{Cfloat}, ptime::Ptr{Cfloat}, flpops::Ptr{Clonglong}, mflops::Ptr{Cfloat})::Cvoid
-end
-
-"""
-    sc_flops_start(fi)
-
-Prepare [`sc_flopinfo_t`](@ref) structure and start flop counters. Must only be called once during the program run. This function calls [`sc_flops_papi`](@ref).
-
-# Arguments
-* `fi`:\\[out\\] Members will be initialized.
-### Prototype
-```c
-void sc_flops_start (sc_flopinfo_t * fi);
-```
-"""
-function sc_flops_start(fi)
-    @ccall libsc.sc_flops_start(fi::Ptr{sc_flopinfo_t})::Cvoid
-end
-
-"""
-    sc_flops_start_nopapi(fi)
-
-Prepare [`sc_flopinfo_t`](@ref) structure and ignore the flop counters. This [`sc_flopinfo_t`](@ref) does not call PAPI\\_flops() in this function or in [`sc_flops_count`](@ref)().
-
-# Arguments
-* `fi`:\\[out\\] Members will be initialized.
-### Prototype
-```c
-void sc_flops_start_nopapi (sc_flopinfo_t * fi);
-```
-"""
-function sc_flops_start_nopapi(fi)
-    @ccall libsc.sc_flops_start_nopapi(fi::Ptr{sc_flopinfo_t})::Cvoid
-end
-
-"""
-    sc_flops_count(fi)
-
-Update [`sc_flopinfo_t`](@ref) structure with current measurement. Must only be called after [`sc_flops_start`](@ref). Can be called any number of times. This function calls [`sc_flops_papi`](@ref).
-
-# Arguments
-* `fi`:\\[in,out\\] Members will be updated.
-### Prototype
-```c
-void sc_flops_count (sc_flopinfo_t * fi);
-```
-"""
-function sc_flops_count(fi)
-    @ccall libsc.sc_flops_count(fi::Ptr{sc_flopinfo_t})::Cvoid
-end
-
-# automatic type deduction for variadic arguments may not be what you want, please use with caution
-@generated function sc_flops_shotv(fi, va_list...)
-        :(@ccall(libsc.sc_flops_shotv(fi::Ptr{sc_flopinfo_t}; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
-
-mutable struct sc_options end
-
-"""The options data structure is opaque."""
-const sc_options_t = sc_options
-
-# typedef int ( * sc_options_callback_t ) ( sc_options_t * opt , const char * opt_arg , void * data )
-"""
-This callback can be invoked with sc_options_parse.
-
-# Arguments
-* `opt`:\\[in\\] Valid options data structure. This is passed as a matter of principle.
-* `opt_arg`:\\[in\\] The option argument or NULL if there is none. This variable is internal. Do not store pointer.
-* `data`:\\[in\\] User-defined data passed to [`sc_options_add_callback`](@ref).
-# Returns
-Return 0 if successful, -1 to indicate a parse error.
-"""
-const sc_options_callback_t = Ptr{Cvoid}
-
-"""
-    sc_options_new(program_path)
-
-Create an empty options structure.
-
-# Arguments
-* `program_path`:\\[in\\] Name or path name of the program to display. Usually argv[0] is fine.
-# Returns
-A valid and empty options structure.
-### Prototype
-```c
-sc_options_t *sc_options_new (const char *program_path);
-```
-"""
-function sc_options_new(program_path)
-    @ccall libsc.sc_options_new(program_path::Cstring)::Ptr{sc_options_t}
-end
-
-"""
-    sc_options_destroy_deep(opt)
-
-Destroy the options structure and all allocated structures contained. The keyvalue structure passed into sc\\_keyvalue\\_add is destroyed.
-
-!!! compat "Deprecated"
-
-    This function is kept for backwards compatibility. It is best to destroy any key-value container outside of the lifetime of the options object.
-
-# Arguments
-* `opt`:\\[in,out\\] This options structure is deallocated, including all key-value containers referenced.
-### Prototype
-```c
-void sc_options_destroy_deep (sc_options_t * opt);
-```
-"""
-function sc_options_destroy_deep(opt)
-    @ccall libsc.sc_options_destroy_deep(opt::Ptr{sc_options_t})::Cvoid
-end
-
-"""
-    sc_options_destroy(opt)
-
-Destroy the options structure. Whatever has been passed into sc\\_keyvalue\\_add is left alone.
-
-# Arguments
-* `opt`:\\[in,out\\] This options structure is deallocated.
-### Prototype
-```c
-void sc_options_destroy (sc_options_t * opt);
-```
-"""
-function sc_options_destroy(opt)
-    @ccall libsc.sc_options_destroy(opt::Ptr{sc_options_t})::Cvoid
-end
-
-"""
-    sc_options_set_spacing(opt, space_type, space_help)
-
-Set the spacing for sc_options_print_summary. There are two values to be set: the spacing from the beginning of the printed line to the type of the option variable, and from the beginning of the printed line to the help string.
-
-# Arguments
-* `opt`:\\[in,out\\] Valid options structure.
-* `space_type`:\\[in\\] Number of spaces to the type display, for example <INT>, <STRING>, etc. Setting this negative sets the default 20.
-* `space_help`:\\[in\\] Number of space to the help string. Setting this negative sets the default 32.
-### Prototype
-```c
-void sc_options_set_spacing (sc_options_t * opt, int space_type, int space_help);
-```
-"""
-function sc_options_set_spacing(opt, space_type, space_help)
-    @ccall libsc.sc_options_set_spacing(opt::Ptr{sc_options_t}, space_type::Cint, space_help::Cint)::Cvoid
-end
-
-"""
-    sc_options_add_switch(opt, opt_char, opt_name, variable, help_string)
-
-Add a switch option. This option is used without option arguments. Every use increments the variable by one. Its initial value is 0. Either opt\\_char or opt\\_name must be valid, that is, not '\\0'/NULL.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_switch (sc_options_t * opt, int opt_char, const char *opt_name, int *variable, const char *help_string);
-```
-"""
-function sc_options_add_switch(opt, opt_char, opt_name, variable, help_string)
-    @ccall libsc.sc_options_add_switch(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_bool(opt, opt_char, opt_name, variable, init_value, help_string)
-
-Add a boolean option. It can be initialized to true or false in the C sense. Specifying it on the command line without argument sets the option to true. The argument 0/f/F/n/N sets it to false (0). The argument 1/t/T/y/Y sets it to true (nonzero).
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `init_value`:\\[in\\] Initial value to set the option, read as true or false.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_bool (sc_options_t * opt, int opt_char, const char *opt_name, int *variable, int init_value, const char *help_string);
-```
-"""
-function sc_options_add_bool(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libsc.sc_options_add_bool(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_int(opt, opt_char, opt_name, variable, init_value, help_string)
-
-Add an option that takes an integer argument.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `init_value`:\\[in\\] The initial value of the option variable.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_int (sc_options_t * opt, int opt_char, const char *opt_name, int *variable, int init_value, const char *help_string);
-```
-"""
-function sc_options_add_int(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libsc.sc_options_add_int(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cint, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_size_t(opt, opt_char, opt_name, variable, init_value, help_string)
-
-Add an option that takes a size\\_t argument. The value of the size\\_t variable must not be greater than LLONG\\_MAX.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `init_value`:\\[in\\] The initial value of the option variable.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_size_t (sc_options_t * opt, int opt_char, const char *opt_name, size_t *variable, size_t init_value, const char *help_string);
-```
-"""
-function sc_options_add_size_t(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libsc.sc_options_add_size_t(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Csize_t}, init_value::Csize_t, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_double(opt, opt_char, opt_name, variable, init_value, help_string)
-
-Add an option that takes a double argument. The double must be in the legal range. "inf" and "nan" are legal too.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `init_value`:\\[in\\] The initial value of the option variable.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_double (sc_options_t * opt, int opt_char, const char *opt_name, double *variable, double init_value, const char *help_string);
-```
-"""
-function sc_options_add_double(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libsc.sc_options_add_double(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cdouble}, init_value::Cdouble, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_string(opt, opt_char, opt_name, variable, init_value, help_string)
-
-Add a string option.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `variable`:\\[in\\] Address of the variable to store the option value.
-* `init_value`:\\[in\\] This default value of the option may be NULL. If not NULL, the value is copied to internal storage.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_string (sc_options_t * opt, int opt_char, const char *opt_name, const char **variable, const char *init_value, const char *help_string);
-```
-"""
-function sc_options_add_string(opt, opt_char, opt_name, variable, init_value, help_string)
-    @ccall libsc.sc_options_add_string(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cstring}, init_value::Cstring, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_inifile(opt, opt_char, opt_name, help_string)
-
-Add an option to read in a file in `.ini` format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_inifile (sc_options_t * opt, int opt_char, const char *opt_name, const char *help_string);
-```
-"""
-function sc_options_add_inifile(opt, opt_char, opt_name, help_string)
-    @ccall libsc.sc_options_add_inifile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_jsonfile(opt, opt_char, opt_name, help_string)
-
-Add an option to read in a file in JSON format. The argument to this option must be a filename. On parsing the specified file is read to set known option variables. It does not have an associated option variable itself.
-
-This functionality is only active when sc_have_json returns true, equivalent to the define SC\\_HAVE\\_JSON existing, and ignored otherwise.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_jsonfile (sc_options_t * opt, int opt_char, const char *opt_name, const char *help_string);
-```
-"""
-function sc_options_add_jsonfile(opt, opt_char, opt_name, help_string)
-    @ccall libsc.sc_options_add_jsonfile(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_callback(opt, opt_char, opt_name, has_arg, fn, data, help_string)
-
-Add an option that calls a user-defined function when parsed. The callback function should be implemented to allow multiple calls. The callback may be used to set multiple option variables in bulk that would otherwise require an inconvenient number of individual options. This option is not loaded from or saved to files.
-
-# Arguments
-* `opt`:\\[in,out\\] A valid options structure.
-* `opt_char`:\\[in\\] Short option character, may be '\\0'.
-* `opt_name`:\\[in\\] Long option name without initial dashes, may be NULL.
-* `has_arg`:\\[in\\] Specify whether the option needs an option argument. This can be 0 for none, 1 for a required argument, and 2 for an optional argument; see getopt\\_long (3).
-* `fn`:\\[in\\] Function to call when this option is encountered.
-* `data`:\\[in\\] User-defined data passed to the callback.
-* `help_string`:\\[in\\] Help string for usage message, may be NULL.
-### Prototype
-```c
-void sc_options_add_callback (sc_options_t * opt, int opt_char, const char *opt_name, int has_arg, sc_options_callback_t fn, void *data, const char *help_string);
-```
-"""
-function sc_options_add_callback(opt, opt_char, opt_name, has_arg, fn, data, help_string)
-    @ccall libsc.sc_options_add_callback(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, has_arg::Cint, fn::sc_options_callback_t, data::Ptr{Cvoid}, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_keyvalue(opt, opt_char, opt_name, variable, init_value, keyvalue, help_string)
-
-Add an option that takes string keys into a lookup table of integers. On calling this function, it must be certain that the initial value exists.
-
-# Arguments
-* `opt`:\\[in\\] Initialized options structure.
-* `opt_char`:\\[in\\] Option character for command line, or 0.
-* `opt_name`:\\[in\\] Name of the long option, or NULL.
-* `variable`:\\[in\\] Address of an existing integer that holds the value of this option parameter.
-* `init_value`:\\[in\\] The key that is looked up for the initial value. It must be certain that the key exists and its value is of type integer.
-* `keyvalue`:\\[in\\] A valid key-value structure where the values must be integers. If a key is asked for that does not exist, we will produce an option error. This structure must stay alive as long as opt.
-* `help_string`:\\[in\\] Instructive one-line string to explain the option.
-### Prototype
-```c
-void sc_options_add_keyvalue (sc_options_t * opt, int opt_char, const char *opt_name, int *variable, const char *init_value, sc_keyvalue_t * keyvalue, const char *help_string);
-```
-"""
-function sc_options_add_keyvalue(opt, opt_char, opt_name, variable, init_value, keyvalue, help_string)
-    @ccall libsc.sc_options_add_keyvalue(opt::Ptr{sc_options_t}, opt_char::Cint, opt_name::Cstring, variable::Ptr{Cint}, init_value::Cstring, keyvalue::Ptr{sc_keyvalue_t}, help_string::Cstring)::Cvoid
-end
-
-"""
-    sc_options_add_suboptions(opt, subopt, prefix)
-
-Copy one set of options to another as a subset, with a prefix. The variables referenced by the options and the suboptions are the same.
-
-# Arguments
-* `opt`:\\[in,out\\] A set of options.
-* `subopt`:\\[in\\] Another set of options to be copied.
-* `prefix`:\\[in\\] The prefix to add to option names as they are copied. If an option has a long name "name" in subopt, its name in opt is "prefix:name"; if an option only has a character 'c' in subopt, its name in opt is "prefix:-c".
-### Prototype
-```c
-void sc_options_add_suboptions (sc_options_t * opt, sc_options_t * subopt, const char *prefix);
-```
-"""
-function sc_options_add_suboptions(opt, subopt, prefix)
-    @ccall libsc.sc_options_add_suboptions(opt::Ptr{sc_options_t}, subopt::Ptr{sc_options_t}, prefix::Cstring)::Cvoid
-end
-
-"""
-    sc_options_print_usage(package_id, log_priority, opt, arg_usage)
-
-Print a usage message. This function uses the [`SC_LC_GLOBAL`](@ref) log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `log_priority`:\\[in\\] Priority for output according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `arg_usage`:\\[in\\] If not NULL, an <ARGUMENTS> string is appended to the usage line. If the string is non-empty, it will be printed after the option summary and an "ARGUMENTS:\\n" title line. Line breaks are identified by strtok(3) and honored.
-### Prototype
-```c
-void sc_options_print_usage (int package_id, int log_priority, sc_options_t * opt, const char *arg_usage);
-```
-"""
-function sc_options_print_usage(package_id, log_priority, opt, arg_usage)
-    @ccall libsc.sc_options_print_usage(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t}, arg_usage::Cstring)::Cvoid
-end
-
-"""
-    sc_options_print_summary(package_id, log_priority, opt)
-
-Print a summary of all option values. Prints the title "Options:" and a line for every option, then the title "Arguments:" and a line for every argument. This function uses the [`SC_LC_GLOBAL`](@ref) log category. That means the default action is to print only on rank 0. Applications can change that by providing a user-defined log handler.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `log_priority`:\\[in\\] Priority for output according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-### Prototype
-```c
-void sc_options_print_summary (int package_id, int log_priority, sc_options_t * opt);
-```
-"""
-function sc_options_print_summary(package_id, log_priority, opt)
-    @ccall libsc.sc_options_print_summary(package_id::Cint, log_priority::Cint, opt::Ptr{sc_options_t})::Cvoid
-end
-
-"""
-    sc_options_load(package_id, err_priority, opt, file)
-
-Load a file in the default format and update option values. The default is a file in the `.ini` format; see sc_options_load_ini.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `file`:\\[in\\] Filename of the file to load.
-# Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_load (int package_id, int err_priority, sc_options_t * opt, const char *file);
-```
-"""
-function sc_options_load(package_id, err_priority, opt, file)
-    @ccall libsc.sc_options_load(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, file::Cstring)::Cint
-end
-
-"""
-    sc_options_load_ini(package_id, err_priority, opt, inifile, re)
-
-Load a file in `.ini` format and update entries found under [Options]. An option whose name contains a colon such as "prefix:basename" will be updated by a "basename =" entry in a [prefix] section.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `inifile`:\\[in\\] Filename of the ini file to load.
-* `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
-# Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_load_ini (int package_id, int err_priority, sc_options_t * opt, const char *inifile, void *re);
-```
-"""
-function sc_options_load_ini(package_id, err_priority, opt, inifile, re)
-    @ccall libsc.sc_options_load_ini(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring, re::Ptr{Cvoid})::Cint
-end
-
-"""
-    sc_options_load_json(package_id, err_priority, opt, jsonfile, re)
-
-Load a file in JSON format and update entries from object "Options". An option whose name contains a colon such as "Prefix:basename" will be updated by a "basename :" entry in a "Prefix" nested object.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `jsonfile`:\\[in\\] Filename of the JSON file to load.
-* `re`:\\[in,out\\] Provisioned for runtime error checking implementation; currently must be NULL.
-# Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_load_json (int package_id, int err_priority, sc_options_t * opt, const char *jsonfile, void *re);
-```
-"""
-function sc_options_load_json(package_id, err_priority, opt, jsonfile, re)
-    @ccall libsc.sc_options_load_json(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, jsonfile::Cstring, re::Ptr{Cvoid})::Cint
-end
-
-"""
-    sc_options_save(package_id, err_priority, opt, inifile)
-
-Save all options and arguments to a file in `.ini` format. This function must only be called after successful option parsing. This function should only be called on rank 0. This function will log errors with category [`SC_LC_GLOBAL`](@ref). An options whose name contains a colon such as "Prefix:basename" will be written in a section titled [Prefix] as "basename =".
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `inifile`:\\[in\\] Filename of the ini file to save.
-# Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_save (int package_id, int err_priority, sc_options_t * opt, const char *inifile);
-```
-"""
-function sc_options_save(package_id, err_priority, opt, inifile)
-    @ccall libsc.sc_options_save(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
-end
-
-"""
-    sc_options_load_args(package_id, err_priority, opt, inifile)
-
-Load a file in `.ini` format and update entries found under [Arguments]. There needs to be a key Arguments.count specifying the number. Then as many integer keys starting with 0 need to be present.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The args are stored in this option structure.
-* `inifile`:\\[in\\] Filename of the ini file to load.
-# Returns
-Returns 0 on success, -1 on failure.
-### Prototype
-```c
-int sc_options_load_args (int package_id, int err_priority, sc_options_t * opt, const char *inifile);
-```
-"""
-function sc_options_load_args(package_id, err_priority, opt, inifile)
-    @ccall libsc.sc_options_load_args(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, inifile::Cstring)::Cint
-end
-
-"""
-    sc_options_parse(package_id, err_priority, opt, argc, argv)
-
-Parse command line options.
-
-# Arguments
-* `package_id`:\\[in\\] Registered package id or -1.
-* `err_priority`:\\[in\\] Error priority according to sc_logprios.
-* `opt`:\\[in\\] The option structure.
-* `argc`:\\[in\\] Length of argument list.
-* `argv`:\\[in,out\\] Argument list may be permuted.
-# Returns
-Returns -1 on an invalid option, otherwise the position of the first non-option argument.
-### Prototype
-```c
-int sc_options_parse (int package_id, int err_priority, sc_options_t * opt, int argc, char **argv);
-```
-"""
-function sc_options_parse(package_id, err_priority, opt, argc, argv)
-    @ccall libsc.sc_options_parse(package_id::Cint, err_priority::Cint, opt::Ptr{sc_options_t}, argc::Cint, argv::Ptr{Cstring})::Cint
-end
-
-"""
-    t8_cmesh_from_tetgen_file(fileprefix, partition, comm, do_dup)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_from_tetgen_file (char *fileprefix, int partition, sc_MPI_Comm comm, int do_dup);
-```
-"""
-function t8_cmesh_from_tetgen_file(fileprefix, partition, comm, do_dup)
-    @ccall libt8.t8_cmesh_from_tetgen_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_from_tetgen_file_time(fileprefix, partition, comm, do_dup, fi, snapshot, stats, statentry)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_from_tetgen_file_time (char *fileprefix, int partition, sc_MPI_Comm comm, int do_dup, sc_flopinfo_t *fi, sc_flopinfo_t *snapshot, sc_statinfo_t *stats, int statentry);
-```
-"""
-function t8_cmesh_from_tetgen_file_time(fileprefix, partition, comm, do_dup, fi, snapshot, stats, statentry)
-    @ccall libt8.t8_cmesh_from_tetgen_file_time(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint, fi::Ptr{sc_flopinfo_t}, snapshot::Ptr{sc_flopinfo_t}, stats::Ptr{sc_statinfo_t}, statentry::Cint)::t8_cmesh_t
-end
-
-"""
-    t8_cmesh_from_triangle_file(fileprefix, partition, comm, do_dup)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_from_triangle_file (char *fileprefix, int partition, sc_MPI_Comm comm, int do_dup);
-```
-"""
-function t8_cmesh_from_triangle_file(fileprefix, partition, comm, do_dup)
-    @ccall libt8.t8_cmesh_from_triangle_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, do_dup::Cint)::t8_cmesh_t
-end
-
 mutable struct t8_cmesh_vertex_connectivity end
 
 """
@@ -17236,17 +16962,11 @@ function t8_eclass_scheme_is_default(scheme, eclass)
     @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{Cint}, eclass::t8_eclass_t)::Cint
 end
 
-const SC_CC = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc"
-
-const SC_CFLAGS = " -pthread"
-
-const SC_CPP = "/opt/bin/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/x86_64-linux-gnu-gcc -E"
-
-const SC_CPPFLAGS = ""
-
 const SC_HAVE_ZLIB = 1
 
 const SC_ENABLE_PTHREAD = 1
+
+const SC_ENABLE_DEBUG = 1
 
 const SC_ENABLE_MEMALIGN = 1
 
@@ -17255,6 +16975,8 @@ const SC_ENABLE_MPI = 1
 const SC_ENABLE_MPICOMMSHARED = 1
 
 const SC_ENABLE_MPIIO = 1
+
+const SC_ENABLE_FILE_CHECKS = 1
 
 const SC_HAVE_AINT_DIFF = 1
 
@@ -17267,6 +16989,8 @@ const SC_HAVE_MPI_INT8_T = 1
 const SC_ENABLE_MPITHREAD = 1
 
 const SC_ENABLE_MPIWINSHARED = 1
+
+const SC_ENABLE_MPISHARED = 1
 
 const SC_ENABLE_USE_COUNTERS = 1
 
@@ -17294,13 +17018,7 @@ const SC_HAVE_STRTOLL = 1
 
 const SC_HAVE_GETTIMEOFDAY = 1
 
-const SC_SIZEOF_VOID_P = 8
-
-const SC_MEMALIGN_BYTES = SC_SIZEOF_VOID_P
-
-const SC_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
-
-const SC_LIBS = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/lib/libz.so m"
+const SC_MEMALIGN_BYTES = 8
 
 const SC_PACKAGE = "libsc"
 
@@ -17308,33 +17026,25 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 2.8.6.999"
+const SC_PACKAGE_STRING = "libsc 2.8.7"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "2.8.6.999"
+const SC_PACKAGE_VERSION = "2.8.7"
 
-const SC_SIZEOF_INT = 4
-
-const SC_SIZEOF_UNSIGNED_INT = 4
-
-const SC_SIZEOF_LONG = 8
-
-const SC_SIZEOF_UNSIGNED_LONG = 8
-
-const SC_SIZEOF_LONG_LONG = 8
-
-const SC_VERSION = "2.8.6.999"
+const SC_VERSION = "2.8.7"
 
 const SC_VERSION_MAJOR = 2
 
 const SC_VERSION_MINOR = 8
 
-const SC_VERSION_POINT = 6
+const SC_VERSION_POINT = 7
 
 # Skipping MacroDefinition: _sc_const const
+
+# Skipping MacroDefinition: SC_DLL_PUBLIC __attribute__ ( ( visibility ( "default" ) ) )
 
 const sc_MPI_COMM_WORLD = MPI.COMM_WORLD
 
@@ -17412,7 +17122,9 @@ const SC_LP_ERROR = 8
 
 const SC_LP_SILENT = 9
 
-const SC_LP_THRESHOLD = SC_LP_INFO
+const SC_LP_THRESHOLD = SC_LP_TRACE
+
+const SC_LP_APPLICATION = SC_LP_DEBUG
 
 const T8_MPI_LOCIDX = sc_MPI_INT
 
@@ -17430,23 +17142,19 @@ const T8_PRECISION_EPS = SC_EPS
 
 const T8_PRECISION_SQRT_EPS = sqrt(T8_PRECISION_EPS)
 
+const T8_CMESH_FORMAT = 0x0002
+
 const sc_mpi_read = sc_io_read
 
 const sc_mpi_write = sc_io_write
-
-const P4EST_CC = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc"
-
-const P4EST_CFLAGS = " -pthread"
-
-const P4EST_CPP = "/opt/x86_64-linux-gnu/x86_64-linux-gnu/sys-root/usr/local/bin/mpicc -E"
-
-const P4EST_CPPFLAGS = ""
 
 const P4EST_ENABLE_BUILD_2D = 1
 
 const P4EST_ENABLE_BUILD_3D = 1
 
 const P4EST_ENABLE_BUILD_P6EST = 1
+
+const P4EST_ENABLE_DEBUG = 1
 
 const P4EST_ENABLE_MEMALIGN = 1
 
@@ -17474,31 +17182,27 @@ const P4EST_HAVE_POSIX_MEMALIGN = 1
 
 const P4EST_HAVE_ZLIB = 1
 
-const P4EST_LDFLAGS = "-Wl,-rpath -Wl,/workspace/destdir/lib -Wl,--enable-new-dtags -L/workspace/x86_64-linux-gnu-libgfortran5-cxx11-mpi+openmpi/destdir/lib -pthread"
-
-const P4EST_LIBS = "   m"
-
 const P4EST_PACKAGE = "p4est"
 
 const P4EST_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const P4EST_PACKAGE_NAME = "p4est"
 
-const P4EST_PACKAGE_STRING = "p4est 2.8.6.999"
+const P4EST_PACKAGE_STRING = "p4est 2.8.7"
 
 const P4EST_PACKAGE_TARNAME = "p4est"
 
 const P4EST_PACKAGE_URL = ""
 
-const P4EST_PACKAGE_VERSION = "2.8.6.999"
+const P4EST_PACKAGE_VERSION = "2.8.7"
 
-const P4EST_VERSION = "2.8.6.999"
+const P4EST_VERSION = "2.8.7"
 
 const P4EST_VERSION_MAJOR = 2
 
 const P4EST_VERSION_MINOR = 8
 
-const P4EST_VERSION_POINT = 6
+const P4EST_VERSION_POINT = 7
 
 const p4est_qcoord_compare = sc_int32_compare
 
@@ -17679,8 +17383,6 @@ const T8_VTK_FLOAT_TYPE = Float32
 const T8_VTK_FORMAT_STRING = "ascii"
 
 const T8_CMESH_N_SUPPORTED_MSH_FILE_VERSIONS = 1
-
-const T8_CMESH_FORMAT = 0x0002
 
 # exports
 const PREFIXES = ["t8_", "T8_"]

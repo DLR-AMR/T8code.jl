@@ -13538,130 +13538,6 @@ const t8_profile_struct_t = t8_profile
 """This struct stores various information about a forest's ghost elements and ghost trees."""
 const t8_forest_ghost_struct_t = t8_forest_ghost
 
-# typedef int ( * t8_fortran_adapt_coordinate_callback ) ( double x , double y , double z , int is_family )
-const t8_fortran_adapt_coordinate_callback = Ptr{Cvoid}
-
-const MPI_T8_Fint = Cint
-
-"""
-    t8_fortran_init_all(comm)
-
-### Prototype
-```c
-void t8_fortran_init_all (sc_MPI_Comm *comm);
-```
-"""
-function t8_fortran_init_all(comm)
-    @ccall libt8.t8_fortran_init_all(comm::Ptr{Cint})::Cvoid
-end
-
-# no prototype is found for this function at t8_fortran_interface.h:67:1, please use with caution
-"""
-    t8_fortran_finalize()
-
-Finalize sc. This wraps [`sc_finalize`](@ref) in order to have consistent naming with [`t8_fortran_init_all`](@ref).
-
-### Prototype
-```c
-void t8_fortran_finalize ();
-```
-"""
-function t8_fortran_finalize()
-    @ccall libt8.t8_fortran_finalize()::Cvoid
-end
-
-"""
-    t8_fortran_cmesh_commit(cmesh, comm)
-
-### Prototype
-```c
-void t8_fortran_cmesh_commit (t8_cmesh_t cmesh, sc_MPI_Comm *comm);
-```
-"""
-function t8_fortran_cmesh_commit(cmesh, comm)
-    @ccall libt8.t8_fortran_cmesh_commit(cmesh::t8_cmesh_t, comm::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_fortran_MPI_Comm_new(Fcomm)
-
-### Prototype
-```c
-sc_MPI_Comm * t8_fortran_MPI_Comm_new (MPI_T8_Fint Fcomm);
-```
-"""
-function t8_fortran_MPI_Comm_new(Fcomm)
-    @ccall libt8.t8_fortran_MPI_Comm_new(Fcomm::MPI_T8_Fint)::Ptr{Cint}
-end
-
-"""
-    t8_fortran_MPI_Comm_delete(Ccomm)
-
-### Prototype
-```c
-void t8_fortran_MPI_Comm_delete (sc_MPI_Comm *Ccomm);
-```
-"""
-function t8_fortran_MPI_Comm_delete(Ccomm)
-    @ccall libt8.t8_fortran_MPI_Comm_delete(Ccomm::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_cmesh_new_periodic_tri_wrap(Ccomm)
-
-### Prototype
-```c
-t8_cmesh_t t8_cmesh_new_periodic_tri_wrap (sc_MPI_Comm *Ccomm);
-```
-"""
-function t8_cmesh_new_periodic_tri_wrap(Ccomm)
-    @ccall libt8.t8_cmesh_new_periodic_tri_wrap(Ccomm::Ptr{Cint})::t8_cmesh_t
-end
-
-"""
-    t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
-
-### Prototype
-```c
-t8_forest_t t8_forest_new_uniform_default (t8_cmesh_t cmesh, int level, int do_face_ghost, sc_MPI_Comm *comm);
-```
-"""
-function t8_forest_new_uniform_default(cmesh, level, do_face_ghost, comm)
-    @ccall libt8.t8_forest_new_uniform_default(cmesh::t8_cmesh_t, level::Cint, do_face_ghost::Cint, comm::Ptr{Cint})::t8_forest_t
-end
-
-"""
-    t8_forest_adapt_by_coordinates(forest, recursive, callback)
-
-# Arguments
-* `forest`:\\[in,out\\] The forest
-* `recursive`:\\[in\\] A flag specifying whether adaptation is to be done recursively or not. If the value is zero, adaptation is not recursive and it is recursive otherwise.
-* `callback`:\\[in\\] A pointer to a user defined function. t8code will never touch the function.
-### Prototype
-```c
-t8_forest_t t8_forest_adapt_by_coordinates (t8_forest_t forest, int recursive, t8_fortran_adapt_coordinate_callback callback);
-```
-"""
-function t8_forest_adapt_by_coordinates(forest, recursive, callback)
-    @ccall libt8.t8_forest_adapt_by_coordinates(forest::t8_forest_t, recursive::Cint, callback::t8_fortran_adapt_coordinate_callback)::t8_forest_t
-end
-
-"""
-    t8_global_productionf_noargs(string)
-
-Log a message on the root rank with priority [`SC_LP_PRODUCTION`](@ref).
-
-# Arguments
-* `string`:\\[in\\] String to log.
-### Prototype
-```c
-void t8_global_productionf_noargs (const char *string);
-```
-"""
-function t8_global_productionf_noargs(string)
-    @ccall libt8.t8_global_productionf_noargs(string::Cstring)::Cvoid
-end
-
 """
     t8_geometry_type
 
@@ -16966,8 +16842,6 @@ const SC_HAVE_ZLIB = 1
 
 const SC_ENABLE_PTHREAD = 1
 
-const SC_ENABLE_DEBUG = 1
-
 const SC_ENABLE_MEMALIGN = 1
 
 const SC_ENABLE_MPI = 1
@@ -17122,9 +16996,9 @@ const SC_LP_ERROR = 8
 
 const SC_LP_SILENT = 9
 
-const SC_LP_THRESHOLD = SC_LP_TRACE
+const SC_LP_THRESHOLD = SC_LP_INFO
 
-const SC_LP_APPLICATION = SC_LP_DEBUG
+const SC_LP_APPLICATION = SC_LP_STATISTICS
 
 const T8_MPI_LOCIDX = sc_MPI_INT
 
@@ -17154,8 +17028,6 @@ const P4EST_ENABLE_BUILD_3D = 1
 
 const P4EST_ENABLE_BUILD_P6EST = 1
 
-const P4EST_ENABLE_DEBUG = 1
-
 const P4EST_ENABLE_MEMALIGN = 1
 
 const P4EST_ENABLE_MPI = 1
@@ -17175,8 +17047,6 @@ const P4EST_ENABLE_VTK_BINARY = 1
 const P4EST_ENABLE_VTK_COMPRESSION = 1
 
 const P4EST_HAVE_FSYNC = 1
-
-const HAVE_LPTHREAD = 1
 
 const P4EST_HAVE_POSIX_MEMALIGN = 1
 

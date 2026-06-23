@@ -126,7 +126,7 @@ function t8_step4_partition_ghost(forest)
     # in such a way that afterwards each process has the same number of elements
     # (+- 1 if the number of elements is not divisible by the number of processes).
     #
-    # The third 0 argument is the flag 'partition_for_coarsening' which ensures that a
+    # The third 1 argument is the flag 'partition_for_coarsening' which ensures that a
     # family of elements will not be split across multiple processes and thus one level
     # coarsening is always possible (see also the comments on coarsening in t8_step3).
     t8_forest_set_partition(new_forest, forest, 1)

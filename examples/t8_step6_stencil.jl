@@ -339,13 +339,13 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
     # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
     vtk_data = [
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("height\0", 8192, ' ')),
+                            NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("height\0", T8code.T8_BUFSIZ, ' ')),
                             pointer(heights)),
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("schlieren\0", 8192, ' ')),
+                            NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("schlieren\0", T8code.T8_BUFSIZ, ' ')),
                             pointer(schlieren)),
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("curvature\0", 8192, ' ')),
+                            NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("curvature\0", T8code.T8_BUFSIZ, ' ')),
                             pointer(curvature))
     ]
 
@@ -402,10 +402,8 @@ t8_step6_exchange_ghost_data(forest, element_data)
 t8_step6_compute_stencil(forest, element_data)
 
 # Output the data to vtu files.
-if !(CI_ON_WINDOWS || CI_ON_MACOS)
-    t8_step6_output_data_to_vtu(forest, element_data, prefix_forest_with_data)
-    t8_global_productionf(" Wrote forest and data to %s*.\n", prefix_forest_with_data)
-end
+t8_step6_output_data_to_vtu(forest, element_data, prefix_forest_with_data)
+t8_global_productionf(" Wrote forest and data to %s*.\n", prefix_forest_with_data)
 
 #
 # Clean-up

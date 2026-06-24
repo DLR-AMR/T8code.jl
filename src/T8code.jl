@@ -259,7 +259,14 @@ macro T8_ASSERT(q)
 end
 
 # platform specific BUFSIZ used in t8_vtk_data_field_t
-const T8_BUFSIZ = sizeof(t8_vtk_data_field_t.types[2])
+# TODO: Just a guess!
+if Sys.isapple()
+    const T8_BUFSIZ = 1024
+elseif Sys.iswindows()
+    const T8_BUFSIZ = 512
+else
+    const T8_BUFSIZ = 8192
+end
 
 function t8_free(ptr)
     Libt8.sc_free(t8_get_package_id(), ptr)

@@ -197,7 +197,7 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     # We set the type of this variable. Since we have one value per element, we pick
     # T8_VTK_SCALAR.
     # We also set the name of the field as should be written to the file.
-    vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR, "Element volume", element_volumes)
+    vtk_data = [t8_vtk_data_field_t(T8_VTK_SCALAR, "Element volume", element_volumes)]
 
     # To write user defined data, we need to extended output function
     # t8_forest_vtk_write_file from t8_forest_vtk.h. Despite writin user data,
@@ -209,7 +209,7 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     write_ghosts = 0
     t8_forest_write_vtk_ext(forest, prefix, write_treeid, write_mpirank,
                             write_level, write_element_id, write_ghosts,
-                            0, 0, num_data, Ref(vtk_data))
+                            0, 0, num_data, pointer(vtk_data))
 end
 
 # The prefix for our output files.

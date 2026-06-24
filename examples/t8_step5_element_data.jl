@@ -196,7 +196,9 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     # For each user defined data field we need one t8_vtk_data_field_t variable.
     vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR,
                                    # Sets the type of this variable. Since we have one value per element, we pick T8_VTK_SCALAR.
-                                   NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("Element volume\0", T8code.T8_BUFSIZ, ' ')),
+                                   NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("Element volume\0",
+                                                                        T8code.T8_BUFSIZ,
+                                                                        ' ')),
                                    # The name of the field as should be written to the file.
                                    pointer(element_volumes))
 
@@ -281,7 +283,7 @@ end
 # Output the volume data to vtu.
 t8_step5_output_data_to_vtu(forest, element_data, prefix_forest_with_data)
 t8_global_productionf(" [step5] Wrote forest and volume data to %s*.\n",
-                        prefix_forest_with_data)
+                      prefix_forest_with_data)
 
 #
 # Clean-up.

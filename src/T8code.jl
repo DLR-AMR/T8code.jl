@@ -268,6 +268,16 @@ else
     const T8_BUFSIZ = 8192
 end
 
+# convenience constructor
+# - adds 0 termination and padding to description string
+# - takes pointer of data
+function Libt8.t8_vtk_data_field_t(type, description::String, data)
+    @info "external ctor", T8_BUFSIZ
+    return t8_vtk_data_field_t(type,
+    NTuple{T8_BUFSIZ, Cchar}(rpad(description * "\0", T8_BUFSIZ, ' ')),
+    pointer(data))
+end
+
 function t8_free(ptr)
     Libt8.sc_free(t8_get_package_id(), ptr)
 end

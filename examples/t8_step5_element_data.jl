@@ -194,13 +194,10 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
 
     # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
     # For each user defined data field we need one t8_vtk_data_field_t variable.
-    vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR,
-                                   # Sets the type of this variable. Since we have one value per element, we pick T8_VTK_SCALAR.
-                                   NTuple{T8code.T8_BUFSIZ, Cchar}(rpad("Element volume\0",
-                                                                        T8code.T8_BUFSIZ,
-                                                                        ' ')),
-                                   # The name of the field as should be written to the file.
-                                   pointer(element_volumes))
+    # We set the type of this variable. Since we have one value per element, we pick
+    # T8_VTK_SCALAR.
+    # We also set the name of the field as should be written to the file.
+    vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR, "Element volume", element_volumes)
 
     # To write user defined data, we need to extended output function
     # t8_forest_vtk_write_file from t8_forest_vtk.h. Despite writin user data,

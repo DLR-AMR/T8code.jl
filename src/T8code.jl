@@ -272,7 +272,6 @@ end
 # - adds 0 termination and padding to description string
 # - takes pointer of data
 function Libt8.t8_vtk_data_field_t(type, description::String, data)
-    @info "external ctor", T8_BUFSIZ
     return t8_vtk_data_field_t(type,
                                NTuple{T8_BUFSIZ, Cchar}(rpad(description * "\0", T8_BUFSIZ,
                                                              ' ')),

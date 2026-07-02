@@ -258,6 +258,9 @@ macro T8_ASSERT(q)
     :($(esc(q)) ? nothing : throw(AssertionError($(string(q)))))
 end
 
+# platform specific BUFSIZ used in t8_vtk_data_field_t
+const T8_BUFSIZ = sizeof(t8_vtk_data_field_t.types[2])
+
 function t8_free(ptr)
     Libt8.sc_free(t8_get_package_id(), ptr)
 end

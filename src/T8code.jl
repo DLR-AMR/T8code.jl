@@ -168,14 +168,13 @@ resources allocated by t8code in an orderly fashion.
 When initialized with a t8code forest pointer the wrapper
 registers itself with a t8code object tracker called `T8CODE_OBJECT_TRACKER`.
 
-In serial mode the wrapper and in consequence the t8code forest
-can be finalized immediately whenever Julia's garbage collector sees fit.
-
-In (MPI) parallel mode the wrapper (and the t8code forest) is kept till the end
-of the session or when finalized explicitly. At the end of the session (resp.
+The wrapper (and the t8code forest) is kept till the end
+of the session or when `clean_up` is called explicitly. At the end of the session (resp.
 when the program shuts down) the object tracker finalizes all registered t8code
 objects in sync with all MPI ranks. This is necessary since t8code internally
 allocates MPI shared arrays.
+
+All ranks must call ForestWrapper in the same order.
 """
 mutable struct ForestWrapper
     pointer::Ptr{t8_forest} # cpointer to t8code forest
@@ -183,31 +182,27 @@ mutable struct ForestWrapper
     function ForestWrapper(pointer::Ptr{t8_forest})
         wrapper = new(pointer)
 
-        # Compute a unique id from the ForestWrapper object.
-        unique_id = UInt64(pointer_from_objref(wrapper))
-
-        if MPI.Comm_size(MPI.Comm(t8_forest_get_mpicomm(pointer))) > 1
-            # Make sure the unique id is identical for each MPI rank.
-            unique_id = MPI.bcast(unique_id, MPI.Comm(t8_forest_get_mpicomm(pointer)))
-        end
-
-        finalizer(wrapper) do wrapper
+        # This finalizer will only run manually when `finalize` is called,
+        # or through `clean_up` at the end of the session. As long as the
+        # wrapper is registered in the `T8CODE_OBJECT_TRACKER`, 
+        # it will not be collected by the GC.
+        finalizer(wrapper) do w
+            w.pointer == C_NULL && return
             # When finalizing, `forest`, `scheme`, `cmesh`, and `geometry` are
             # also cleaned up from within `t8code`. The cleanup code for
             # `cmesh` does some MPI calls for deallocating shared memory
-            # arrays. Due to garbage collection in Julia the order of shutdown
-            # is not deterministic. Hence, deterministic finalization is necessary in
-            # order to avoid MPI-related error output when closing the Julia
-            # program/session.
-            t8_forest_unref(Ref(wrapper.pointer))
-
-            # Deregister from the object tracker.
-            delete!(T8CODE_OBJECT_TRACKER, unique_id)
+            # arrays.
+            t8_forest_unref(Ref(w.pointer))
+            w.pointer = C_NULL
+            idx = findfirst(x -> x === w, T8CODE_OBJECT_TRACKER)
+            idx !== nothing && deleteat!(T8CODE_OBJECT_TRACKER, idx)
         end
 
         # Register the T8codeForestWrapper with the object tracker.
-        T8CODE_OBJECT_TRACKER[unique_id] = wrapper
+        push!(T8CODE_OBJECT_TRACKER, wrapper)
 
+        # Don't attach a finalizer since the order of finalization is not deterministic,
+        # instead we rely on `clean_up` to finalize all registered t8code objects in order.
         return wrapper
     end
 end
@@ -219,31 +214,28 @@ Base.pointer(fw::ForestWrapper) = fw.pointer
 # https://discourse.julialang.org/t/how-to-use-ccall-cconvert-and-unsafe-convert-in-a-convenient-and-memory-safe-way/41932/18
 Base.unsafe_convert(::Type{Ptr{t8_forest}}, fw::ForestWrapper) = fw.pointer
 
+"""
+    clean_up()
+
+Finalize all t8code objects registered in the `T8CODE_OBJECT_TRACKER`.
+The user is expected to add this function as a finalize hook to MPI.
+
+```
+MPI.add_finalize_hook(T8code.clean_up)
+```
+"""
 function clean_up()
-    # Finalize all registered t8code objects before MPI shuts down.
-    while length(T8CODE_OBJECT_TRACKER) > 0
-        unique_id = first(T8CODE_OBJECT_TRACKER).first
-
-        forest_wrapper = T8CODE_OBJECT_TRACKER[unique_id]
-
-        # Make sure all MPI ranks finalize the same object.
-        if MPI.Comm_size(MPI.Comm(t8_forest_get_mpicomm(forest_wrapper.pointer))) > 1
-            unique_id = MPI.bcast(unique_id,
-                                  MPI.Comm(t8_forest_get_mpicomm(forest_wrapper.pointer)))
-        end
-
-        # Finalize the object. The object deregisters itself from the
-        # object tracker automatically.
-        finalize(forest_wrapper)
+    while !isempty(T8CODE_OBJECT_TRACKER)
+        wrapper = pop!(T8CODE_OBJECT_TRACKER)
+        finalize(wrapper)
     end
 end
 
 # Minimal reference tracker holding active t8code related objects
 # created throughout the life time of a Julia session. t8code objects
 # should remove themselves from the tracker when they get finalized.
-if !@isdefined(T8CODE_OBJECT_TRACKER)
-    T8CODE_OBJECT_TRACKER = Dict{UInt64, ForestWrapper}()
-end
+# TODO: This should likely have a lock.
+const T8CODE_OBJECT_TRACKER = Vector{ForestWrapper}()
 
 const T8_QUAD_MAXLEVEL = 30
 const T8_HEX_MAXLEVEL = 19

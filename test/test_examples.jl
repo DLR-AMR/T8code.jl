@@ -22,11 +22,8 @@ end
     include("../examples/t8_step4_partition_balance_ghost.jl")
 end
 
-# Unfortunately, step 5 and step 6 currently crash (1.) in Windows, (2.) in MacOS,
-# and (3.) with Julia older than 1.9, see related issues
-# https://github.com/DLR-AMR/T8code.jl/issues/26,
-# https://github.com/DLR-AMR/T8code.jl/issues/30,
-# https://github.com/DLR-AMR/T8code.jl/issues/104.
+# Step 5 and step 6 crash with Julia older than 1.9, see related issue
+# https://github.com/DLR-AMR/T8code.jl/issues/26
 
 @testset "t8_step5_element_data" begin
     include("../examples/t8_step5_element_data.jl")

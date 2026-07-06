@@ -12866,9 +12866,9 @@ A data field for VTK output. This struct is used to store data that is written t
 | type        | Describes of which type the data array is  |
 | description | String that describes the data.            |
 """
-struct t8_vtk_data_field_t
+struct t8_vtk_data_field_t{BUFSIZ}
     type::t8_vtk_data_type_t
-    description::NTuple{8192, Cchar}
+    description::NTuple{BUFSIZ, Cchar}
     data::Ptr{Cdouble}
 end
 
@@ -12880,8 +12880,8 @@ end
 int t8_forest_write_vtk_ext (t8_forest_t forest, const char *fileprefix, const int write_treeid, const int write_mpirank, const int write_level, const int write_element_id, const int write_ghosts, const int write_curved, int do_not_use_API, const int num_data, t8_vtk_data_field_t *data);
 ```
 """
-function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
-    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data::Ptr{DataFieldType}) where DataFieldType
+    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{DataFieldType})::Cint
 end
 
 """

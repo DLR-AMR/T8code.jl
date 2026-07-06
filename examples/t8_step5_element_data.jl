@@ -194,9 +194,10 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
 
     # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
     # For each user defined data field we need one t8_vtk_data_field_t variable.
-    vtk_data = t8_vtk_data_field_t(T8_VTK_SCALAR, # Set the type of this variable. Since we have one value per element, we pick T8_VTK_SCALAR.
-                                   NTuple{8192, Cchar}(rpad("Element volume\0", 8192, ' ')), # The name of the field as should be written to the file.
-                                   pointer(element_volumes))
+    # We set the type of this variable. Since we have one value per element, we pick
+    # T8_VTK_SCALAR.
+    # We also set the name of the field as should be written to the file.
+    vtk_data = [t8_vtk_data_field_t(T8_VTK_SCALAR, "Element volume", element_volumes)]
 
     # To write user defined data, we need to extended output function
     # t8_forest_vtk_write_file from t8_forest_vtk.h. Despite writin user data,
@@ -208,7 +209,7 @@ function t8_step5_output_data_to_vtu(forest, element_data, prefix)
     write_ghosts = 0
     t8_forest_write_vtk_ext(forest, prefix, write_treeid, write_mpirank,
                             write_level, write_element_id, write_ghosts,
-                            0, 0, num_data, Ref(vtk_data))
+                            0, 0, num_data, pointer(vtk_data))
 end
 
 # The prefix for our output files.
@@ -277,11 +278,9 @@ if t8_forest_get_num_ghosts(forest) > 0
 end
 
 # Output the volume data to vtu.
-if !(CI_ON_WINDOWS || CI_ON_MACOS)
-    t8_step5_output_data_to_vtu(forest, element_data, prefix_forest_with_data)
-    t8_global_productionf(" [step5] Wrote forest and volume data to %s*.\n",
-                          prefix_forest_with_data)
-end
+t8_step5_output_data_to_vtu(forest, element_data, prefix_forest_with_data)
+t8_global_productionf(" [step5] Wrote forest and volume data to %s*.\n",
+                      prefix_forest_with_data)
 
 #
 # Clean-up.

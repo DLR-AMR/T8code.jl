@@ -7,5 +7,5 @@ mpi = "mpich"
 os = "linux"
 
     [[t8code.download]]
-    sha256 = "0413dac63e9bba5c9b27c9a7850377b7946860956db538290849c47acd3a130d"
-    url = "https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases/download/t8code-v3.0.1+0/t8code.v3.0.1.x86_64-linux-gnu-mpi+mpich.tar.gz"
+    sha256 = "a1f03e34fccbdda56e381bc3bb5c52b7917a4aae2afeb68777906f4ccac28ef6"
+    url = "https://github.com/JuliaBinaryWrappers/t8code_jll.jl/releases/download/t8code-v4.0.7%2B0/t8code-logs.v4.0.7.x86_64-linux-gnu-mpi+mpich.tar.gz"

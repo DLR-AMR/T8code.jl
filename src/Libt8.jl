@@ -4791,6 +4791,11 @@ function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_ca
     @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
 end
 
+mutable struct sc_keyvalue end
+
+"""The key-value container is an opaque structure."""
+const sc_keyvalue_t = sc_keyvalue
+
 struct sc_stats
     mpicomm::MPI_Comm
     kv::Ptr{sc_keyvalue_t}
@@ -4979,11 +4984,6 @@ The values can have different types.
     SC_KEYVALUE_ENTRY_STRING = 3
     SC_KEYVALUE_ENTRY_POINTER = 4
 end
-
-mutable struct sc_keyvalue end
-
-"""The key-value container is an opaque structure."""
-const sc_keyvalue_t = sc_keyvalue
 
 # no prototype is found for this function at sc_keyvalue.h:54:21, please use with caution
 """

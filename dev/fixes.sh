@@ -37,5 +37,9 @@ sed -i -z 's/\nstruct t8_forest.*stats_computed::Cint\nend/\n# This struct is no
 # Fix forest type
 sed -i "s/forest::Cint/forest::t8_forest_t/" "${LIB_JL}"
 
+# Fix scheme type
+sed -i "s/scheme::Ptr{Cint}/scheme::Ptr{t8_scheme_c}/" "${LIB_JL}"
+sed -i "s/t8_scheme_new_default()::Ptr{Cint}/t8_scheme_new_default()::Ptr{t8_scheme_c}/" "${LIB_JL}"
+
 # Rename remaining MPI macros
 sed -i "s/= MPI_/= MPI./" "${LIB_JL}"

@@ -11719,6 +11719,36 @@ function t8_forest_same_level_leaf_face_neighbor_index(forest, element_index, fa
 end
 
 """
+    t8_forest_leaf_neighbor_subface(forest, ltreeid, leaf, face, neighbor_tree_class, neighbor_leaf, neighbor_face)
+
+Compute the subface index for a coarser neighbor
+
+\\pre *leaf* and *neighbor_leaf* must be a face neighbors. The common face must correspond to *face* for *leaf* and *neighbor_face* for *neighbor_leaf* respectively. *neighbor_leaf* must be one level coarser than *leaf*. Otherwise the behavior is undefined.
+
+!!! note
+
+    This function is designed to be called after t8_forest_leaf_face_neighbors_ext to complement its output. It is primarily intended for balanced forests, but can be used on any committed forest as long as the preconditions  hold (i.e. the forest must be ''locally balanced'').
+
+# Arguments
+* `forest`:\\[in\\] The forest. Must be committed.
+* `ltreeid`:\\[in\\] A local tree id.
+* `leaf`:\\[in\\] A leaf in *ltreeid*.
+* `face`:\\[in\\] The face index of *leaf* to consider.
+* `neighbor_tree_class`:\\[in\\] The eclass of the neighbor element.
+* `neighbor_leaf`:\\[in\\] The leaf of *forest* on the other side of the face of index *face* of element *leaf*.
+* `neighbor_face`:\\[in\\] The face index of *neighbor_leaf* (i.e. the dual face of *face*).
+# Returns
+The index of the subface of *neighbor_face* which corresponds to *face*.
+### Prototype
+```c
+int t8_forest_leaf_neighbor_subface (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, int face, t8_eclass_t neighbor_tree_class, const t8_element_t *neighbor_leaf, int neighbor_face);
+```
+"""
+function t8_forest_leaf_neighbor_subface(forest, ltreeid, leaf, face, neighbor_tree_class, neighbor_leaf, neighbor_face)
+    @ccall libt8.t8_forest_leaf_neighbor_subface(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, face::Cint, neighbor_tree_class::t8_eclass_t, neighbor_leaf::Ptr{t8_element_t}, neighbor_face::Cint)::Cint
+end
+
+"""
     t8_forest_ghost_exchange_data(forest, element_data)
 
 Exchange ghost information of user defined element data.
@@ -12365,6 +12395,18 @@ void t8_forest_element_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const 
 """
 function t8_forest_element_centroid(forest, ltreeid, element, coordinates)
     @ccall libt8.t8_forest_element_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_forest_element_linear_centroid(forest, ltreeid, element, coordinates)
+
+### Prototype
+```c
+void t8_forest_element_linear_centroid (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *element, double *coordinates);
+```
+"""
+function t8_forest_element_linear_centroid(forest, ltreeid, element, coordinates)
+    @ccall libt8.t8_forest_element_linear_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -16823,7 +16865,7 @@ const t8_scheme_c * t8_scheme_new_default (void);
 ```
 """
 function t8_scheme_new_default()
-    @ccall libt8.t8_scheme_new_default()::Ptr{Cint}
+    @ccall libt8.t8_scheme_new_default()::Ptr{t8_scheme_c}
 end
 
 """
@@ -16835,7 +16877,7 @@ int t8_eclass_scheme_is_default (const t8_scheme_c *scheme, const t8_eclass_t ec
 ```
 """
 function t8_eclass_scheme_is_default(scheme, eclass)
-    @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{Cint}, eclass::t8_eclass_t)::Cint
+    @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{t8_scheme_c}, eclass::t8_eclass_t)::Cint
 end
 
 const SC_HAVE_ZLIB = 1
@@ -17183,6 +17225,8 @@ const T8_ECLASS_MAX_CORNERS = 8
 const T8_ECLASS_MAX_DIM = 3
 
 const T8_ECLASS_MAX_CHILDREN = 10
+
+const T8_ECLASS_MAX_FACE_CHILDREN = 4
 
 # Skipping MacroDefinition: T8_FACE_VERTEX_TO_TREE_VERTEX_VALUES { { { - 1 } } , /* vertex */ { { 0 } , { 1 } } , /* line */ { { 0 , 2 } , { 1 , 3 } , { 0 , 1 } , { 2 , 3 } } , /* quad */ { { 1 , 2 } , { 0 , 2 } , { 0 , 1 } } , /* triangle */ { { 0 , 2 , 4 , 6 } , { 1 , 3 , 5 , 7 } , { 0 , 1 , 4 , 5 } , { 2 , 3 , 6 , 7 } , { 0 , 1 , 2 , 3 } , { 4 , 5 , 6 , 7 } } , /* hex */ { { 1 , 2 , 3 } , { 0 , 2 , 3 } , { 0 , 1 , 3 } , { 0 , 1 , 2 } } , /* tet */ { { 1 , 2 , 4 , 5 } , { 0 , 2 , 3 , 5 } , { 0 , 1 , 3 , 4 } , { 0 , 1 , 2 } , { 3 , 4 , 5 } } , /* prism */ { { 0 , 2 , 4 } , { 1 , 3 , 4 } , { 0 , 1 , 4 } , { 2 , 3 , 4 } , { 0 , 1 , 2 , 3 } } /* pyramid */ \
 #}

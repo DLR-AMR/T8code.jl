@@ -15884,6 +15884,9 @@ end
 """This data type stores a tetrahedron."""
 const t8_dtet_t = t8_dtet
 
+const t8_dtri_t = t8_dtet_t
+const t8_dtri_type_t = t8_dtet_type_t
+
 """
     t8_dprism
 
@@ -18160,6 +18163,127 @@ function t8_dtet_element_unpack(recvbuf, buffer_size, position, elements, count,
     @ccall libt8.t8_dtet_element_unpack(recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_dtet_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
 end
 
+const t8_dtri_coord_t = t8_dtet_coord_t
+
+# const t8_dtri_cube_id_t = t8_dtet_cube_id_t
+
+# const t8_dtri_cid_type_to_parenttype = t8_dtet_cid_type_to_parenttype
+
+# const t8_dtri_type_of_child = t8_dtet_type_of_child
+
+# const t8_dtri_type_of_child_morton = t8_dtet_type_of_child_morton
+
+# const t8_dtri_index_to_bey_number = t8_dtet_index_to_bey_number
+
+# const t8_dtri_beyid_to_vertex = t8_dtet_beyid_to_vertex
+
+# const t8_dtri_type_cid_to_beyid = t8_dtet_type_cid_to_beyid
+
+# const t8_dtri_type_beyid_to_Iloc = t8_dtet_type_beyid_to_Iloc
+
+# const t8_dtri_parenttype_cid_to_Iloc = t8_dtet_parenttype_cid_to_Iloc
+
+# const t8_dtri_parenttype_Iloc_to_type = t8_dtet_parenttype_Iloc_to_type
+
+# const t8_dtri_parenttype_Iloc_to_cid = t8_dtet_parenttype_Iloc_to_cid
+
+# const t8_dtri_type_cid_to_Iloc = t8_dtet_type_cid_to_Iloc
+
+# const t8_dtri_face_corner = t8_dtet_face_corner
+
+const t8_dtri_is_equal = t8_dtet_is_equal
+
+const t8_dtri_copy = t8_dtet_copy
+
+const t8_dtri_compare = t8_dtet_compare
+
+const t8_dtri_equal = t8_dtet_equal
+
+const t8_dtri_parent = t8_dtet_parent
+
+const t8_dtri_ancestor = t8_dtet_ancestor
+
+const t8_dtri_compute_all_coords = t8_dtet_compute_all_coords
+
+const t8_dtri_compute_integer_coords = t8_dtet_compute_integer_coords
+
+const t8_dtri_compute_vertex_ref_coords = t8_dtet_compute_vertex_ref_coords
+
+const t8_dtri_compute_reference_coords = t8_dtet_compute_reference_coords
+
+const t8_dtri_child = t8_dtet_child
+
+const t8_dtri_childrenpv = t8_dtet_childrenpv
+
+const t8_dtri_is_familypv = t8_dtet_is_familypv
+
+const t8_dtri_sibling = t8_dtet_sibling
+
+const t8_dtri_face_neighbour = t8_dtet_face_neighbour
+
+const t8_dtri_nearest_common_ancestor = t8_dtet_nearest_common_ancestor
+
+const t8_dtri_children_at_face = t8_dtet_children_at_face
+
+const t8_dtri_face_child_face = t8_dtet_face_child_face
+
+const t8_dtri_face_parent_face = t8_dtet_face_parent_face
+
+const t8_dtri_tree_face = t8_dtet_tree_face
+
+const t8_dtri_root_face_to_face = t8_dtet_root_face_to_face
+
+const t8_dtri_is_inside_root = t8_dtet_is_inside_root
+
+const t8_dtri_is_root_boundary = t8_dtet_is_root_boundary
+
+const t8_dtri_is_sibling = t8_dtet_is_sibling
+
+const t8_dtri_is_parent = t8_dtet_is_parent
+
+const t8_dtri_is_ancestor = t8_dtet_is_ancestor
+
+const t8_dtri_linear_id = t8_dtet_linear_id
+
+# const t8_dtri_linear_id_corner_desc = t8_dtet_linear_id_corner_desc
+
+const t8_dtri_init_linear_id = t8_dtet_init_linear_id
+
+const t8_dtri_init_root = t8_dtet_init_root
+
+const t8_dtri_successor = t8_dtet_successor
+
+const t8_dtri_first_descendant = t8_dtet_first_descendant
+
+const t8_dtri_last_descendant = t8_dtet_last_descendant
+
+const t8_dtri_corner_descendant = t8_dtet_corner_descendant
+
+const t8_dtri_predecessor = t8_dtet_predecessor
+
+const t8_dtri_ancestor_id = t8_dtet_ancestor_id
+
+const t8_dtri_child_id = t8_dtet_child_id
+
+const t8_dtri_get_level = t8_dtet_get_level
+
+const t8_dtri_is_valid = t8_dtet_is_valid
+
+const t8_dtri_init = t8_dtet_init
+
+const t8_dtri_init_linear_id_with_level = t8_dtet_init_linear_id_with_level
+
+# const t8_dtri_linear_id_with_level = t8_dtet_linear_id_with_level
+
+# const t8_dtri_debug_print = t8_dtet_debug_print
+
+const t8_dtri_element_pack = t8_dtet_element_pack
+
+const t8_dtri_element_pack_size = t8_dtet_element_pack_size
+
+const t8_dtri_element_unpack = t8_dtet_element_unpack
+
+
 """
     t8_dtri
 
@@ -20351,7 +20475,7 @@ const T8_DPRISM_MAXLEVEL = 21
 
 const T8_DPRISM_ROOT_LEN = 1 << T8_DPRISM_MAXLEVEL
 
-const T8_DPRISM_ROOT_BY_QUAD_ROOT = 1 << (P4EST_QMAXLEVEL - T8_DPRISM_MAXLEVEL)
+ #const T8_DPRISM_ROOT_BY_QUAD_ROOT = 1 << (P4EST_QMAXLEVEL - T8_DPRISM_MAXLEVEL)
 
 const T8_DTET_MAXLEVEL = 21
 
@@ -20360,8 +20484,6 @@ const T8_DTRI_MAXLEVEL = T8_DTET_MAXLEVEL
 const T8_DPRISM_ROOT_BY_DTRI_ROOT = 1 << (T8_DTRI_MAXLEVEL - T8_DPRISM_MAXLEVEL)
 
 const T8_DPRISM_ROOT_BY_DLINE_ROOT = 1 << (T8_DLINE_MAXLEVEL - T8_DPRISM_MAXLEVEL)
-
-const t8_dtri_t = t8_dtet_t
 
 const T8_DPYRAMID_CHILDREN = 10
 
@@ -20415,7 +20537,7 @@ const T8_DTET_DIM = 3
 
 const T8_DTRI_ROOT_LEN = T8_DTET_ROOT_LEN
 
-const T8_DTRI_LEN = T8_DTET_LEN
+# const T8_DTRI_LEN = T8_DTET_LEN
 
 const T8_DTRI_FACES = T8_DTET_FACES
 
@@ -20428,128 +20550,6 @@ const T8_DTRI_FACE_CHILDREN = T8_DTET_FACE_CHILDREN
 const T8_DTRI_CORNERS = T8_DTET_CORNERS
 
 const T8_DTRI_NUM_TYPES = T8_DTET_NUM_TYPES
-
-const t8_dtri_coord_t = t8_dtet_coord_t
-
-const t8_dtri_type_t = t8_dtet_type_t
-
-const t8_dtri_cube_id_t = t8_dtet_cube_id_t
-
-const t8_dtri_cid_type_to_parenttype = t8_dtet_cid_type_to_parenttype
-
-const t8_dtri_type_of_child = t8_dtet_type_of_child
-
-const t8_dtri_type_of_child_morton = t8_dtet_type_of_child_morton
-
-const t8_dtri_index_to_bey_number = t8_dtet_index_to_bey_number
-
-const t8_dtri_beyid_to_vertex = t8_dtet_beyid_to_vertex
-
-const t8_dtri_type_cid_to_beyid = t8_dtet_type_cid_to_beyid
-
-const t8_dtri_type_beyid_to_Iloc = t8_dtet_type_beyid_to_Iloc
-
-const t8_dtri_parenttype_cid_to_Iloc = t8_dtet_parenttype_cid_to_Iloc
-
-const t8_dtri_parenttype_Iloc_to_type = t8_dtet_parenttype_Iloc_to_type
-
-const t8_dtri_parenttype_Iloc_to_cid = t8_dtet_parenttype_Iloc_to_cid
-
-const t8_dtri_type_cid_to_Iloc = t8_dtet_type_cid_to_Iloc
-
-const t8_dtri_face_corner = t8_dtet_face_corner
-
-const t8_dtri_is_equal = t8_dtet_is_equal
-
-const t8_dtri_copy = t8_dtet_copy
-
-const t8_dtri_compare = t8_dtet_compare
-
-const t8_dtri_equal = t8_dtet_equal
-
-const t8_dtri_parent = t8_dtet_parent
-
-const t8_dtri_ancestor = t8_dtet_ancestor
-
-const t8_dtri_compute_all_coords = t8_dtet_compute_all_coords
-
-const t8_dtri_compute_integer_coords = t8_dtet_compute_integer_coords
-
-const t8_dtri_compute_vertex_ref_coords = t8_dtet_compute_vertex_ref_coords
-
-const t8_dtri_compute_reference_coords = t8_dtet_compute_reference_coords
-
-const t8_dtri_child = t8_dtet_child
-
-const t8_dtri_childrenpv = t8_dtet_childrenpv
-
-const t8_dtri_is_familypv = t8_dtet_is_familypv
-
-const t8_dtri_sibling = t8_dtet_sibling
-
-const t8_dtri_face_neighbour = t8_dtet_face_neighbour
-
-const t8_dtri_nearest_common_ancestor = t8_dtet_nearest_common_ancestor
-
-const t8_dtri_children_at_face = t8_dtet_children_at_face
-
-const t8_dtri_face_child_face = t8_dtet_face_child_face
-
-const t8_dtri_face_parent_face = t8_dtet_face_parent_face
-
-const t8_dtri_tree_face = t8_dtet_tree_face
-
-const t8_dtri_root_face_to_face = t8_dtet_root_face_to_face
-
-const t8_dtri_is_inside_root = t8_dtet_is_inside_root
-
-const t8_dtri_is_root_boundary = t8_dtet_is_root_boundary
-
-const t8_dtri_is_sibling = t8_dtet_is_sibling
-
-const t8_dtri_is_parent = t8_dtet_is_parent
-
-const t8_dtri_is_ancestor = t8_dtet_is_ancestor
-
-const t8_dtri_linear_id = t8_dtet_linear_id
-
-const t8_dtri_linear_id_corner_desc = t8_dtet_linear_id_corner_desc
-
-const t8_dtri_init_linear_id = t8_dtet_init_linear_id
-
-const t8_dtri_init_root = t8_dtet_init_root
-
-const t8_dtri_successor = t8_dtet_successor
-
-const t8_dtri_first_descendant = t8_dtet_first_descendant
-
-const t8_dtri_last_descendant = t8_dtet_last_descendant
-
-const t8_dtri_corner_descendant = t8_dtet_corner_descendant
-
-const t8_dtri_predecessor = t8_dtet_predecessor
-
-const t8_dtri_ancestor_id = t8_dtet_ancestor_id
-
-const t8_dtri_child_id = t8_dtet_child_id
-
-const t8_dtri_get_level = t8_dtet_get_level
-
-const t8_dtri_is_valid = t8_dtet_is_valid
-
-const t8_dtri_init = t8_dtet_init
-
-const t8_dtri_init_linear_id_with_level = t8_dtet_init_linear_id_with_level
-
-const t8_dtri_linear_id_with_level = t8_dtet_linear_id_with_level
-
-const t8_dtri_debug_print = t8_dtet_debug_print
-
-const t8_dtri_element_pack = t8_dtet_element_pack
-
-const t8_dtri_element_pack_size = t8_dtet_element_pack_size
-
-const t8_dtri_element_unpack = t8_dtet_element_unpack
 
 const T8_DLINE_ROOT_BY_DTRI_ROOT = 1 << (T8_DLINE_MAXLEVEL - T8_DTRI_MAXLEVEL)
 

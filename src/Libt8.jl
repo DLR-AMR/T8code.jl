@@ -23,7 +23,7 @@ function __init__()
     global libsc
     global libt8
     @static if _PREFERENCE_LIBP4EST == "t8code_jll" && MPIPreferences.binary == "system"
-        @warn "System MPI version detected, but not a system p4est version. ..."
+        @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
     elseif _PREFERENCE_LIBP4EST == "t8code_jll"
         libp4est = t8code_jll.libp4est
     else

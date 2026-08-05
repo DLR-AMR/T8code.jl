@@ -61,7 +61,8 @@ t8_global_productionf(" [step3] \n")
 ## Setup. Build cmesh and uniform forest.
 
 # Build a cube cmesh with tet, hex, and prism trees.
-cmesh = t8_cmesh_new_hypercube_hybrid(comm, 0, 0)
+cmesh = t8_cmesh_new()
+t8_cmesh_new_hypercube_hybrid(Ref(cmesh), comm, 0, 0)
 t8_global_productionf(" [step3] Created coarse mesh.\n")
 forest = t8_forest_new_uniform(cmesh, t8_scheme_new_default(), level, 0, comm)
 

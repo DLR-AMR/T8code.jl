@@ -5260,7 +5260,7 @@ end
 
 mutable struct t8_cmesh end
 
-"""Forward pointer reference to hidden cmesh implementation. This reference needs to be known by [`t8_geometry`](@ref), hence we  put it before the include."""
+"""Forward pointer reference to hidden cmesh implementation. This reference needs to be known by [`t8_geometry`](@ref), hence we put it before the include."""
 const t8_cmesh_t = Ptr{t8_cmesh}
 
 """
@@ -5563,21 +5563,40 @@ function t8_cmesh_is_initialized(cmesh)
 end
 
 """
-    t8_cmesh_is_committed(cmesh)
+    t8_cmesh_is_committed(cmesh, validate_cmesh)
 
-Check whether a cmesh is not NULL, initialized and committed. In addition, it asserts that the cmesh is consistent as much as possible.
+Check whether a cmesh is not NULL, initialized and committed.
 
 # Arguments
 * `cmesh`:\\[in\\] This cmesh is examined. May be NULL.
+* `validate_cmesh`:\\[in\\] If true (the default), in addition to checking the committed flag, checks that the cmesh is consistent as much as possible. If false, only *cmesh* being non-NULL and its internal committed flag are checked; no recursive validation is performed. Useful for cheap checks, e.g. at the start of a cmesh generator, where the full validation is neither needed nor (since the cmesh is not yet committed) meaningful.
 # Returns
-True if cmesh is not NULL and t8_cmesh_init has been called on it as well as t8_cmesh_commit. False otherwise.
+True if cmesh is not NULL and t8_cmesh_init has been called on it as well as t8_cmesh_commit (and the validation is successful). False otherwise.
 ### Prototype
 ```c
-int t8_cmesh_is_committed (const t8_cmesh_t cmesh);
+int t8_cmesh_is_committed (const t8_cmesh_t cmesh #ifdef __cplusplus , int validate_cmesh = 1 #else , int validate_cmesh #endif );
 ```
 """
-function t8_cmesh_is_committed(cmesh)
-    @ccall libt8.t8_cmesh_is_committed(cmesh::t8_cmesh_t)::Cint
+function t8_cmesh_is_committed(cmesh, validate_cmesh)
+    @ccall libt8.t8_cmesh_is_committed(cmesh::t8_cmesh_t, validate_cmesh::Cint)::Cint
+end
+
+"""
+    t8_cmesh_stash_is_empty(cmesh)
+
+Check whether a cmesh holds no trees, face-connections or attributes yet. Useful at the start of a cmesh generator to ensure the caller has not already added trees to *cmesh* before passing it on.
+
+# Arguments
+* `cmesh`:\\[in\\] This cmesh is examined. Must be initialized, but not committed.
+# Returns
+True if *cmesh* holds no entries at all, false otherwise.
+### Prototype
+```c
+int t8_cmesh_stash_is_empty (const t8_cmesh_t cmesh);
+```
+"""
+function t8_cmesh_stash_is_empty(cmesh)
+    @ccall libt8.t8_cmesh_stash_is_empty(cmesh::t8_cmesh_t)::Cint
 end
 
 """
@@ -6414,7 +6433,7 @@ end
 """
     t8_cmesh_get_tree_face_neighbor_eclass(cmesh, ltreeid, face)
 
-Given a local tree id (of a local tree or ghost tree) and a face compute the eclass of the  tree's face neighbor.
+Given a local tree id (of a local tree or ghost tree) and a face compute the eclass of the tree's face neighbor.
 
 # Arguments
 * `cmesh`:\\[in\\] The cmesh to be considered.
@@ -10372,459 +10391,459 @@ function p8est_connectivity_read_inp(filename)
 end
 
 """
-    t8_cmesh_new_from_p4est(conn, comm, do_partition)
+    t8_cmesh_new_from_p4est(cmesh, conn, comm, do_partition)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_from_p4est (p4est_connectivity_t *conn, sc_MPI_Comm comm, int do_partition);
+void t8_cmesh_new_from_p4est (t8_cmesh_t cmesh, p4est_connectivity_t *conn, sc_MPI_Comm comm, int do_partition);
 ```
 """
-function t8_cmesh_new_from_p4est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p4est(conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
+function t8_cmesh_new_from_p4est(cmesh, conn, comm, do_partition)
+    @ccall libt8.t8_cmesh_new_from_p4est(cmesh::t8_cmesh_t, conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_from_p8est(conn, comm, do_partition)
+    t8_cmesh_new_from_p8est(cmesh, conn, comm, do_partition)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_from_p8est (p8est_connectivity_t *conn, sc_MPI_Comm comm, int do_partition);
+void t8_cmesh_new_from_p8est (t8_cmesh_t cmesh, p8est_connectivity_t *conn, sc_MPI_Comm comm, int do_partition);
 ```
 """
-function t8_cmesh_new_from_p8est(conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p8est(conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::t8_cmesh_t
+function t8_cmesh_new_from_p8est(cmesh, conn, comm, do_partition)
+    @ccall libt8.t8_cmesh_new_from_p8est(cmesh::t8_cmesh_t, conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_empty(comm, do_partition, dimension)
+    t8_cmesh_new_empty(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_empty (sc_MPI_Comm comm, const int do_partition, const int dimension);
+void t8_cmesh_new_empty (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_empty(comm, do_partition, dimension)
-    @ccall libt8.t8_cmesh_new_empty(comm::MPI_Comm, do_partition::Cint, dimension::Cint)::t8_cmesh_t
+function t8_cmesh_new_empty(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_empty(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_from_class(eclass, comm)
+    t8_cmesh_new_from_class(cmesh, eclass, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_from_class (t8_eclass_t eclass, sc_MPI_Comm comm);
+void t8_cmesh_new_from_class (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_from_class(eclass, comm)
-    @ccall libt8.t8_cmesh_new_from_class(eclass::t8_eclass_t, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_from_class(cmesh, eclass, comm)
+    @ccall libt8.t8_cmesh_new_from_class(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
+    t8_cmesh_new_hypercube(pcmesh, eclass, comm, do_bcast, do_partition, periodic)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hypercube (t8_eclass_t eclass, sc_MPI_Comm comm, int do_bcast, int do_partition, int periodic);
+void t8_cmesh_new_hypercube (t8_cmesh_t *pcmesh, const t8_eclass_t eclass, sc_MPI_Comm comm, const int do_bcast, const int do_partition, int periodic);
 ```
 """
-function t8_cmesh_new_hypercube(eclass, comm, do_bcast, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube(eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+function t8_cmesh_new_hypercube(pcmesh, eclass, comm, do_bcast, do_partition, periodic)
+    @ccall libt8.t8_cmesh_new_hypercube(pcmesh::Ptr{t8_cmesh_t}, eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
+    t8_cmesh_new_hypercube_pad(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hypercube_pad (const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int use_axis_aligned);
+void t8_cmesh_new_hypercube_pad (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int use_axis_aligned);
 ```
 """
-function t8_cmesh_new_hypercube_pad(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
-    @ccall libt8.t8_cmesh_new_hypercube_pad(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::t8_cmesh_t
+function t8_cmesh_new_hypercube_pad(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
+    @ccall libt8.t8_cmesh_new_hypercube_pad(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_hypercube_pad_ext(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
+    t8_cmesh_new_hypercube_pad_ext(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hypercube_pad_ext (const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int periodic_x, const int periodic_y, const int periodic_z, const int use_axis_aligned, const int set_partition, t8_gloidx_t offset);
+void t8_cmesh_new_hypercube_pad_ext (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int periodic_x, const int periodic_y, const int periodic_z, const int use_axis_aligned, const int set_partition, t8_gloidx_t offset);
 ```
 """
-function t8_cmesh_new_hypercube_pad_ext(eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
-    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::t8_cmesh_t
+function t8_cmesh_new_hypercube_pad_ext(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
+    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::Cvoid
 end
 
 """
-    t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
+    t8_cmesh_new_hypercube_hybrid(cmesh, comm, periodic)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hypercube_hybrid (sc_MPI_Comm comm, int do_partition, int periodic);
+void t8_cmesh_new_hypercube_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm, int periodic);
 ```
 """
-function t8_cmesh_new_hypercube_hybrid(comm, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube_hybrid(comm::MPI_Comm, do_partition::Cint, periodic::Cint)::t8_cmesh_t
+function t8_cmesh_new_hypercube_hybrid(cmesh, comm, periodic)
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm, periodic::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_periodic(comm, dim)
+    t8_cmesh_new_periodic(cmesh, comm, dim)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_periodic (sc_MPI_Comm comm, int dim);
+void t8_cmesh_new_periodic (t8_cmesh_t cmesh, sc_MPI_Comm comm, int dim);
 ```
 """
-function t8_cmesh_new_periodic(comm, dim)
-    @ccall libt8.t8_cmesh_new_periodic(comm::MPI_Comm, dim::Cint)::t8_cmesh_t
+function t8_cmesh_new_periodic(cmesh, comm, dim)
+    @ccall libt8.t8_cmesh_new_periodic(cmesh::t8_cmesh_t, comm::MPI_Comm, dim::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_periodic_tri(comm)
+    t8_cmesh_new_periodic_tri(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_periodic_tri (sc_MPI_Comm comm);
+void t8_cmesh_new_periodic_tri (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_periodic_tri(comm)
-    @ccall libt8.t8_cmesh_new_periodic_tri(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_periodic_tri(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_periodic_tri(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_periodic_hybrid(comm)
+    t8_cmesh_new_periodic_hybrid(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_periodic_hybrid (sc_MPI_Comm comm);
+void t8_cmesh_new_periodic_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_periodic_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_periodic_hybrid(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_periodic_hybrid(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_periodic_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_periodic_line_more_trees(comm)
+    t8_cmesh_new_periodic_line_more_trees(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_periodic_line_more_trees (sc_MPI_Comm comm);
+void t8_cmesh_new_periodic_line_more_trees (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_periodic_line_more_trees(comm)
-    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_periodic_line_more_trees(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_bigmesh(eclass, num_trees, comm)
+    t8_cmesh_new_bigmesh(cmesh, eclass, num_trees, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_bigmesh (t8_eclass_t eclass, int num_trees, sc_MPI_Comm comm);
+void t8_cmesh_new_bigmesh (t8_cmesh_t cmesh, t8_eclass_t eclass, int num_trees, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_bigmesh(eclass, num_trees, comm)
-    @ccall libt8.t8_cmesh_new_bigmesh(eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_bigmesh(cmesh, eclass, num_trees, comm)
+    @ccall libt8.t8_cmesh_new_bigmesh(cmesh::t8_cmesh_t, eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_line_zigzag(comm)
+    t8_cmesh_new_line_zigzag(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_line_zigzag (sc_MPI_Comm comm);
+void t8_cmesh_new_line_zigzag (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_line_zigzag(comm)
-    @ccall libt8.t8_cmesh_new_line_zigzag(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_line_zigzag(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_line_zigzag(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_prism_cake(comm, num_of_prisms)
+    t8_cmesh_new_prism_cake(cmesh, comm, num_of_prisms)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prism_cake (sc_MPI_Comm comm, int num_of_prisms);
+void t8_cmesh_new_prism_cake (t8_cmesh_t cmesh, sc_MPI_Comm comm, int num_of_prisms);
 ```
 """
-function t8_cmesh_new_prism_cake(comm, num_of_prisms)
-    @ccall libt8.t8_cmesh_new_prism_cake(comm::MPI_Comm, num_of_prisms::Cint)::t8_cmesh_t
+function t8_cmesh_new_prism_cake(cmesh, comm, num_of_prisms)
+    @ccall libt8.t8_cmesh_new_prism_cake(cmesh::t8_cmesh_t, comm::MPI_Comm, num_of_prisms::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_prism_deformed(comm)
+    t8_cmesh_new_prism_deformed(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prism_deformed (sc_MPI_Comm comm);
+void t8_cmesh_new_prism_deformed (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prism_deformed(comm)
-    @ccall libt8.t8_cmesh_new_prism_deformed(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_prism_deformed(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_prism_deformed(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_pyramid_deformed(comm)
+    t8_cmesh_new_pyramid_deformed(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_pyramid_deformed (sc_MPI_Comm comm);
+void t8_cmesh_new_pyramid_deformed (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_pyramid_deformed(comm)
-    @ccall libt8.t8_cmesh_new_pyramid_deformed(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_pyramid_deformed(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_pyramid_deformed(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_prism_cake_funny_oriented(comm)
+    t8_cmesh_new_prism_cake_funny_oriented(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prism_cake_funny_oriented (sc_MPI_Comm comm);
+void t8_cmesh_new_prism_cake_funny_oriented (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prism_cake_funny_oriented(comm)
-    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_prism_cake_funny_oriented(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_prism_geometry(comm)
+    t8_cmesh_new_prism_geometry(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prism_geometry (sc_MPI_Comm comm);
+void t8_cmesh_new_prism_geometry (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prism_geometry(comm)
-    @ccall libt8.t8_cmesh_new_prism_geometry(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_prism_geometry(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_prism_geometry(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_brick_2d(num_x, num_y, x_periodic, y_periodic, comm)
+    t8_cmesh_new_brick_2d(cmesh, num_x, num_y, x_periodic, y_periodic, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_brick_2d (t8_gloidx_t num_x, t8_gloidx_t num_y, int x_periodic, int y_periodic, sc_MPI_Comm comm);
+void t8_cmesh_new_brick_2d (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num_y, int x_periodic, int y_periodic, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_brick_2d(num_x, num_y, x_periodic, y_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_2d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_brick_2d(cmesh, num_x, num_y, x_periodic, y_periodic, comm)
+    @ccall libt8.t8_cmesh_new_brick_2d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_brick_3d(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+    t8_cmesh_new_brick_3d(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_brick_3d (t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
+void t8_cmesh_new_brick_3d (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_brick_3d(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_3d(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_brick_3d(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+    @ccall libt8.t8_cmesh_new_brick_3d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+    t8_cmesh_new_disjoint_bricks(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_disjoint_bricks (t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
+void t8_cmesh_new_disjoint_bricks (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_disjoint_bricks(num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_disjoint_bricks(num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_disjoint_bricks(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
+    @ccall libt8.t8_cmesh_new_disjoint_bricks(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_tet_orientation_test(comm)
+    t8_cmesh_new_tet_orientation_test(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_tet_orientation_test (sc_MPI_Comm comm);
+void t8_cmesh_new_tet_orientation_test (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_tet_orientation_test(comm)
-    @ccall libt8.t8_cmesh_new_tet_orientation_test(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_tet_orientation_test(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_tet_orientation_test(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_hybrid_gate(comm)
+    t8_cmesh_new_hybrid_gate(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hybrid_gate (sc_MPI_Comm comm);
+void t8_cmesh_new_hybrid_gate (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_hybrid_gate(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_hybrid_gate(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_hybrid_gate(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_hybrid_gate_deformed(comm)
+    t8_cmesh_new_hybrid_gate_deformed(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_hybrid_gate_deformed (sc_MPI_Comm comm);
+void t8_cmesh_new_hybrid_gate_deformed (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_hybrid_gate_deformed(comm)
-    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_hybrid_gate_deformed(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_hybrid_gate_deformed(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_full_hybrid(comm)
+    t8_cmesh_new_full_hybrid(cmesh, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_full_hybrid (sc_MPI_Comm comm);
+void t8_cmesh_new_full_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_full_hybrid(comm)
-    @ccall libt8.t8_cmesh_new_full_hybrid(comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_full_hybrid(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_full_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
+    t8_cmesh_new_pyramid_cake(cmesh, comm, num_of_pyra)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_pyramid_cake (sc_MPI_Comm comm, int num_of_pyra);
+void t8_cmesh_new_pyramid_cake (t8_cmesh_t cmesh, sc_MPI_Comm comm, int num_of_pyra);
 ```
 """
-function t8_cmesh_new_pyramid_cake(comm, num_of_pyra)
-    @ccall libt8.t8_cmesh_new_pyramid_cake(comm::MPI_Comm, num_of_pyra::Cint)::t8_cmesh_t
+function t8_cmesh_new_pyramid_cake(cmesh, comm, num_of_pyra)
+    @ccall libt8.t8_cmesh_new_pyramid_cake(cmesh::t8_cmesh_t, comm::MPI_Comm, num_of_pyra::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
+    t8_cmesh_new_long_brick_pyramid(cmesh, comm, num_cubes)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_long_brick_pyramid (sc_MPI_Comm comm, int num_cubes);
+void t8_cmesh_new_long_brick_pyramid (t8_cmesh_t cmesh, sc_MPI_Comm comm, int num_cubes);
 ```
 """
-function t8_cmesh_new_long_brick_pyramid(comm, num_cubes)
-    @ccall libt8.t8_cmesh_new_long_brick_pyramid(comm::MPI_Comm, num_cubes::Cint)::t8_cmesh_t
+function t8_cmesh_new_long_brick_pyramid(cmesh, comm, num_cubes)
+    @ccall libt8.t8_cmesh_new_long_brick_pyramid(cmesh::t8_cmesh_t, comm::MPI_Comm, num_cubes::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_row_of_cubes(num_trees, set_attributes, do_partition, comm, package_id)
+    t8_cmesh_new_row_of_cubes(cmesh, num_trees, set_attributes, do_partition, comm, package_id)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_row_of_cubes (t8_locidx_t num_trees, const int set_attributes, const int do_partition, sc_MPI_Comm comm, const int package_id);
+void t8_cmesh_new_row_of_cubes (t8_cmesh_t cmesh, t8_locidx_t num_trees, const int set_attributes, const int do_partition, sc_MPI_Comm comm, const int package_id);
 ```
 """
-function t8_cmesh_new_row_of_cubes(num_trees, set_attributes, do_partition, comm, package_id)
-    @ccall libt8.t8_cmesh_new_row_of_cubes(num_trees::t8_locidx_t, set_attributes::Cint, do_partition::Cint, comm::MPI_Comm, package_id::Cint)::t8_cmesh_t
+function t8_cmesh_new_row_of_cubes(cmesh, num_trees, set_attributes, do_partition, comm, package_id)
+    @ccall libt8.t8_cmesh_new_row_of_cubes(cmesh::t8_cmesh_t, num_trees::t8_locidx_t, set_attributes::Cint, do_partition::Cint, comm::MPI_Comm, package_id::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_quadrangulated_disk(radius, comm)
+    t8_cmesh_new_quadrangulated_disk(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_quadrangulated_disk (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_quadrangulated_disk (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_quadrangulated_disk(radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_disk(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_quadrangulated_disk(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_quadrangulated_disk(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_triangulated_spherical_surface_octahedron(radius, comm)
+    t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_octahedron (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_triangulated_spherical_surface_octahedron (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_triangulated_spherical_surface_octahedron(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius, comm)
+    t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_icosahedron (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_triangulated_spherical_surface_icosahedron (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_triangulated_spherical_surface_cube(radius, comm)
+    t8_cmesh_new_triangulated_spherical_surface_cube(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_triangulated_spherical_surface_cube (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_triangulated_spherical_surface_cube (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_triangulated_spherical_surface_cube(radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_triangulated_spherical_surface_cube(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_quadrangulated_spherical_surface(radius, comm)
+    t8_cmesh_new_quadrangulated_spherical_surface(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_quadrangulated_spherical_surface (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_quadrangulated_spherical_surface (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_quadrangulated_spherical_surface(radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_quadrangulated_spherical_surface(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+    t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_octahedron (const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
+void t8_cmesh_new_prismed_spherical_shell_octahedron (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
+    t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_prismed_spherical_shell_icosahedron (const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
+void t8_cmesh_new_prismed_spherical_shell_icosahedron (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_cubed_spherical_shell(inner_radius, shell_thickness, num_trees, num_layers, comm)
+    t8_cmesh_new_cubed_spherical_shell(cmesh, inner_radius, shell_thickness, num_trees, num_layers, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_cubed_spherical_shell (const double inner_radius, const double shell_thickness, const int num_trees, const int num_layers, sc_MPI_Comm comm);
+void t8_cmesh_new_cubed_spherical_shell (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_trees, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_cubed_spherical_shell(inner_radius, shell_thickness, num_trees, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(inner_radius::Cdouble, shell_thickness::Cdouble, num_trees::Cint, num_layers::Cint, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_cubed_spherical_shell(cmesh, inner_radius, shell_thickness, num_trees, num_layers, comm)
+    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_trees::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
-    t8_cmesh_new_cubed_sphere(radius, comm)
+    t8_cmesh_new_cubed_sphere(cmesh, radius, comm)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_new_cubed_sphere (const double radius, sc_MPI_Comm comm);
+void t8_cmesh_new_cubed_sphere (t8_cmesh_t cmesh, const double radius, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_cubed_sphere(radius, comm)
-    @ccall libt8.t8_cmesh_new_cubed_sphere(radius::Cdouble, comm::MPI_Comm)::t8_cmesh_t
+function t8_cmesh_new_cubed_sphere(cmesh, radius, comm)
+    @ccall libt8.t8_cmesh_new_cubed_sphere(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10883,15 +10902,15 @@ function t8_cmesh_set_join_by_stash(cmesh, connectivity, do_both_directions)
 end
 
 """
-    t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_cad_geometry)
+    t8_cmesh_from_msh_file(pcmesh, fileprefix, partition, comm, dim, master, use_cad_geometry)
 
 ### Prototype
 ```c
-t8_cmesh_t t8_cmesh_from_msh_file (const char *fileprefix, int partition, sc_MPI_Comm comm, int dim, int master, int use_cad_geometry);
+void t8_cmesh_from_msh_file (t8_cmesh_t *pcmesh, const char *fileprefix, int partition, sc_MPI_Comm comm, int dim, int master, int use_cad_geometry);
 ```
 """
-function t8_cmesh_from_msh_file(fileprefix, partition, comm, dim, master, use_cad_geometry)
-    @ccall libt8.t8_cmesh_from_msh_file(fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::t8_cmesh_t
+function t8_cmesh_from_msh_file(pcmesh, fileprefix, partition, comm, dim, master, use_cad_geometry)
+    @ccall libt8.t8_cmesh_from_msh_file(pcmesh::Ptr{t8_cmesh_t}, fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::Cvoid
 end
 
 mutable struct t8_cmesh_vertex_connectivity end
@@ -14795,7 +14814,7 @@ end
 """
     t8_forest_element_is_ghost(forest, element, lghost_tree)
 
-Query whether a given element is a ghost of a certrain tree in a forest.
+Query whether a given element is a ghost of a certain tree in a forest.
 
 !!! note
 

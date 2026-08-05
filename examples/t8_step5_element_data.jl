@@ -59,7 +59,7 @@ end
 
 function t8_step5_build_forest(comm, level)
     cmesh = t8_cmesh_new()
-    t8_cmesh_new_hypercube_hybrid(Ref(cmesh), comm, 0, 0)
+    t8_cmesh_new_hypercube_hybrid(Ref(cmesh), comm, 0)
     scheme = t8_scheme_new_default()
 
     adapt_data = t8_step3_adapt_data_t((0.5, 0.5, 1.0),      # Midpoints of the sphere.

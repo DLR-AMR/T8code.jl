@@ -77,7 +77,7 @@ end
 # adapted and committed forest is returned back to the calling scope.
 function t8_step6_build_forest(comm, dim, level)
     cmesh = t8_cmesh_new()
-    t8_cmesh_new_periodic(Ref(cmesh), comm, dim)
+    t8_cmesh_new_periodic(cmesh, comm, dim)
 
     scheme = t8_scheme_new_default()
 

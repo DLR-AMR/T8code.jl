@@ -18,9 +18,11 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 args = get_default_args()  # Note you must call this function firstly and then append your own flags
 push!(args, "-I$include_dir")
 
-headers = [joinpath(include_dir, header) for header in readdir(include_dir) if endswith(header, ".h")]
-# there is also an experimental `detect_headers` function for auto-detecting top-level headers in the directory
-# headers = detect_headers(include_dir, args)
+filter_out = (x -> !startswith(basename(x), "t8_") ||
+                   !endswith(basename(x), ".h") ||
+                   basename(x) == "t8_dtri_to_dtet.h")  # this header contains redefinitions which seem harmful
+
+headers = detect_headers(include_dir, args, Dict(), filter_out)
 
 # create context
 ctx = create_context(headers, args, options)

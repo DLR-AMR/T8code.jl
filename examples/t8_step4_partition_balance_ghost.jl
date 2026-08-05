@@ -213,7 +213,7 @@ t8_global_productionf(" [step4] Creating an adapted forest as in step3.\n")
 t8_global_productionf(" [step4] \n")
 # Build a cube cmesh with tet, hex, and prism trees.
 cmesh = t8_cmesh_new()
-t8_cmesh_new_hypercube_hybrid(Ref(cmesh), comm, 0)
+t8_cmesh_new_hypercube_hybrid(cmesh, comm, 0)
 t8_global_productionf(" [step4] Created coarse mesh.\n")
 forest = t8_forest_new_uniform(cmesh, t8_scheme_new_default(), level, 0, comm)
 

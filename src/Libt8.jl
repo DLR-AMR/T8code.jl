@@ -65,6 +65,7 @@ const INT32_MIN = typemin(Cint)
 const INT32_MAX = typemax(Cint)
 const INT64_MIN = typemin(Clonglong)
 const INT64_MAX = typemax(Clonglong)
+const P4EST_QMAXLEVEL = 29
 
 
 """
@@ -349,6 +350,97 @@ const t8_eclass_t = t8_eclass
 
 """Type definition for the geometric shape of an element. Currently the possible shapes are the same as the possible element classes. I.e. T8\\_ECLASS\\_VERTEX, T8\\_ECLASS\\_TET, etc..."""
 const t8_element_shape_t = t8_eclass_t
+
+"""
+    sc_refcount
+
+The refcount structure is declared in public so its size is known. Its members should really never be accessed directly.
+
+| Field        | Note                                                         |
+| :----------- | :----------------------------------------------------------- |
+| package\\_id | The sc package that uses this reference counter.             |
+| refcount     | The reference count is always positive for a valid counter.  |
+"""
+struct sc_refcount
+    package_id::Cint
+    refcount::Cint
+end
+
+"""The refcount structure is declared in public so its size is known. Its members should really never be accessed directly."""
+const sc_refcount_t = sc_refcount
+
+"""
+    sc_refcount_ref(rc)
+
+Increase a reference counter. The counter must be active, that is, have a value greater than zero.
+
+# Arguments
+* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is increased by one.
+### Prototype
+```c
+void sc_refcount_ref (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_ref(rc)
+    @ccall libsc.sc_refcount_ref(rc::Ptr{sc_refcount_t})::Cvoid
+end
+
+"""
+    sc_refcount_unref(rc)
+
+Decrease the reference counter and notify when it reaches zero. The count must be greater zero on input. If the reference count reaches zero, which is indicated by the return value, the counter may not be used further with sc_refcount_ref or
+
+# Arguments
+* `rc`:\\[in,out\\] This reference counter must be valid (greater zero). Its count is decreased by one.
+# Returns
+True if the count has reached zero, false otherwise.
+# See also
+[`sc_refcount_unref`](@ref). It is legal, however, to reactivate it later by calling, [`sc_refcount_init`](@ref).
+
+### Prototype
+```c
+int sc_refcount_unref (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_unref(rc)
+    @ccall libsc.sc_refcount_unref(rc::Ptr{sc_refcount_t})::Cint
+end
+
+"""
+    sc_refcount_is_active(rc)
+
+Check whether a reference counter has a positive value. This means that the reference counter is in use and corresponds to a live object.
+
+# Arguments
+* `rc`:\\[in\\] A reference counter.
+# Returns
+True if the count is greater zero, false otherwise.
+### Prototype
+```c
+int sc_refcount_is_active (const sc_refcount_t * rc);
+```
+"""
+function sc_refcount_is_active(rc)
+    @ccall libsc.sc_refcount_is_active(rc::Ptr{sc_refcount_t})::Cint
+end
+
+"""
+    sc_refcount_is_last(rc)
+
+Check whether a reference counter has value one. This means that this counter is the last of its kind, which we may optimize for.
+
+# Arguments
+* `rc`:\\[in\\] A reference counter.
+# Returns
+True if the count is exactly one.
+### Prototype
+```c
+int sc_refcount_is_last (const sc_refcount_t * rc);
+```
+"""
+function sc_refcount_is_last(rc)
+    @ccall libsc.sc_refcount_is_last(rc::Ptr{sc_refcount_t})::Cint
+end
 
 """
     sc_MPI_Error_string(errorcode, string, resultlen)
@@ -5170,6 +5262,124 @@ mutable struct t8_cmesh end
 
 """Forward pointer reference to hidden cmesh implementation. This reference needs to be known by [`t8_geometry`](@ref), hence we  put it before the include."""
 const t8_cmesh_t = Ptr{t8_cmesh}
+
+"""
+    sc_refcount_init_invalid(rc)
+
+Initialize a well-defined but unusable reference counter. Specifically, we set its package identifier and reference count to -1. To make this reference counter usable, call sc_refcount_init.
+
+# Arguments
+* `rc`:\\[out\\] This reference counter is defined as invalid. It will return false on both sc_refcount_is_active and sc_refcount_is_last. It can be made valid by calling sc_refcount_init. No other functions must be called on it.
+### Prototype
+```c
+void sc_refcount_init_invalid (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_init_invalid(rc)
+    @ccall libsc.sc_refcount_init_invalid(rc::Ptr{sc_refcount_t})::Cvoid
+end
+
+"""
+    sc_refcount_init(rc, package_id)
+
+Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
+
+# Arguments
+* `rc`:\\[out\\] This reference counter is initialized to one. The object's contents may be undefined on input.
+* `package_id`:\\[in\\] Either -1 or a package registered to libsc.
+### Prototype
+```c
+void sc_refcount_init (sc_refcount_t * rc, int package_id);
+```
+"""
+function sc_refcount_init(rc, package_id)
+    @ccall libsc.sc_refcount_init(rc::Ptr{sc_refcount_t}, package_id::Cint)::Cvoid
+end
+
+"""
+    sc_refcount_new(package_id)
+
+Create a new reference counter with count initialized to 1. Equivalent to calling sc_refcount_init on a newly allocated rc object.
+
+# Arguments
+* `package_id`:\\[in\\] Either -1 or a package registered to libsc.
+# Returns
+A reference counter with count one.
+### Prototype
+```c
+sc_refcount_t *sc_refcount_new (int package_id);
+```
+"""
+function sc_refcount_new(package_id)
+    @ccall libsc.sc_refcount_new(package_id::Cint)::Ptr{sc_refcount_t}
+end
+
+"""
+    sc_refcount_destroy(rc)
+
+Destroy a reference counter. It must have been counted down to zero before, thus reached an inactive state.
+
+# Arguments
+* `rc`:\\[in,out\\] This reference counter must have reached count zero.
+### Prototype
+```c
+void sc_refcount_destroy (sc_refcount_t * rc);
+```
+"""
+function sc_refcount_destroy(rc)
+    @ccall libsc.sc_refcount_destroy(rc::Ptr{sc_refcount_t})::Cvoid
+end
+
+"""We can reuse the reference counter type from libsc."""
+const t8_refcount_t = sc_refcount_t
+
+"""
+    t8_refcount_init(rc)
+
+Initialize a reference counter to 1. It is legal if its status prior to this call is undefined.
+
+# Arguments
+* `rc`:\\[out\\] The reference counter is set to one by this call.
+### Prototype
+```c
+void t8_refcount_init (t8_refcount_t *rc);
+```
+"""
+function t8_refcount_init(rc)
+    @ccall libt8.t8_refcount_init(rc::Ptr{t8_refcount_t})::Cvoid
+end
+
+"""
+    t8_refcount_new()
+
+Create a new reference counter with count initialized to 1. Equivalent to calling [`t8_refcount_init`](@ref) on a newly allocated refcount\\_t. It is mandatory to free this with t8_refcount_destroy.
+
+# Returns
+An allocated reference counter whose count has been set to one.
+### Prototype
+```c
+t8_refcount_t * t8_refcount_new (void);
+```
+"""
+function t8_refcount_new()
+    @ccall libt8.t8_refcount_new()::Ptr{t8_refcount_t}
+end
+
+"""
+    t8_refcount_destroy(rc)
+
+Destroy a reference counter that we allocated with t8_refcount_new. Its reference count must have decreased to zero.
+
+# Arguments
+* `rc`:\\[in,out\\] Allocated, formerly valid reference counter.
+### Prototype
+```c
+void t8_refcount_destroy (t8_refcount_t *rc);
+```
+"""
+function t8_refcount_destroy(rc)
+    @ccall libt8.t8_refcount_destroy(rc::Ptr{t8_refcount_t})::Cvoid
+end
 
 """
     t8_geometry_type
@@ -11296,6 +11506,7 @@ end
 
 | Field                          | Note                                                                                                                                                                                                                                                                                           |
 | :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| rc                             | Reference counter.                                                                                                                                                                                                                                                                             |
 | set\\_partition\\_offset       | Flag indicating whether the partition range was set manually.                                                                                                                                                                                                                                  |
 | set\\_first\\_global\\_element | If set\\_partition\\_offset is true, the global ID of the first local element after partitioning.                                                                                                                                                                                              |
 | set\\_level                    | Level to use in new construction.                                                                                                                                                                                                                                                              |
@@ -14352,8 +14563,11 @@ const t8_profile_t = t8_profile
 """
     t8_forest_ghost
 
+This struct stores various information about a forest's ghost elements and ghost trees.
+
 | Field                             | Note                                                                                                                                                                                                                                                                                                                                                      |
 | :-------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| rc                                | The reference counter.                                                                                                                                                                                                                                                                                                                                    |
 | num\\_ghosts\\_elements           | The count of non-local ghost leaf elements                                                                                                                                                                                                                                                                                                                |
 | num\\_remote\\_elements           | The count of local leaf elements that are ghost to another process.                                                                                                                                                                                                                                                                                       |
 | ghost\\_type                      | Describes which neighbors are considered ghosts.                                                                                                                                                                                                                                                                                                          |
@@ -14366,7 +14580,7 @@ const t8_profile_t = t8_profile
 | proc\\_offset\\_mempool           | The process offset memory pool.                                                                                                                                                                                                                                                                                                                           |
 """
 struct t8_forest_ghost
-    rc::Cint
+    rc::t8_refcount_t
     num_ghosts_elements::t8_locidx_t
     num_remote_elements::t8_locidx_t
     ghost_type::t8_ghost_type_t
@@ -21099,7 +21313,7 @@ const T8_DPRISM_MAXLEVEL = 21
 
 const T8_DPRISM_ROOT_LEN = 1 << T8_DPRISM_MAXLEVEL
 
-#const T8_DPRISM_ROOT_BY_QUAD_ROOT = 1 << (P4EST_QMAXLEVEL - T8_DPRISM_MAXLEVEL)
+const T8_DPRISM_ROOT_BY_QUAD_ROOT = 1 << (P4EST_QMAXLEVEL - T8_DPRISM_MAXLEVEL)
 
 const T8_DPRISM_ROOT_BY_DTRI_ROOT = 1 << (T8_DTRI_MAXLEVEL - T8_DPRISM_MAXLEVEL)
 

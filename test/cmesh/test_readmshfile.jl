@@ -75,7 +75,8 @@ end
 
         @assert isfile(filename) "File not found: "*filename
 
-        cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
+        cmesh = t8_cmesh_new()
+        t8_cmesh_from_msh_file(Ref(cmesh), fileprefix, 1, comm, 2, 0, 0)
 
         @assert cmesh!=C_NULL "Could not read cmesh from ascii version 4, but should be able to: "*filename
 
@@ -88,7 +89,8 @@ end
 
         @assert isfile(filename) "File not found: "*filename
 
-        cmesh = t8_cmesh_from_msh_file(fileprefix, 1, comm, 2, 0, 0)
+        cmesh = t8_cmesh_new()
+        t8_cmesh_from_msh_file(Ref(cmesh), fileprefix, 1, comm, 2, 0, 0)
 
         @assert cmesh==C_NULL "Expected fail of reading binary msh file v.4, but did not fail."
 

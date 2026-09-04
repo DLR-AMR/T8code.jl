@@ -76,7 +76,8 @@ end
 # properties of the first ("root") forest and deallocates it. The final
 # adapted and committed forest is returned back to the calling scope.
 function t8_step6_build_forest(comm, dim, level)
-    cmesh = t8_cmesh_new_periodic(comm, dim)
+    cmesh = t8_cmesh_new()
+    t8_cmesh_new_periodic(cmesh, comm, dim)
 
     scheme = t8_scheme_new_default()
 

@@ -13,28 +13,38 @@ export t8code_jll
 using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
 using MPIPreferences: MPIPreferences
 
-@static if _PREFERENCE_LIBT8 == "t8code_jll" && MPIPreferences.binary == "system"
-    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
-elseif _PREFERENCE_LIBT8 == "t8code_jll"
-    const libt8 = t8code_jll.libt8
-else
-    const libt8 = _PREFERENCE_LIBT8
-end
+# Load libp4est and libsc paths at runtime for PackageCompiler.jl-generated executables
+libp4est = ""
+libsc = ""
+libt8 = ""
 
-@static if _PREFERENCE_LIBP4EST == "t8code_jll" && MPIPreferences.binary == "system"
-    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
-elseif _PREFERENCE_LIBP4EST == "t8code_jll"
-    const libp4est = t8code_jll.libp4est
-else
-    const libp4est = _PREFERENCE_LIBP4EST
-end
+function __init__()
+    global libp4est
+    global libsc
+    global libt8
+    @static if _PREFERENCE_LIBP4EST == "t8code_jll" && MPIPreferences.binary == "system"
+        @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
+    elseif _PREFERENCE_LIBP4EST == "t8code_jll"
+        libp4est = t8code_jll.libp4est
+    else
+        libp4est = _PREFERENCE_LIBP4EST
+    end
 
-@static if _PREFERENCE_LIBSC == "t8code_jll" && MPIPreferences.binary == "system"
-    @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
-elseif _PREFERENCE_LIBSC == "t8code_jll"
-    const libsc = t8code_jll.libsc
-else
-    const libsc = _PREFERENCE_LIBSC
+    @static if _PREFERENCE_LIBSC == "t8code_jll" && MPIPreferences.binary == "system"
+        @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
+    elseif _PREFERENCE_LIBSC == "t8code_jll"
+        libsc = t8code_jll.libsc
+    else
+        libsc = _PREFERENCE_LIBSC
+    end
+
+    @static if _PREFERENCE_LIBT8 == "t8code_jll" && MPIPreferences.binary == "system"
+        @warn "System MPI version detected, but not a system t8code version. To make T8code.jl work, you need to set the preferences, see https://github.com/DLR-AMR/T8code.jl#using-a-custom-version-of-mpi-andor-t8code."
+    elseif _PREFERENCE_LIBT8 == "t8code_jll"
+        libt8 = t8code_jll.libt8
+    else
+        libt8 = _PREFERENCE_LIBT8
+    end
 end
 
 # Define missing types

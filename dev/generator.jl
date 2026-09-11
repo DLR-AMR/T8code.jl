@@ -7,7 +7,6 @@ Pkg.instantiate()
 using Artifacts
 cp(joinpath(artifact"t8code", "include"), "t8code_include"; force = true)
 
-using Glob
 using Clang.Generators
 
 cd(@__DIR__)
@@ -19,12 +18,11 @@ options = load_options(joinpath(@__DIR__, "generator.toml"))
 args = get_default_args()  # Note you must call this function firstly and then append your own flags
 push!(args, "-I$include_dir")
 
-headers = [
-  glob("t8_*.h", include_dir) ; 
-  glob("**/t8_*.h", include_dir) ; 
-  glob("**/**/t8_*.h", include_dir) ;
-  # glob("**/**/**/t8_*.h", include_dir)
-]
+filter_out = (x -> !startswith(basename(x), "t8_") ||
+                   !endswith(basename(x), ".h") ||
+                   basename(x) == "t8_dtri_to_dtet.h")  # this header contains redefinitions which seem harmful
+
+headers = detect_headers(include_dir, args, Dict(), filter_out)
 
 # create context
 ctx = create_context(headers, args, options)

@@ -56,3 +56,4 @@ const INT32_MIN = typemin(Cint)
 const INT32_MAX = typemax(Cint)
 const INT64_MIN = typemin(Clonglong)
 const INT64_MAX = typemax(Clonglong)
+const P4EST_QMAXLEVEL = 29

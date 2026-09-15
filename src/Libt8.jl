@@ -15707,35 +15707,33 @@ end
 """Type of an integer coordinate for a node of a prism element."""
 const t8_dprism_coord_t = Int32
 
-"""The type of a tetrahedron designates its position relative to the surrounding cube."""
-const t8_dtet_type_t = Int8
+"""Type for the (integer) type of a triangular element."""
+const t8_dtri_type_t = Int8
 
-"""The coordinates of a tetrahedron are integers relative to the maximum refinement."""
-const t8_dtet_coord_t = Int32
+"""Type of an integer coordinate for a node of a triangular element."""
+const t8_dtri_coord_t = Int32
 
 """
-    t8_dtet
+    t8_dtri
 
-This data type stores a tetrahedron.
+The data container describing a refined element in a refined tree for the triangular element class.
 
-| Field | Note                                                                      |
-| :---- | :------------------------------------------------------------------------ |
-| level | The refinement level of the tetrahedron relative to the root at level 0.  |
-| type  | Type of the tetrahedron in 0, ..., 5.                                     |
-| x     | The x integer coordinate of the anchor node.                              |
-| y     | The y integer coordinate of the anchor node.                              |
-| z     | The z integer coordinate of the anchor node.                              |
+| Field | Note                                                                  |
+| :---- | :-------------------------------------------------------------------- |
+| level | The refinement level of the element relative to the root at level 0.  |
+| type  | Type of the triangle (0 or 1).                                        |
+| x     | The x integer coordinate of the anchor node.                          |
+| y     | The y integer coordinate of the anchor node.                          |
 """
-struct t8_dtet
+struct t8_dtri
     level::Int8
-    type::t8_dtet_type_t
-    x::t8_dtet_coord_t
-    y::t8_dtet_coord_t
-    z::t8_dtet_coord_t
+    type::t8_dtri_type_t
+    x::t8_dtri_coord_t
+    y::t8_dtri_coord_t
 end
 
-"""This data type stores a tetrahedron."""
-const t8_dtet_t = t8_dtet
+"""The data container describing a refined element in a refined tree for the triangular element class."""
+const t8_dtri_t = t8_dtri
 
 """
     t8_dprism
@@ -16390,6 +16388,36 @@ const t8_dpyramid_coord_t = Int32
 
 """The type of pyramid in 0, ...,7. The first 6 types describe tetrahedra. Type 6 is an upward facing pyramid. Type 7 is a downward facing pyramid."""
 const t8_dpyramid_type_t = Int8
+
+"""The type of a tetrahedron designates its position relative to the surrounding cube."""
+const t8_dtet_type_t = Int8
+
+"""The coordinates of a tetrahedron are integers relative to the maximum refinement."""
+const t8_dtet_coord_t = Int32
+
+"""
+    t8_dtet
+
+This data type stores a tetrahedron.
+
+| Field | Note                                                                      |
+| :---- | :------------------------------------------------------------------------ |
+| level | The refinement level of the tetrahedron relative to the root at level 0.  |
+| type  | Type of the tetrahedron in 0, ..., 5.                                     |
+| x     | The x integer coordinate of the anchor node.                              |
+| y     | The y integer coordinate of the anchor node.                              |
+| z     | The z integer coordinate of the anchor node.                              |
+"""
+struct t8_dtet
+    level::Int8
+    type::t8_dtet_type_t
+    x::t8_dtet_coord_t
+    y::t8_dtet_coord_t
+    z::t8_dtet_coord_t
+end
+
+"""This data type stores a tetrahedron."""
+const t8_dtet_t = t8_dtet
 
 """
     t8_dpyramid
@@ -18014,22 +18042,412 @@ function t8_dtet_element_unpack(recvbuf, buffer_size, position, elements, count,
 end
 
 """
-    t8_dtri
+    t8_dtri_copy(element, dest)
 
-The data container describing a refined element in a refined tree for the triangular element class.
+Copy the values of one triangle to another.
 
-| Field | Note                                                                  |
-| :---- | :-------------------------------------------------------------------- |
-| level | The refinement level of the element relative to the root at level 0.  |
-| type  | Type of the triangle (0 or 1).                                        |
-| x     | The x integer coordinate of the anchor node.                          |
-| y     | The y integer coordinate of the anchor node.                          |
+# Arguments
+* `element`:\\[in\\] Triangle whose values will be copied.
+* `dest`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*.
+### Prototype
+```c
+void t8_dtri_copy (const t8_dtri_t *element, t8_dtri_t *dest);
+```
 """
-struct t8_dtri
-    level::Int8
-    type::t8_dtri_type_t
-    x::t8_dtri_coord_t
-    y::t8_dtri_coord_t
+function t8_dtri_copy(element, dest)
+    @ccall libt8.t8_dtri_copy(element::Ptr{t8_dtri_t}, dest::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_compare(element1, element2)
+
+Compare two triangle in their linear order.
+
+# Arguments
+* `element1`:\\[in\\] Triangle one.
+* `element2`:\\[in\\] Triangle two.
+# Returns
+Returns negative if tri1 < tri2, zero if tri1 = tri2, positive if tri1 > tri2
+### Prototype
+```c
+int t8_dtri_compare (const t8_dtri_t *element1, const t8_dtri_t *element2);
+```
+"""
+function t8_dtri_compare(element1, element2)
+    @ccall libt8.t8_dtri_compare(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_equal(element1, element2)
+
+Check if two elements are equal.
+
+# Arguments
+* `element1`:\\[in\\] The first element.
+* `element2`:\\[in\\] The second element.
+# Returns
+1 if the elements are equal, 0 if they are not equal
+### Prototype
+```c
+int t8_dtri_equal (const t8_dtri_t *element1, const t8_dtri_t *element2);
+```
+"""
+function t8_dtri_equal(element1, element2)
+    @ccall libt8.t8_dtri_equal(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_parent(element, parent)
+
+Compute the parent of a triangle.
+
+!!! note
+
+    *element* may point to the same triangle as *parent*.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `parent`:\\[in,out\\] Existing triangle whose data will be filled with the data of elem's parent.
+### Prototype
+```c
+void t8_dtri_parent (const t8_dtri_t *element, t8_dtri_t *parent);
+```
+"""
+function t8_dtri_parent(element, parent)
+    @ccall libt8.t8_dtri_parent(element::Ptr{t8_dtri_t}, parent::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_ancestor(element, level, ancestor)
+
+Compute the ancestor of a triangle at a given level.
+
+!!! note
+
+    The triangle *ancestor* may point to the same triangle as *element*.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `level`:\\[in\\] A smaller level than *element*.
+* `ancestor`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*'s ancestor on level  *level*.
+### Prototype
+```c
+void t8_dtri_ancestor (const t8_dtri_t *element, int level, t8_dtri_t *ancestor);
+```
+"""
+function t8_dtri_ancestor(element, level, ancestor)
+    @ccall libt8.t8_dtri_ancestor(element::Ptr{t8_dtri_t}, level::Cint, ancestor::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_compute_integer_coords(element, vertex, coordinates)
+
+Compute the coordinates of a vertex of a triangle.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `vertex`:\\[in\\] The number of the vertex.
+* `coordinates`:\\[out\\] An array of 2 [`t8_dtri_coord_t`](@ref) that will be filled with the coordinates of the vertex.
+### Prototype
+```c
+void t8_dtri_compute_integer_coords (const t8_dtri_t *element, const int vertex, t8_dtri_coord_t coordinates[2]);
+```
+"""
+function t8_dtri_compute_integer_coords(element, vertex, coordinates)
+    @ccall libt8.t8_dtri_compute_integer_coords(element::Ptr{t8_dtri_t}, vertex::Cint, coordinates::Ptr{t8_dtri_coord_t})::Cvoid
+end
+
+"""
+    t8_dtri_compute_vertex_ref_coords(element, vertex, coordinates)
+
+Compute the reference coordinates of a vertex of a triangle when the  tree (level 0 triangle) is embedded in
+
+```c++
+ [0,1]^2 
+```
+
+.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `vertex`:\\[in\\] The number of the vertex.
+* `coordinates`:\\[out\\] An array of 2 double that will be filled with the reference coordinates of the vertex.
+### Prototype
+```c
+void t8_dtri_compute_vertex_ref_coords (const t8_dtri_t *element, const int vertex, double coordinates[2]);
+```
+"""
+function t8_dtri_compute_vertex_ref_coords(element, vertex, coordinates)
+    @ccall libt8.t8_dtri_compute_vertex_ref_coords(element::Ptr{t8_dtri_t}, vertex::Cint, coordinates::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_dtri_compute_reference_coords(element, ref_coords, num_coords, skip_coords, out_coords)
+
+Convert points in the reference space of a tri element to points in the reference space of the tree (level 0) embedded in
+
+```c++
+ [0,1]^2 
+```
+
+.
+
+```c++
+ [0,1]^2 
+```
+
+)
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `ref_coords`:\\[in\\] The reference coordinates in the triangle (*num_coords* times
+* `num_coords`:\\[in\\] Number of coordinates to evaluate
+* `skip_coords`:\\[in\\] Only used for batch computation of prisms. In all other cases 0. Skip coordinates in the *ref_coords* and *out_coords* array.
+* `out_coords`:\\[out\\] An array of *num_coords* x 2 x double that will be filled with the reference coordinates of the points on the triangle.
+### Prototype
+```c
+void t8_dtri_compute_reference_coords (const t8_dtri_t *element, const double *ref_coords, const size_t num_coords, const size_t skip_coords, double *out_coords);
+```
+"""
+function t8_dtri_compute_reference_coords(element, ref_coords, num_coords, skip_coords, out_coords)
+    @ccall libt8.t8_dtri_compute_reference_coords(element::Ptr{t8_dtri_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, skip_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_dtri_compute_all_coords(element, coordinates)
+
+Compute the coordinates of the four vertices of a triangle.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `coordinates`:\\[out\\] An array of 4x3 [`t8_dtri_coord_t`](@ref) that will be filled with the coordinates of t's vertices.
+### Prototype
+```c
+void t8_dtri_compute_all_coords (const t8_dtri_t *element, t8_dtri_coord_t coordinates[3][2]);
+```
+"""
+function t8_dtri_compute_all_coords(element, coordinates)
+    @ccall libt8.t8_dtri_compute_all_coords(element::Ptr{t8_dtri_t}, coordinates::Ptr{NTuple{2, t8_dtri_coord_t}})::Cvoid
+end
+
+"""
+    t8_dtri_child(element, childid, child)
+
+Compute the childid-th child in Morton order of a triangle.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `childid`:\\[in,out\\] The id of the child, 0..7 in Morton order.
+* `child`:\\[out\\] Existing triangle whose data will be filled with the date of t's childid-th child.
+### Prototype
+```c
+void t8_dtri_child (const t8_dtri_t *element, int childid, t8_dtri_t *child);
+```
+"""
+function t8_dtri_child(element, childid, child)
+    @ccall libt8.t8_dtri_child(element::Ptr{t8_dtri_t}, childid::Cint, child::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_childrenpv(element, children)
+
+Compute the 4 children of a triangle, array version.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `children`:\\[in,out\\] Pointers to the 4 computed children in Morton order. t may point to the same quadrant as c[0].
+### Prototype
+```c
+void t8_dtri_childrenpv (const t8_dtri_t *element, t8_dtri_t *children[T8_DTRI_CHILDREN]);
+```
+"""
+function t8_dtri_childrenpv(element, children)
+    @ccall libt8.t8_dtri_childrenpv(element::Ptr{t8_dtri_t}, children::Ptr{Ptr{t8_dtri_t}})::Cvoid
+end
+
+"""
+    t8_dtri_is_familypv(f)
+
+Check whether a collection of eight triangles is a family in Morton order.
+
+# Arguments
+* `f`:\\[in\\] An array of eight triangles.
+# Returns
+Nonzero if *f* is a family of triangles.
+### Prototype
+```c
+int t8_dtri_is_familypv (const t8_dtri_t *f[]);
+```
+"""
+function t8_dtri_is_familypv(f)
+    @ccall libt8.t8_dtri_is_familypv(f::Ptr{Ptr{t8_dtri_t}})::Cint
+end
+
+"""
+    t8_dtri_sibling(element, sibid, sibling)
+
+Compute a specific sibling of a triangle.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `sibid`:\\[in\\] The id of the sibling computed, 0..7 in Bey order.
+* `sibling`:\\[in,out\\] Existing triangle whose data will be filled with the data of sibling no. sibling\\_id of  *element*.
+### Prototype
+```c
+void t8_dtri_sibling (const t8_dtri_t *element, int sibid, t8_dtri_t *sibling);
+```
+"""
+function t8_dtri_sibling(element, sibid, sibling)
+    @ccall libt8.t8_dtri_sibling(element::Ptr{t8_dtri_t}, sibid::Cint, sibling::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_face_neighbour(element, face, neigh)
+
+Compute the face neighbor of a triangle.
+
+!!! note
+
+    *element* may point to the same triangle as *neigh*.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+* `face`:\\[in\\] The face across which to generate the neighbor.
+* `neigh`:\\[in,out\\] Existing triangle whose data will be filled.
+### Prototype
+```c
+int t8_dtri_face_neighbour (const t8_dtri_t *element, int face, t8_dtri_t *neigh);
+```
+"""
+function t8_dtri_face_neighbour(element, face, neigh)
+    @ccall libt8.t8_dtri_face_neighbour(element::Ptr{t8_dtri_t}, face::Cint, neigh::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_nearest_common_ancestor(element1, element2, nca)
+
+Computes the nearest common ancestor of two triangles in the same tree.
+
+!!! note
+
+    *element1*, *element2*, *nca* may point to the same quadrant.
+
+# Arguments
+* `element1`:\\[in\\] First input triangle.
+* `element2`:\\[in\\] Second input triangle.
+* `nca`:\\[in,out\\] Existing triangle whose data will be filled.
+### Prototype
+```c
+void t8_dtri_nearest_common_ancestor (const t8_dtri_t *element1, const t8_dtri_t *element2, t8_dtri_t *nca);
+```
+"""
+function t8_dtri_nearest_common_ancestor(element1, element2, nca)
+    @ccall libt8.t8_dtri_nearest_common_ancestor(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t}, nca::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_children_at_face(element, face, children, num_children, child_indices)
+
+Given a triangle and a face of the triangle, compute all children of the triangle that touch the face.
+
+# Arguments
+* `element`:\\[in\\] The triangle.
+* `face`:\\[in\\] A face of *element*.
+* `children`:\\[in,out\\] Allocated triangles, in which the children of *element* that share a face with *face* are  stored. They will be stored in order of their child\\_id.
+* `num_children`:\\[in\\] The number of triangles in *children*. Must match the number of children that touch  *face*.
+* `child_indices`:\\[in,out\\] The indices of the children in *children*. Only filled if this is null previously.
+### Prototype
+```c
+void t8_dtri_children_at_face (const t8_dtri_t *element, int face, t8_dtri_t *children[], int num_children, int *child_indices);
+```
+"""
+function t8_dtri_children_at_face(element, face, children, num_children, child_indices)
+    @ccall libt8.t8_dtri_children_at_face(element::Ptr{t8_dtri_t}, face::Cint, children::Ptr{Ptr{t8_dtri_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_dtri_face_child_face(triangle, face, face_child)
+
+Given a face of a triangle and a child number of a child of that face, return the face number of the child of the  triangle that matches the child face.
+
+# Arguments
+* `triangle`:\\[in\\] The triangle.
+* `face`:\\[in\\] Then number of the face.
+* `face_child`:\\[in\\] The child number of a child of the face triangle.
+# Returns
+The face number of the face of a child of *triangle* that coincides with *face_child*.
+### Prototype
+```c
+int t8_dtri_face_child_face (const t8_dtri_t *triangle, int face, int face_child);
+```
+"""
+function t8_dtri_face_child_face(triangle, face, face_child)
+    @ccall libt8.t8_dtri_face_child_face(triangle::Ptr{t8_dtri_t}, face::Cint, face_child::Cint)::Cint
+end
+
+"""
+    t8_dtri_face_parent_face(triangle, face)
+
+Given a face of an triangle return the face number of the parent of the triangle that matches the triangle's face.  Or return -1 if no face of the parent matches the face.
+
+# Arguments
+* `triangle`:\\[in\\] The triangle.
+* `face`:\\[in\\] Then number of the face.
+# Returns
+If *face* of *elem* is also a face of *elem*'s parent, the face number of this face.  Otherwise -1.
+### Prototype
+```c
+int t8_dtri_face_parent_face (const t8_dtri_t *triangle, int face);
+```
+"""
+function t8_dtri_face_parent_face(triangle, face)
+    @ccall libt8.t8_dtri_face_parent_face(triangle::Ptr{t8_dtri_t}, face::Cint)::Cint
+end
+
+"""
+    t8_dtri_tree_face(element, face)
+
+Given a triangle and a face of this triangle. If the face lies on the tree boundary, return the face number of the  tree face. If not the return value is arbitrary.
+
+!!! note
+
+    For boundary triangles, this function is the inverse of t8_dtri_root_face_to_face
+
+# Arguments
+* `element`:\\[in\\] The triangle.
+* `face`:\\[in\\] The index of a face of *element*.
+# Returns
+The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary  integer if *element* is not at a tree boundary.
+### Prototype
+```c
+int t8_dtri_tree_face (t8_dtri_t *element, int face);
+```
+"""
+function t8_dtri_tree_face(element, face)
+    @ccall libt8.t8_dtri_tree_face(element::Ptr{t8_dtri_t}, face::Cint)::Cint
+end
+
+"""
+    t8_dtri_root_face_to_face(element, root_face)
+
+Given a triangle and a face of the root triangle. If the triangle lies on the tree boundary, return the  corresponding face number of the triangle. If not the return value is arbitrary.
+
+!!! note
+
+    For boundary triangles, this function is the inverse of t8_dtri_tree_face
+
+# Arguments
+* `element`:\\[in\\] The triangle.
+* `root_face`:\\[in\\] The index of a face of the root element.
+# Returns
+The index of the face of *element* that is a subface of *root_face*, if *element* is on the tree boundary. Any arbitrary integer if *element* is not at a tree boundary.
+### Prototype
+```c
+int t8_dtri_root_face_to_face (t8_dtri_t *element, int root_face);
+```
+"""
+function t8_dtri_root_face_to_face(element, root_face)
+    @ccall libt8.t8_dtri_root_face_to_face(element::Ptr{t8_dtri_t}, root_face::Cint)::Cint
 end
 
 """
@@ -18057,6 +18475,393 @@ void t8_dtri_transform_face (const t8_dtri_t *trianglein, t8_dtri_t *triangle2, 
 """
 function t8_dtri_transform_face(trianglein, triangle2, orientation, sign, is_smaller_face)
     @ccall libt8.t8_dtri_transform_face(trianglein::Ptr{t8_dtri_t}, triangle2::Ptr{t8_dtri_t}, orientation::Cint, sign::Cint, is_smaller_face::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_is_inside_root(element)
+
+Test if a triangle lies inside of the root triangle, that is the triangle of level 0, anchor node (0,0) and type 0.
+
+# Arguments
+* `element`:\\[in\\] Input triangle.
+# Returns
+true If *element* lies inside of the root triangle.
+### Prototype
+```c
+int t8_dtri_is_inside_root (t8_dtri_t *element);
+```
+"""
+function t8_dtri_is_inside_root(element)
+    @ccall libt8.t8_dtri_is_inside_root(element::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_is_root_boundary(element, face)
+
+Compute whether a given triangle shares a given face with its root tree.
+
+# Arguments
+* `element`:\\[in\\] The input triangle.
+* `face`:\\[in\\] A face of *element*.
+# Returns
+True if *face* is a subface of the triangle's root element.
+### Prototype
+```c
+int t8_dtri_is_root_boundary (const t8_dtri_t *element, int face);
+```
+"""
+function t8_dtri_is_root_boundary(element, face)
+    @ccall libt8.t8_dtri_is_root_boundary(element::Ptr{t8_dtri_t}, face::Cint)::Cint
+end
+
+"""
+    t8_dtri_is_equal(element1, element2)
+
+Test if two triangles have the same coordinates, type and level.
+
+# Returns
+true if *element1* describes the same triangle as *element2*.
+### Prototype
+```c
+int t8_dtri_is_equal (const t8_dtri_t *element1, const t8_dtri_t *element2);
+```
+"""
+function t8_dtri_is_equal(element1, element2)
+    @ccall libt8.t8_dtri_is_equal(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_is_sibling(element1, element2)
+
+Test if two triangles are siblings.
+
+# Arguments
+* `element1`:\\[in\\] First triangle to be tested.
+* `element2`:\\[in\\] Second triangle to be tested.
+# Returns
+true if *element1* is equal to or a sibling of *element2*.
+### Prototype
+```c
+int t8_dtri_is_sibling (const t8_dtri_t *element1, const t8_dtri_t *element2);
+```
+"""
+function t8_dtri_is_sibling(element1, element2)
+    @ccall libt8.t8_dtri_is_sibling(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_is_parent(element, child)
+
+Test if a triangle is the parent of another triangle.
+
+# Arguments
+* `element`:\\[in\\] triangle to be tested.
+* `child`:\\[in\\] Possible child triangle.
+# Returns
+true if *element* is the parent of *child*.
+### Prototype
+```c
+int t8_dtri_is_parent (const t8_dtri_t *element, const t8_dtri_t *child);
+```
+"""
+function t8_dtri_is_parent(element, child)
+    @ccall libt8.t8_dtri_is_parent(element::Ptr{t8_dtri_t}, child::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_is_ancestor(element, child)
+
+Test if a triangle is an ancestor of another triangle.
+
+# Arguments
+* `element`:\\[in\\] triangle to be tested.
+* `child`:\\[in\\] Descendent triangle.
+# Returns
+true if *element* is equal to or an ancestor of *child*.
+### Prototype
+```c
+int t8_dtri_is_ancestor (const t8_dtri_t *element, const t8_dtri_t *child);
+```
+"""
+function t8_dtri_is_ancestor(element, child)
+    @ccall libt8.t8_dtri_is_ancestor(element::Ptr{t8_dtri_t}, child::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_linear_id(element, level)
+
+Computes the linear position of a triangle in a uniform grid.
+
+!!! note
+
+    This id is not the Morton index.
+
+# Arguments
+* `element`:\\[in\\] triangle whose id will be computed.
+* `level`:\\[in\\] level of uniform grid to be considered.
+# Returns
+Returns the linear position of this triangle on a grid of level *level*.
+### Prototype
+```c
+t8_linearidx_t t8_dtri_linear_id (const t8_dtri_t *element, int level);
+```
+"""
+function t8_dtri_linear_id(element, level)
+    @ccall libt8.t8_dtri_linear_id(element::Ptr{t8_dtri_t}, level::Cint)::t8_linearidx_t
+end
+
+"""
+    t8_dtri_init_linear_id_with_level(element, id, start_level, end_level, parenttype)
+
+Same as init\\_linear\\_id, but we only consider the subtree. Used for computing the index of a tetrahedron lying in a  pyramid
+
+# Arguments
+* `element`:\\[in,out\\] Existing triangle whose data will be filled
+* `id`:\\[in\\] Index to be considered
+* `start_level`:\\[in\\] The level of the root of the subtree
+* `end_level`:\\[in\\] Level of uniform grid to be considered
+* `parenttype`:\\[in\\] The type of the parent.
+### Prototype
+```c
+void t8_dtri_init_linear_id_with_level (t8_dtri_t *element, t8_linearidx_t id, const int start_level, const int end_level, t8_dtri_type_t parenttype);
+```
+"""
+function t8_dtri_init_linear_id_with_level(element, id, start_level, end_level, parenttype)
+    @ccall libt8.t8_dtri_init_linear_id_with_level(element::Ptr{t8_dtri_t}, id::t8_linearidx_t, start_level::Cint, end_level::Cint, parenttype::t8_dtri_type_t)::Cvoid
+end
+
+"""
+    t8_dtri_init_linear_id(element, id, level)
+
+Initialize a triangle as the triangle with a given global id in a uniform refinement of a given level. *
+
+# Arguments
+* `element`:\\[in,out\\] Existing triangle whose data will be filled.
+* `id`:\\[in\\] Index to be considered.
+* `level`:\\[in\\] level of uniform grid to be considered.
+### Prototype
+```c
+void t8_dtri_init_linear_id (t8_dtri_t *element, t8_linearidx_t id, int level);
+```
+"""
+function t8_dtri_init_linear_id(element, id, level)
+    @ccall libt8.t8_dtri_init_linear_id(element::Ptr{t8_dtri_t}, id::t8_linearidx_t, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_init_root(element)
+
+Initialize a triangle as the root triangle (type 0 at level 0)
+
+# Arguments
+* `element`:\\[in,out\\] Existing triangle whose data will be filled.
+### Prototype
+```c
+void t8_dtri_init_root (t8_dtri_t *element);
+```
+"""
+function t8_dtri_init_root(element)
+    @ccall libt8.t8_dtri_init_root(element::Ptr{t8_dtri_t})::Cvoid
+end
+
+"""
+    t8_dtri_successor(element, s, level)
+
+Computes the successor of a triangle in a uniform grid of level *level*.
+
+# Arguments
+* `element`:\\[in\\] triangle whose id will be computed.
+* `s`:\\[in,out\\] Existing triangle whose data will be filled with the data of t's successor on level *level*.
+* `level`:\\[in\\] level of uniform grid to be considered.
+### Prototype
+```c
+void t8_dtri_successor (const t8_dtri_t *element, t8_dtri_t *s, int level);
+```
+"""
+function t8_dtri_successor(element, s, level)
+    @ccall libt8.t8_dtri_successor(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_first_descendant(element, s, level)
+
+Compute the first descendant of a triangle at a given level. This is the descendant of the triangle in a uniform maxlevel refinement that has the smaller id.
+
+# Arguments
+* `element`:\\[in\\] Triangle whose descendant is computed.
+* `level`:\\[in\\] A given level. Must be grater or equal to *element*'s level.
+* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's first descendant.
+### Prototype
+```c
+void t8_dtri_first_descendant (const t8_dtri_t *element, t8_dtri_t *s, int level);
+```
+"""
+function t8_dtri_first_descendant(element, s, level)
+    @ccall libt8.t8_dtri_first_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_last_descendant(element, s, level)
+
+Compute the last descendant of a triangle at a given level. This is the descendant of the triangle in a uniform maxlevel refinement that has the biggest id.
+
+# Arguments
+* `element`:\\[in\\] Triangle whose descendant is computed.
+* `level`:\\[in\\] A given level. Must be grater or equal to *element*'s level.
+* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's last descendant.
+### Prototype
+```c
+void t8_dtri_last_descendant (const t8_dtri_t *element, t8_dtri_t *s, int level);
+```
+"""
+function t8_dtri_last_descendant(element, s, level)
+    @ccall libt8.t8_dtri_last_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_corner_descendant(element, s, corner, level)
+
+Compute the descendant of a triangle in a given corner.
+
+# Arguments
+* `element`:\\[in\\] Triangle whose descendant is computed.
+* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's descendant in *corner*.
+* `corner`:\\[in\\] The corner in which the descendant should lie.
+* `level`:\\[in\\] The refinement level of the descendant. Must be greater or equal to *element*'s level.
+### Prototype
+```c
+void t8_dtri_corner_descendant (const t8_dtri_t *element, t8_dtri_t *s, int corner, int level);
+```
+"""
+function t8_dtri_corner_descendant(element, s, corner, level)
+    @ccall libt8.t8_dtri_corner_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, corner::Cint, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_predecessor(element, s, level)
+
+Computes the predecessor of a triangle in a uniform grid of level *level*.
+
+# Arguments
+* `element`:\\[in\\] triangle whose id will be computed.
+* `s`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*'s predecessor on level *level*.
+* `level`:\\[in\\] level of uniform grid to be considered.
+### Prototype
+```c
+void t8_dtri_predecessor (const t8_dtri_t *element, t8_dtri_t *s, int level);
+```
+"""
+function t8_dtri_predecessor(element, s, level)
+    @ccall libt8.t8_dtri_predecessor(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
+end
+
+"""
+    t8_dtri_ancestor_id(element, level)
+
+Compute the position of the ancestor of this child at level *level* within its siblings.
+
+# Arguments
+* `element`:\\[in\\] triangle to be considered.
+* `level`:\\[in\\] level to be considered.
+# Returns
+Returns its child id in 0..3
+### Prototype
+```c
+int t8_dtri_ancestor_id (const t8_dtri_t *element, int level);
+```
+"""
+function t8_dtri_ancestor_id(element, level)
+    @ccall libt8.t8_dtri_ancestor_id(element::Ptr{t8_dtri_t}, level::Cint)::Cint
+end
+
+"""
+    t8_dtri_child_id(element)
+
+Compute the position of the ancestor of this child at level *level* within its siblings.
+
+# Arguments
+* `element`:\\[in\\] triangle to be considered.
+# Returns
+Returns its child id in 0..3
+### Prototype
+```c
+int t8_dtri_child_id (const t8_dtri_t *element);
+```
+"""
+function t8_dtri_child_id(element)
+    @ccall libt8.t8_dtri_child_id(element::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_get_level(element)
+
+Return the level of a triangle.
+
+# Arguments
+* `element`:\\[in\\] triangle to be considered.
+# Returns
+The level of *element*.
+### Prototype
+```c
+int t8_dtri_get_level (const t8_dtri_t *element);
+```
+"""
+function t8_dtri_get_level(element)
+    @ccall libt8.t8_dtri_get_level(element::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_is_valid(element)
+
+Query whether all entries of a triangle are in valid ranges.
+
+# Arguments
+* `element`:\\[in\\] triangle to be considered.
+# Returns
+True, if *element* is a valid triangle and it is safe to call any function on *element*. False otherwise.
+### Prototype
+```c
+int t8_dtri_is_valid (const t8_dtri_t *element);
+```
+"""
+function t8_dtri_is_valid(element)
+    @ccall libt8.t8_dtri_is_valid(element::Ptr{t8_dtri_t})::Cint
+end
+
+"""
+    t8_dtri_element_pack(elements, count, send_buffer, buffer_size, position, comm)
+
+### Prototype
+```c
+void t8_dtri_element_pack (t8_dtri_t **const elements, const unsigned int count, void *send_buffer, const int buffer_size, int *position, sc_MPI_Comm comm);
+```
+"""
+function t8_dtri_element_pack(elements, count, send_buffer, buffer_size, position, comm)
+    @ccall libt8.t8_dtri_element_pack(elements::Ptr{Ptr{t8_dtri_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
+end
+
+"""
+    t8_dtri_element_pack_size(count, comm, pack_size)
+
+### Prototype
+```c
+void t8_dtri_element_pack_size (const unsigned int count, sc_MPI_Comm comm, int *pack_size);
+```
+"""
+function t8_dtri_element_pack_size(count, comm, pack_size)
+    @ccall libt8.t8_dtri_element_pack_size(count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
+end
+
+"""
+    t8_dtri_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
+
+### Prototype
+```c
+void t8_dtri_element_unpack (void *recvbuf, const int buffer_size, int *position, t8_dtri_t **elements, const unsigned int count, sc_MPI_Comm comm);
+```
+"""
+function t8_dtri_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
+    @ccall libt8.t8_dtri_element_unpack(recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_dtri_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -20204,15 +21009,11 @@ const T8_DPRISM_ROOT_LEN = 1 << T8_DPRISM_MAXLEVEL
 
 const T8_DPRISM_ROOT_BY_QUAD_ROOT = 1 << (P4EST_QMAXLEVEL - T8_DPRISM_MAXLEVEL)
 
-const T8_DTET_MAXLEVEL = 21
-
-const T8_DTRI_MAXLEVEL = T8_DTET_MAXLEVEL
+const T8_DTRI_MAXLEVEL = 29
 
 const T8_DPRISM_ROOT_BY_DTRI_ROOT = 1 << (T8_DTRI_MAXLEVEL - T8_DPRISM_MAXLEVEL)
 
 const T8_DPRISM_ROOT_BY_DLINE_ROOT = 1 << (T8_DLINE_MAXLEVEL - T8_DPRISM_MAXLEVEL)
-
-const t8_dtri_t = t8_dtet_t
 
 const T8_DPYRAMID_CHILDREN = 10
 
@@ -20254,6 +21055,8 @@ const T8_DTET_FACE_CHILDREN = 4
 
 const T8_DTET_CORNERS = 4
 
+const T8_DTET_MAXLEVEL = 21
+
 const T8_DTET_ROOT_LEN = 1 << T8_DTET_MAXLEVEL
 
 const T8_DTET_NUM_TYPES = 6
@@ -20264,145 +21067,23 @@ const T8_DTET_DIM = 3
 
 # Skipping MacroDefinition: t8_dtet_face_corner t8_face_vertex_to_tree_vertex [ T8_ECLASS_TET ]
 
-const T8_DTRI_ROOT_LEN = T8_DTET_ROOT_LEN
+const T8_DTRI_CHILDREN = 4
 
-const T8_DTRI_LEN = T8_DTET_LEN
+const T8_DTRI_FACES = 3
 
-const T8_DTRI_FACES = T8_DTET_FACES
+const T8_DTRI_FACE_CHILDREN = 2
 
-const T8_DTRI_DIM = T8_DTET_DIM
+const T8_DTRI_CORNERS = 3
 
-const T8_DTRI_CHILDREN = T8_DTET_CHILDREN
+const T8_DTRI_ROOT_LEN = 1 << T8_DTRI_MAXLEVEL
 
-const T8_DTRI_FACE_CHILDREN = T8_DTET_FACE_CHILDREN
-
-const T8_DTRI_CORNERS = T8_DTET_CORNERS
-
-const T8_DTRI_NUM_TYPES = T8_DTET_NUM_TYPES
-
-const t8_dtri_coord_t = t8_dtet_coord_t
-
-const t8_dtri_type_t = t8_dtet_type_t
-
-const t8_dtri_cube_id_t = t8_dtet_cube_id_t
-
-const t8_dtri_cid_type_to_parenttype = t8_dtet_cid_type_to_parenttype
-
-const t8_dtri_type_of_child = t8_dtet_type_of_child
-
-const t8_dtri_type_of_child_morton = t8_dtet_type_of_child_morton
-
-const t8_dtri_index_to_bey_number = t8_dtet_index_to_bey_number
-
-const t8_dtri_beyid_to_vertex = t8_dtet_beyid_to_vertex
-
-const t8_dtri_type_cid_to_beyid = t8_dtet_type_cid_to_beyid
-
-const t8_dtri_type_beyid_to_Iloc = t8_dtet_type_beyid_to_Iloc
-
-const t8_dtri_parenttype_cid_to_Iloc = t8_dtet_parenttype_cid_to_Iloc
-
-const t8_dtri_parenttype_Iloc_to_type = t8_dtet_parenttype_Iloc_to_type
-
-const t8_dtri_parenttype_Iloc_to_cid = t8_dtet_parenttype_Iloc_to_cid
-
-const t8_dtri_type_cid_to_Iloc = t8_dtet_type_cid_to_Iloc
-
-const t8_dtri_face_corner = t8_dtet_face_corner
-
-const t8_dtri_is_equal = t8_dtet_is_equal
-
-const t8_dtri_copy = t8_dtet_copy
-
-const t8_dtri_compare = t8_dtet_compare
-
-const t8_dtri_equal = t8_dtet_equal
-
-const t8_dtri_parent = t8_dtet_parent
-
-const t8_dtri_ancestor = t8_dtet_ancestor
-
-const t8_dtri_compute_all_coords = t8_dtet_compute_all_coords
-
-const t8_dtri_compute_integer_coords = t8_dtet_compute_integer_coords
-
-const t8_dtri_compute_vertex_ref_coords = t8_dtet_compute_vertex_ref_coords
-
-const t8_dtri_compute_reference_coords = t8_dtet_compute_reference_coords
-
-const t8_dtri_child = t8_dtet_child
-
-const t8_dtri_childrenpv = t8_dtet_childrenpv
-
-const t8_dtri_is_familypv = t8_dtet_is_familypv
-
-const t8_dtri_sibling = t8_dtet_sibling
-
-const t8_dtri_face_neighbour = t8_dtet_face_neighbour
-
-const t8_dtri_nearest_common_ancestor = t8_dtet_nearest_common_ancestor
-
-const t8_dtri_children_at_face = t8_dtet_children_at_face
-
-const t8_dtri_face_child_face = t8_dtet_face_child_face
-
-const t8_dtri_face_parent_face = t8_dtet_face_parent_face
-
-const t8_dtri_tree_face = t8_dtet_tree_face
-
-const t8_dtri_root_face_to_face = t8_dtet_root_face_to_face
-
-const t8_dtri_is_inside_root = t8_dtet_is_inside_root
-
-const t8_dtri_is_root_boundary = t8_dtet_is_root_boundary
-
-const t8_dtri_is_sibling = t8_dtet_is_sibling
-
-const t8_dtri_is_parent = t8_dtet_is_parent
-
-const t8_dtri_is_ancestor = t8_dtet_is_ancestor
-
-const t8_dtri_linear_id = t8_dtet_linear_id
-
-const t8_dtri_linear_id_corner_desc = t8_dtet_linear_id_corner_desc
-
-const t8_dtri_init_linear_id = t8_dtet_init_linear_id
-
-const t8_dtri_init_root = t8_dtet_init_root
-
-const t8_dtri_successor = t8_dtet_successor
-
-const t8_dtri_first_descendant = t8_dtet_first_descendant
-
-const t8_dtri_last_descendant = t8_dtet_last_descendant
-
-const t8_dtri_corner_descendant = t8_dtet_corner_descendant
-
-const t8_dtri_predecessor = t8_dtet_predecessor
-
-const t8_dtri_ancestor_id = t8_dtet_ancestor_id
-
-const t8_dtri_child_id = t8_dtet_child_id
-
-const t8_dtri_get_level = t8_dtet_get_level
-
-const t8_dtri_is_valid = t8_dtet_is_valid
-
-const t8_dtri_init = t8_dtet_init
-
-const t8_dtri_init_linear_id_with_level = t8_dtet_init_linear_id_with_level
-
-const t8_dtri_linear_id_with_level = t8_dtet_linear_id_with_level
-
-const t8_dtri_debug_print = t8_dtet_debug_print
-
-const t8_dtri_element_pack = t8_dtet_element_pack
-
-const t8_dtri_element_pack_size = t8_dtet_element_pack_size
-
-const t8_dtri_element_unpack = t8_dtet_element_unpack
+const T8_DTRI_NUM_TYPES = 2
 
 const T8_DLINE_ROOT_BY_DTRI_ROOT = 1 << (T8_DLINE_MAXLEVEL - T8_DTRI_MAXLEVEL)
+
+const T8_DTRI_DIM = 2
+
+# Skipping MacroDefinition: t8_dtri_face_corner t8_face_vertex_to_tree_vertex [ T8_ECLASS_TRIANGLE ]
 
 const T8_DVERTEX_CHILDREN = 1
 

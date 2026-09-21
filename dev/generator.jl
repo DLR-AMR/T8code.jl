@@ -19,8 +19,8 @@ args = get_default_args()  # Note you must call this function firstly and then a
 push!(args, "-I$include_dir")
 
 filter_out = (x -> !startswith(basename(x), "t8_") ||
-                   !endswith(basename(x), ".h") ||
-                   basename(x) == "t8_dtri_to_dtet.h")  # this header contains redefinitions which seem harmful
+                       !endswith(basename(x), ".h") ||
+                       basename(x) == "t8_dtri_to_dtet.h")  # this header contains redefinitions which seem harmful
 
 headers = detect_headers(include_dir, args, Dict(), filter_out)
 

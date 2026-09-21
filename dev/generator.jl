@@ -24,6 +24,12 @@ filter_out = (x -> !startswith(basename(x), "t8_") ||
 
 headers = detect_headers(include_dir, args, Dict(), filter_out)
 
+# `t8_dtri_to_dtet.h` redefines the triangle macros, types and functions to their
+# tetrahedron counterparts, so that the triangle implementation can be reused for
+# tetrahedra. Parsing it would turn the `t8_dtri_*` functions into mere aliases of
+# `t8_dtet_*`, even though both are separate symbols in `libt8`.
+filter!(h -> basename(h) != "t8_dtri_to_dtet.h", headers)
+
 # create context
 ctx = create_context(headers, args, options)
 

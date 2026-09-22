@@ -173,6 +173,11 @@ jobs:
         shell: julia --color=yes --project=test {0}
         run: |
           using Pkg
+
+          # Workaround
+          # https://github.com/trixi-framework/libtrixi/issues/237
+          Pkg.add(name="OpenMPI_jll", version="4")
+
           Pkg.develop(path=joinpath(dirname(Base.active_project()), ".."))
 
           # Use local t8code

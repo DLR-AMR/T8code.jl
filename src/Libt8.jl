@@ -7,12 +7,10 @@ to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
     :(va_list[$ind]::$type)
 end
 
+using t8code_jll: t8code_jll
+export t8code_jll
+
 using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
-
-@static if _PREFERENCE_LIBT8 == "t8code_jll" || _PREFERENCE_LIBP4EST == "t8code_jll" || _PREFERENCE_LIBSC == "t8code_jll"
-    using t8code_jll: t8code_jll
-end
-
 using MPIPreferences: MPIPreferences
 
 @static if _PREFERENCE_LIBT8 == "t8code_jll" && MPIPreferences.binary == "system"

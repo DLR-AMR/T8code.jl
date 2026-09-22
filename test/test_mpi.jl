@@ -1,10 +1,5 @@
-@testset "Conditional loading of t8code_jll"
-    # TODO adapt once implemented
-    if JULIA_MPI_PROVIDER == "SYSTEM_MPI"
-        @test :t8code_jll in names(Main; imported=true)
-    else
-        @test :t8code_jll in names(Main; imported=true)
-    end
+@testset "Conditional loading of t8code_jll" begin
+    @test (JULIA_MPI_PROVIDER == "SYSTEM_MPI") && !(:t8code_jll in names(Main; imported=true))
 end
 
 @testset "T8code.uses_mpi" begin

@@ -101,6 +101,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Set environment variables
+        shell: bash
+        run: |
+          echo "JULIA_MPI_PROVIDER=${{ matrix.mpi-provider }}" >> $GITHUB_ENV
+
       - name: Enable Julia cache
         uses: julia-actions/cache@v3
 
@@ -169,6 +174,10 @@ jobs:
         run: |
           using Pkg
           Pkg.develop(path=joinpath(dirname(Base.active_project()), ".."))
+
+          # Workaround
+          # https://github.com/trixi-framework/libtrixi/issues/237
+          Pkg.add(name="OpenMPI_jll", version="4")
 
           # Use local t8code
           using T8code

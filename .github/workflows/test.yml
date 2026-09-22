@@ -178,11 +178,11 @@ jobs:
           # https://github.com/trixi-framework/libtrixi/issues/237
           Pkg.add(name="OpenMPI_jll", version="4")
 
+          # Use local t8code, just to set the preferences
           Pkg.develop(path=joinpath(dirname(Base.active_project()), ".."))
-
-          # Use local t8code
           using T8code
           T8code.set_libraries_path!(abspath("./t8code-local/prefix/lib"); force = true)
+          Pkg.free("T8code")
 
       - name: Run Julia build step
         uses: julia-actions/julia-buildpkg@v1

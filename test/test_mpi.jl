@@ -1,5 +1,5 @@
 @testset "Conditional loading of t8code_jll" begin
-    @test (JULIA_MPI_PROVIDER == "SYSTEM_MPI") != (:t8code_jll in names(Main; imported=true))
+    @test (JULIA_MPI_PROVIDER == "SYSTEM_MPI") != (:t8code_jll in names(T8code; imported=true))
 end
 
 @testset "T8code.uses_mpi" begin

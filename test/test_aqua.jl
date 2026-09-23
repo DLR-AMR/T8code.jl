@@ -11,7 +11,7 @@ JULIA_MPI_PROVIDER = get(ENV, "JULIA_MPI_PROVIDER", "JLL_MPI")
 @testset "Aqua.jl" begin
     # in case we are running with system MPI t8code_jll will not be loaded
     if JULIA_MPI_PROVIDER == "SYSTEM_MPI"
-        stale_deps_ignore = (ignore = [:T8code],)
+        stale_deps_ignore = (ignore = [:t8code_jll],)
     else
         stale_deps_ignore = ()
     end

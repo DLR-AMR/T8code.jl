@@ -19,7 +19,7 @@ JULIA_MPI_PROVIDER = get(ENV, "JULIA_MPI_PROVIDER", "JLL_MPI")
     end
 
     Aqua.test_all(T8code;
-                  test_persistent_tasks = test_persistent_tasks,
+                  persistent_tasks = test_persistent_tasks,
                   stale_deps = stale_deps_ignore)
 end
 

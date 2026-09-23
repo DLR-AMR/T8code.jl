@@ -6,7 +6,7 @@ MPIPreferences = "3da0fdf6-3ccc-4f1b-acd9-58baa6c99267"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Aqua = "0.7, 0.8"
+Aqua = "0.8"
 ExplicitImports = "1.15"
 MPI = "0.20.6"
 MPIPreferences = "0.1.6"

@@ -183,12 +183,23 @@ jobs:
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
            "libsc" => abspath("./t8code-local/prefix/lib/libsc.so"), force = true)
 
+      # Add an explicit precompile step where we expect t8code_jll to fail
+      # https://github.com/DLR-AMR/T8code.jl/pull/143#issuecomment-5783271942
+      - name: Precompile (nightly)
+        if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version == 'nightly'
+        shell: julia --color=yes --project=. {0}
+        run: |
+          using Pkg
+          Pkg.precompile()
+        continue-on-error: true
+
       - name: Precompile
-        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version != 'nightly'
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
           Pkg.precompile(; skip_dependents=false)
+        continue-on-error: true
 
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1

@@ -9,7 +9,8 @@ end
 
 using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
 
-@static if _PREFERENCE_LIBT8 == "t8code_jll" || _PREFERENCE_LIBP4EST == "t8code_jll" || _PREFERENCE_LIBSC == "t8code_jll"
+@static if _PREFERENCE_LIBT8 == "t8code_jll" || _PREFERENCE_LIBP4EST == "t8code_jll" ||
+           _PREFERENCE_LIBSC == "t8code_jll"
     using t8code_jll: t8code_jll
 end
 

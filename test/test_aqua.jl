@@ -16,7 +16,7 @@ JULIA_MPI_PROVIDER = get(ENV, "JULIA_MPI_PROVIDER", "JLL_MPI")
         stale_deps_ignore = []
     end
 
-    Aqua.test_all(T8code; stale_deps=(ignore=stale_deps_ignore,))
+    Aqua.test_all(T8code; stale_deps = (ignore = stale_deps_ignore,))
 end
 
 @testset "ExplicitImports.jl" begin

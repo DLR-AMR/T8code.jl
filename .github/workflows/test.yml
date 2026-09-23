@@ -203,6 +203,8 @@ jobs:
 
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1
+        env:
+          JULIA_PKG_PRECOMPILE_AUTO: 0
 
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session

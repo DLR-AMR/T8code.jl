@@ -175,13 +175,13 @@ jobs:
           using Preferences, UUIDs
           set_preferences!(
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
-           "libt8" => "./t8code-local/prefix/lib/libt8.so", force = true)
+           "libt8" => abspath("./t8code-local/prefix/lib/libt8.so"), force = true)
           set_preferences!(
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
-           "libp4est" => "./t8code-local/prefix/lib/libp4est.so", force = true)
+           "libp4est" => abspath("./t8code-local/prefix/lib/libp4est.so"), force = true)
           set_preferences!(
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
-           "libsc" => "./t8code-local/prefix/lib/libsc.so", force = true)
+           "libsc" => abspath("./t8code-local/prefix/lib/libsc.so"), force = true)
 
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1

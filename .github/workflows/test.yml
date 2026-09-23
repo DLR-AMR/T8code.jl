@@ -190,7 +190,7 @@ jobs:
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.precompile()
+          Pkg.precompile(; skip_dependents=false)
         continue-on-error: true
 
       - name: Precompile
@@ -198,7 +198,7 @@ jobs:
         shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.precompile(; skip_dependents=false)
+          Pkg.precompile()
         continue-on-error: true
 
       - name: Run Julia tests

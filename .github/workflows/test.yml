@@ -183,6 +183,13 @@ jobs:
            UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
            "libsc" => abspath("./t8code-local/prefix/lib/libsc.so"), force = true)
 
+      - name: Precompile
+        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        shell: julia --color=yes --project=. {0}
+        run: |
+          using Pkg
+          Pkg.precompile(; skip_dependents=false)
+
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1
 

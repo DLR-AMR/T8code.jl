@@ -159,7 +159,7 @@ jobs:
 
       - name: Configure MPI.jl
         if: matrix.mpi-provider == 'SYSTEM_MPI'
-        shell: julia --color=yes --project=test {0}
+        shell: julia --color=yes --project=. {0}
         run: |
           using Pkg
           Pkg.instantiate()
@@ -170,7 +170,7 @@ jobs:
 
       - name: Configure T8code.jl
         if: matrix.mpi-provider == 'SYSTEM_MPI'
-        shell: julia --color=yes --project=test {0}
+        shell: julia --color=yes --project=. {0}
         run: |
           using Preferences, UUIDs
           set_preferences!(

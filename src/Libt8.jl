@@ -43,7 +43,7 @@ end
 const ptrdiff_t = Cptrdiff_t
 
 # Definitions used from MPI.jl
-using MPI: MPI, MPI_Datatype, MPI_Comm, MPI_File
+using MPI: MPI, MPI_Comm, MPI_File
 
 const MPI_COMM_WORLD = MPI.COMM_WORLD
 const MPI_COMM_SELF = MPI.COMM_SELF
@@ -5001,7 +5001,7 @@ end
 Convert points in the reference space of an element to points in the reference space of the tree.
 
 ```c++
- [0,1]^\\mathrm{dim} 
+ [0,1]^\\mathrm{dim}
 ```
 
 of the point in the reference space of the element.
@@ -15998,7 +15998,7 @@ end
 Definition of an analytic geometry function. This function maps reference coordinates to physical coordinates.
 
 ```c++
- [0,1]^\\mathrm{dim} 
+ [0,1]^\\mathrm{dim}
 ```
 
 .
@@ -16019,19 +16019,19 @@ const t8_geom_analytic_fn = Ptr{Cvoid}
 Definition for the jacobian of an analytic geometry function.
 
 ```c++
- [0,1]^\\mathrm{dim} 
+ [0,1]^\\mathrm{dim}
 ```
 
 .
 
 ```c++
- \\mathrm{dim} 
+ \\mathrm{dim}
 ```
 
 to map.
 
 ```c++
- \\mathrm{dim} \\cdot 3 
+ \\mathrm{dim} \\cdot 3
 ```
 
 x *num_coords*. Indices
@@ -16043,31 +16043,31 @@ x *num_coords*. Indices
 ,
 
 ```c++
- 3 \\cdot i+1 
+ 3 \\cdot i+1
 ```
 
 ,
 
 ```c++
- 3 \\cdot i+2 
+ 3 \\cdot i+2
 ```
 
 correspond to the
 
 ```c++
- i 
+ i
 ```
 
 -th column of the jacobian (Entry
 
 ```c++
- 3 \\cdot i + j 
+ 3 \\cdot i + j
 ```
 
 is
 
 ```c++
- \\frac{\\partial f_j}{\\partial x_i} 
+ \\frac{\\partial f_j}{\\partial x_i}
 ```
 
 ).
@@ -16626,13 +16626,13 @@ const t8_dhex_t = t8_dhex
 Convert points in the reference space of a hex element to points in the reference space of the tree (level 0) embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 )
@@ -17138,7 +17138,7 @@ end
 Convert points in the reference space of a line element to points in the reference space of the tree (level 0) embedded in [0,1]^1.
 
 ```c++
- [0,1]^1 
+ [0,1]^1
 ```
 
 )
@@ -17804,7 +17804,7 @@ end
 Compute the reference coordinates of a vertex of a prism when the  tree (level 0) is embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
@@ -17828,13 +17828,13 @@ end
 Convert points in the reference space of a prism element to points in the reference space of the tree (level 0) embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 )
@@ -18652,7 +18652,7 @@ end
 Compute the reference coordinates of a vertex of a pyramid when the tree (level 0 triangle) is embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
@@ -18676,13 +18676,13 @@ end
 Convert points in the reference space of a pyramid element to points in the reference space of the tree (level 0) embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 )
@@ -18761,7 +18761,7 @@ end
 Compute the coordinates of a vertex of a tetrahedron when the  tree (level 0 tetrahedron) is embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
@@ -18785,13 +18785,13 @@ end
 Convert points in the reference space of a tet element to points in the reference space of the tree (level 0) embedded in
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 .
 
 ```c++
- [0,1]^3 
+ [0,1]^3
 ```
 
 )
@@ -19670,7 +19670,7 @@ end
 Compute the reference coordinates of a vertex of a triangle when the  tree (level 0 triangle) is embedded in
 
 ```c++
- [0,1]^2 
+ [0,1]^2
 ```
 
 .
@@ -19694,13 +19694,13 @@ end
 Convert points in the reference space of a tri element to points in the reference space of the tree (level 0) embedded in
 
 ```c++
- [0,1]^2 
+ [0,1]^2
 ```
 
 .
 
 ```c++
- [0,1]^2 
+ [0,1]^2
 ```
 
 )

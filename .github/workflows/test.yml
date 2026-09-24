@@ -187,7 +187,7 @@ jobs:
       # https://github.com/DLR-AMR/T8code.jl/pull/143#issuecomment-5783271942
       - name: Precompile (nightly)
         if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version == 'nightly'
-        shell: julia --color=yes --check-bounds=yes --compiled-modules=yes --depwarn=yes--project=. {0}
+        shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
         run: |
           using Pkg
           Pkg.precompile(; skip_dependents=false)
@@ -195,7 +195,7 @@ jobs:
 
       - name: Precompile
         if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version != 'nightly'
-        shell: julia --color=yes --check-bounds=yes --compiled-modules=yes --depwarn=yes--project=. {0}
+        shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
         run: |
           using Pkg
           Pkg.precompile()

@@ -6,24 +6,23 @@ on:
       - main
     paths-ignore:
       - 'AUTHORS.md'
-      - 'CITATION.bib'
       - 'CONTRIBUTING.md'
       - 'LICENSE.md'
       - 'NEWS.md'
       - 'README.md'
-      - '.github/workflows/CompatHelper.yml'
+      - '.github/workflows/Downgrade.yml'
+      - '.github/workflows/FormatCheck.yml'
+      - '.github/workflows/SpellCheck.yml'
       - '.github/workflows/TagBot.yml'
+      - '.github/dependabot.yml'
       - '.gitignore'
   pull_request:
     paths-ignore:
-      - 'AUTHORS.md'
-      - 'CITATION.bib'
-      - 'CONTRIBUTING.md'
-      - 'LICENSE.md'
-      - 'NEWS.md'
-      - 'README.md'
-      - '.github/workflows/CompatHelper.yml'
+      - '.github/workflows/Downgrade.yml'
+      - '.github/workflows/FormatCheck.yml'
+      - '.github/workflows/SpellCheck.yml'
       - '.github/workflows/TagBot.yml'
+      - '.github/dependabot.yml'
       - '.gitignore'
   workflow_dispatch:
     inputs:
@@ -40,35 +39,172 @@ concurrency:
 
 jobs:
   test:
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.10', '1', 'nightly']
-        julia-arch: [x64, x86]
-        os: [ubuntu-latest, windows-latest]
+        julia-version:
+          - '1.10'
+          - '1'
+          - 'nightly'
+        julia-arch:
+          - x64
+          - x86
+        os:
+          - ubuntu-latest
+          - windows-latest
+        mpi-provider:
+          - JLL_MPI
+        t8code_version:
+          - '4.0.0'
+        t8code_snapshot:
+          - '26.07'
         include:
         - julia-version: '1.10'
           julia-arch: 'default'
           os: macos-latest
+          mpi-provider: JLL_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
         - julia-version: '1'
           julia-arch: 'default'
           os: macos-latest
+          mpi-provider: JLL_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
         - julia-version: 'nightly'
           julia-arch: 'default'
           os: macos-latest
+          mpi-provider: JLL_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
+        - julia-version: '1.10'
+          julia-arch: 'x64'
+          os: ubuntu-latest
+          mpi-provider: SYSTEM_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
+        - julia-version: '1'
+          julia-arch: 'x64'
+          os: ubuntu-latest
+          mpi-provider: SYSTEM_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
+        - julia-version: 'nightly'
+          julia-arch: 'x64'
+          os: ubuntu-latest
+          mpi-provider: SYSTEM_MPI
+          t8code_version: '4.0.0'
+          t8code_snapshot: '26.07'
     steps:
-      - uses: actions/checkout@v7
-      - uses: julia-actions/setup-julia@v3
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set environment variables
+        shell: bash
+        run: |
+          echo "JULIA_MPI_PROVIDER=${{ matrix.mpi-provider }}" >> $GITHUB_ENV
+
+      - name: Enable Julia cache
+        uses: julia-actions/cache@v3
+
+      - name: Enable t8code cache
+        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        id: cache-t8code
+        uses: actions/cache@v6
+        with:
+          path: ./t8code-local
+          key: ${{ matrix.os }}-${{ matrix.julia-arch }}-${{ matrix.t8code_version }}-${{ matrix.t8code_snapshot }}
+
+      - name: Install Julia
+        uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.julia-version }}
           arch: ${{ matrix.julia-arch }}
-      - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
-        # with:
-        #   annotate: true
-        continue-on-error: false
+          show-versioninfo: true
+
+      - name: Install system MPI library
+        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+      - name: Install t8code
+        if: matrix.mpi-provider == 'SYSTEM_MPI' && steps.cache-t8code.outputs.cache-hit != 'true'
+        run: |
+          T8CODE_RELEASE=${{ matrix.t8code_version }}
+          mkdir t8code-local
+          cd t8code-local
+          wget https://github.com/DLR-AMR/t8code/releases/download/v${T8CODE_RELEASE}-${{ matrix.t8code_snapshot }}/T8CODE-${T8CODE_RELEASE}-Source.tar.gz
+          tar xf T8CODE-${T8CODE_RELEASE}-Source.tar.gz
+          mkdir build
+          cd build
+          cmake \
+              -DCMAKE_C_COMPILER=mpicc \
+              -DCMAKE_CXX_COMPILER=mpicxx \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX="$PWD/../prefix" \
+              -DT8CODE_BUILD_TESTS=OFF \
+              -DBUILD_GMOCK=OFF \
+              -DINSTALL_GTEST=OFF \
+              -DT8CODE_BUILD_TUTORIALS=OFF \
+              -DT8CODE_BUILD_EXAMPLES=OFF \
+              -DT8CODE_BUILD_BENCHMARKS=OFF \
+              -DT8CODE_ENABLE_MPI=ON \
+              -DT8CODE_BUILD_FORTRAN_INTERFACE=ON \
+              ../T8CODE-${T8CODE_RELEASE}-Source
+          make -j 2
+          make install
+
+      - name: Configure MPI.jl
+        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        shell: julia --color=yes --project=. {0}
+        run: |
+          using Pkg
+          Pkg.instantiate()
+
+          # Use system MPI
+          using MPIPreferences
+          MPIPreferences.use_system_binary(; force = true)
+
+      - name: Configure T8code.jl
+        if: matrix.mpi-provider == 'SYSTEM_MPI'
+        shell: julia --color=yes --project=. {0}
+        run: |
+          using Preferences, UUIDs
+          set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libt8" => abspath("./t8code-local/prefix/lib/libt8.so"), force = true)
+          set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libp4est" => abspath("./t8code-local/prefix/lib/libp4est.so"), force = true)
+          set_preferences!(
+           UUID("d0cc0030-9a40-4274-8435-baadcfd54fa1"), # UUID of T8code.jl
+           "libsc" => abspath("./t8code-local/prefix/lib/libsc.so"), force = true)
+
+      # Add an explicit precompile step where we expect t8code_jll to fail
+      # https://github.com/DLR-AMR/T8code.jl/pull/143#issuecomment-5783271942
+      - name: Precompile (nightly)
+        if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version == 'nightly'
+        shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
+        run: |
+          using Pkg
+          Pkg.precompile(; skip_dependents=false)
+        continue-on-error: true
+
+      - name: Precompile
+        if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version != 'nightly'
+        shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
+        run: |
+          using Pkg
+          Pkg.precompile()
+        continue-on-error: true
+
+      - name: Run Julia tests
+        uses: julia-actions/julia-runtest@v1
+
       # Enable tmate debugging of manually-triggered workflows if the input option was provided
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        if: github.event_name == 'workflow_dispatch' && inputs.debug_enabled

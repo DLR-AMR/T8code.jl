@@ -17,6 +17,13 @@ comm = MPI.COMM_WORLD
 CI_ON_WINDOWS = (get(ENV, "GITHUB_ACTIONS", false) == "true") && Sys.iswindows()
 CI_ON_MACOS = (get(ENV, "GITHUB_ACTIONS", false) == "true") && Sys.isapple()
 
+# When run in CI, check if we are running with system MPI or Julia artifacts
+JULIA_MPI_PROVIDER = get(ENV, "JULIA_MPI_PROVIDER", "JLL_MPI")
+
+@testset "MPI" begin
+    include("test_mpi.jl")
+end
+
 @testset "init" begin
     include("test_init.jl")
 end

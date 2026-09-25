@@ -55,7 +55,8 @@ using T8code.Libt8: SC_LP_PRODUCTION
 # \return            The coarse mesh.
 function t8_step2_build_prismcube_coarse_mesh(comm)
     # Build a coarse mesh of 2 prism trees that form a cube.
-    cmesh = t8_cmesh_new_hypercube(T8_ECLASS_PRISM, comm, 0, 0, 0)
+    cmesh = t8_cmesh_new()
+    t8_cmesh_new_hypercube(Ref(cmesh), T8_ECLASS_PRISM, comm, 0, 0, 0)
 
     t8_global_productionf(" [step2] Constructed coarse mesh with 2 prism trees.\n")
 

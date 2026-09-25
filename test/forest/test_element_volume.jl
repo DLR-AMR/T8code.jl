@@ -37,7 +37,8 @@ end
     for eclass in T8_ECLASS_ZERO:t8_eclass(T8_ECLASS_COUNT - 1)
         for level in 0:4
             scheme = t8_scheme_new_default()
-            cmesh = t8_cmesh_new_hypercube(t8_eclass(eclass), comm, 0, 0, 0)
+            cmesh = t8_cmesh_new()
+            t8_cmesh_new_hypercube(Ref(cmesh), t8_eclass(eclass), comm, 0, 0, 0)
             forest = t8_forest_new_uniform(cmesh, scheme, level, 0, comm)
 
             # Compute the global number of elements.

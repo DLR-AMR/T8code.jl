@@ -191,18 +191,24 @@ jobs:
         shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.precompile(; skip_dependents=false)
-          using T8code
-        continue-on-error: true
+          try
+            Pkg.precompile(; skip_dependents=false)
+          finally
+            using T8code
+            @info "T8code loaded successfully."
+          end
 
       - name: Precompile
         if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version != 'nightly'
         shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
         run: |
           using Pkg
-          Pkg.precompile()
-          using T8code
-        continue-on-error: true
+          try
+            Pkg.precompile()
+          finally
+            using T8code
+            @info "T8code loaded successfully."
+          end
 
       - name: Run Julia tests
         uses: julia-actions/julia-runtest@v1

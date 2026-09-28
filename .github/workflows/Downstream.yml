@@ -1,13 +1,5 @@
 name: Trixi.jl downstream test
 on:
-  pull_request:
-    paths-ignore:
-      - '.github/workflows/Downgrade.yml'
-      - '.github/workflows/FormatCheck.yml'
-      - '.github/workflows/SpellCheck.yml'
-      - '.github/workflows/TagBot.yml'
-      - '.github/dependabot.yml'
-      - '.gitignore'
   workflow_dispatch:
     inputs:
       trixi_branch:
@@ -23,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.os }} - ${{ matrix.trixi_branch }} - ${{ matrix.test }}
+    name: ${{ matrix.os }} - ${{ inputs.trixi_branch }} - ${{ matrix.test }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,8 +26,6 @@ jobs:
           - ubuntu-latest
         julia-arch:
           - x64
-        trixi_branch:
-          - main
         test:
           - t8code_part1
           - mpi
@@ -57,7 +47,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: trixi-framework/Trixi.jl
-          ref: ${{ matrix.trixi_branch }}
+          ref: ${{ inputs.trixi_branch }}
           path: downstream
 
       - name: Load upstream package into downstream environment

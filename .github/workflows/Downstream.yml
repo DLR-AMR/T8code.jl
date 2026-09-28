@@ -1,0 +1,66 @@
+name: Trixi.jl downstream test
+on:
+  workflow_dispatch:
+    inputs:
+      trixi_branch:
+        type: string
+        description: 'Branch of Trixi.jl to check out'
+        required: false
+        default: 'main'
+
+# Cancel redundant CI tests automatically
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} - ${{ inputs.trixi_branch }} - ${{ matrix.test }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        julia-version:
+          - '1.10'
+        os:
+          - ubuntu-latest
+        julia-arch:
+          - x64
+        test:
+          - t8code_part1
+          - mpi
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Enable Julia cache
+        uses: julia-actions/cache@v3
+
+      - name: Install Julia
+        uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
+          show-versioninfo: true
+      
+      - name: Retrieve downstream package
+        uses: actions/checkout@v7
+        with:
+          repository: trixi-framework/Trixi.jl
+          ref: ${{ inputs.trixi_branch }}
+          path: downstream
+
+      - name: Load upstream package into downstream environment
+        shell: julia --color=yes --project=downstream {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path="."))
+          Pkg.update()
+
+      - name: Run downstream tests (without coverage)
+        shell: julia --color=yes --project=downstream {0}
+        run: |
+          using Pkg
+          Pkg.test(coverage=false)
+        env:
+          TRIXI_TEST: ${{ matrix.test }}

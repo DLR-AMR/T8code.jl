@@ -185,12 +185,14 @@ jobs:
 
       # Add an explicit precompile step where we expect t8code_jll to fail
       # https://github.com/DLR-AMR/T8code.jl/pull/143#issuecomment-5783271942
+      # Make sure T8code loads without errors
       - name: Precompile (nightly)
         if: matrix.mpi-provider == 'SYSTEM_MPI' && matrix.julia-version == 'nightly'
         shell: julia --code-coverage=@/home/runner/work/T8code.jl/T8code.jl --color=yes --warn-overwrite=yes --depwarn=yes --inline=yes --startup-file=no --track-allocation=none --check-bounds=yes --compiled-modules=yes --depwarn=yes --project=. {0}
         run: |
           using Pkg
           Pkg.precompile(; skip_dependents=false)
+          using T8code
         continue-on-error: true
 
       - name: Precompile
@@ -199,6 +201,7 @@ jobs:
         run: |
           using Pkg
           Pkg.precompile()
+          using T8code
         continue-on-error: true
 
       - name: Run Julia tests

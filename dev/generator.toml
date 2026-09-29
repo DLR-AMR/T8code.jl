@@ -166,6 +166,7 @@ output_ignorelist = [
   "sc_MPI_Irecv",
   "sc_MPI_Send",
   "sc_MPI_Isend",
+  "sc_MPI_Sendrecv",
   "sc_MPI_Probe",
   "sc_MPI_Iprobe",
   "sc_MPI_Get_count",

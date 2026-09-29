@@ -106,7 +106,7 @@ Print a message to stderr and then call [`sc_abort`](@ref) ().
 
 ### Prototype
 ```c
-void sc_abort_verbose (const char *filename, int lineno, const char *msg) __attribute__ ((noreturn));
+SC_NORETURN void sc_abort_verbose (const char *filename, int lineno, const char *msg);
 ```
 """
 function sc_abort_verbose(filename, lineno, msg)
@@ -207,7 +207,7 @@ end
 """
     sc_array
 
-The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested).
+The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A maximum-first priority queue is implemented with sc_array_pqueue_insert, sc_array_pqueue_pop and further helpers.
 
 | Field        | Note                                                                                                                                            |
 | :----------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -223,7 +223,7 @@ struct sc_array
     array::Cstring
 end
 
-"""The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A priority queue is implemented with pqueue\\_add and pqueue\\_pop (untested)."""
+"""The [`sc_array`](@ref) object provides a dynamic array of equal-size elements. Elements are accessed by their 0-based index. Their address may change. The number of elements (== elem\\_count) of the array can be changed by sc_array_resize and sc_array_rewind. Elements can be sorted with sc_array_sort. If the array is sorted, it can be searched with sc_array_bsearch. A maximum-first priority queue is implemented with sc_array_pqueue_insert, sc_array_pqueue_pop and further helpers."""
 const sc_array_t = sc_array
 
 """
@@ -904,7 +904,7 @@ Print a stack trace, call the abort handler and then call abort ().
 
 ### Prototype
 ```c
-void sc_abort (void) __attribute__ ((noreturn));
+SC_NORETURN void sc_abort (void);
 ```
 """
 function sc_abort()
@@ -918,7 +918,7 @@ Collective abort where only root prints a message
 
 ### Prototype
 ```c
-void sc_abort_collective (const char *msg) __attribute__ ((noreturn));
+SC_NORETURN void sc_abort_collective (const char *msg);
 ```
 """
 function sc_abort_collective(msg)
@@ -1862,67 +1862,101 @@ function sc_array_checksum(array)
 end
 
 """
-    sc_array_pqueue_add(array, temp, compar)
+    sc_array_pqueue_siftup(array, pos, newval, compar)
 
-Adds an element to a priority queue.
-
-!!! note
-
-    PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. The priority queue is implemented as a heap in ascending order. A heap is a binary tree where the children are not less than their parent. Assumes that elements [0]..[elem\\_count-2] form a valid heap. Then propagates [elem\\_count-1] upward by swapping if necessary.
-
-!!! note
-
-    If the return value is zero for all elements in an array, the array is sorted linearly and unchanged.
+Replace an element in a priority queue with another and sift up. The priority queue is implemented as a binary heap in descending order. It is a maximum heap: The largest values have highest priority. The new element is inserted at a given position and must not be less than the descendants below that position. This function is not allowed for views.
 
 # Arguments
-* `array`:\\[in,out\\] Valid priority queue object.
-* `temp`:\\[in\\] Pointer to unused allocated memory of elem\\_size.
-* `compar`:\\[in\\] The comparison function to be used.
+* `array`:\\[in,out\\] Valid priority queue, not a view.
+* `pos`:\\[in\\] Valid position in priority queue.
+* `newval`:\\[in\\] Read-only storage of the new value. Must reside outside of the array.
+* `compar`:\\[in\\] A comparison function to be used.
 # Returns
-Returns the number of swap operations.
+The number of swap operations.
 ### Prototype
 ```c
-size_t sc_array_pqueue_add (sc_array_t * array, void *temp, int (*compar) (const void *, const void *));
+size_t sc_array_pqueue_siftup (sc_array_t * array, size_t pos, void *newval, int (*compar) (const void *, const void *));
 ```
 """
-function sc_array_pqueue_add(array, temp, compar)
-    @ccall libsc.sc_array_pqueue_add(array::Ptr{sc_array_t}, temp::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+function sc_array_pqueue_siftup(array, pos, newval, compar)
+    @ccall libsc.sc_array_pqueue_siftup(array::Ptr{sc_array_t}, pos::Csize_t, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
 end
 
 """
-    sc_array_pqueue_pop(array, result, compar)
+    sc_array_pqueue_insert(array, newval, compar)
 
-Pops the smallest element from a priority queue.
-
-!!! note
-
-    PQUEUE FUNCTIONS ARE UNTESTED AND CURRENTLY DISABLED. This function is not allowed for views. This function assumes that the array forms a valid heap in ascending order.
-
-!!! note
-
-    This function resizes the array to elem\\_count-1.
+Add an element to a priority queue. The priority queue is implemented as a heap in descending order. It is a maximum heap: The largest values have highest priority. This function augments the priority queue by one element. This function is not allowed for views.
 
 # Arguments
-* `array`:\\[in,out\\] Valid priority queue object.
-* `result`:\\[out\\] Pointer to unused allocated memory of elem\\_size.
-* `compar`:\\[in\\] The comparison function to be used.
+* `array`:\\[in,out\\] Valid priority queue, not a view. Enlarged by one element.
+* `newval`:\\[in\\] Read-only storage of the new value.
+* `compar`:\\[in\\] A comparison function to be used.
 # Returns
-Returns the number of swap operations.
+The number of swap operations.
 ### Prototype
 ```c
-size_t sc_array_pqueue_pop (sc_array_t * array, void *result, int (*compar) (const void *, const void *));
+size_t sc_array_pqueue_insert (sc_array_t * array, void *newval, int (*compar) (const void *, const void *));
 ```
 """
-function sc_array_pqueue_pop(array, result, compar)
-    @ccall libsc.sc_array_pqueue_pop(array::Ptr{sc_array_t}, result::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+function sc_array_pqueue_insert(array, newval, compar)
+    @ccall libsc.sc_array_pqueue_insert(array::Ptr{sc_array_t}, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+end
+
+"""
+    sc_array_pqueue_siftdown(array, maxcount, pos, newval, compar)
+
+Replace an element in a priority queue with another and sift down. The priority queue is implemented as a binary heap in descending order. It is a maximum heap: The largest values have highest priority. The new element is inserted at a given position and must not be greater than its ancestors above that position. This function is not allowed for views.
+
+# Arguments
+* `array`:\\[in,out\\] Valid priority queue, not a view.
+* `maxcount`:\\[in\\] Less or equal than *array*'s element count. Work only with this amount of array elements.
+* `pos`:\\[in\\] Valid position less than *maxcount*.
+* `newval`:\\[in\\] Read-only storage of the new value. Must reside outside of the first maxcount array positions.
+* `compar`:\\[in\\] A comparison function to be used.
+# Returns
+The number of swap operations.
+### Prototype
+```c
+size_t sc_array_pqueue_siftdown (sc_array_t * array, size_t maxcount, size_t pos, void *newval, int (*compar) (const void *, const void *));
+```
+"""
+function sc_array_pqueue_siftdown(array, maxcount, pos, newval, compar)
+    @ccall libsc.sc_array_pqueue_siftdown(array::Ptr{sc_array_t}, maxcount::Csize_t, pos::Csize_t, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+end
+
+"""
+    sc_array_pqueue_pop(array, newval, compar)
+
+Pop the largest element from a priority queue. The priority queue is implemented as a binary heap in descending order. It is a maximum heap: The largest values have highest priority. The root of the heap is removed and returned. This function is not allowed for views.
+
+# Arguments
+* `array`:\\[in,out\\] Valid priority queue, not a view. Shrunk by one element.
+* `newval`:\\[in\\] Storage for the maximum value removed.
+* `compar`:\\[in\\] A comparison function to be used.
+# Returns
+The number of swap operations.
+### Prototype
+```c
+size_t sc_array_pqueue_pop (sc_array_t * array, void *newval, int (*compar) (const void *, const void *));
+```
+"""
+function sc_array_pqueue_pop(array, newval, compar)
+    @ccall libsc.sc_array_pqueue_pop(array::Ptr{sc_array_t}, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
 end
 
 """
     sc_array_index(array, iz)
 
+Returns a pointer to an array element.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `iz`:\\[in\\] Needs to be in [0]..[elem\\_count-1].
+# Returns
+Pointer to the indexed array element.
 ### Prototype
 ```c
-static inline void * sc_array_index (sc_array_t * array, size_t iz);
+inline void * sc_array_index (sc_array_t * array, size_t iz);
 ```
 """
 function sc_array_index(array, iz)
@@ -1932,9 +1966,16 @@ end
 """
     sc_array_index_null(array, iz)
 
+Returns a pointer to an array element or NULL at the array's end.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `iz`:\\[in\\] Needs to be in [0]..[elem\\_count].
+# Returns
+Pointer to the indexed array element or NULL if the specified index is elem\\_count.
 ### Prototype
 ```c
-static inline void * sc_array_index_null (sc_array_t * array, size_t iz);
+inline void * sc_array_index_null (sc_array_t * array, size_t iz);
 ```
 """
 function sc_array_index_null(array, iz)
@@ -1944,9 +1985,14 @@ end
 """
     sc_array_index_int(array, i)
 
+Returns a pointer to an array element indexed by a plain int.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `i`:\\[in\\] Needs to be in [0]..[elem\\_count-1].
 ### Prototype
 ```c
-static inline void * sc_array_index_int (sc_array_t * array, int i);
+inline void * sc_array_index_int (sc_array_t * array, int i);
 ```
 """
 function sc_array_index_int(array, i)
@@ -1956,9 +2002,14 @@ end
 """
     sc_array_index_long(array, l)
 
+Returns a pointer to an array element indexed by a plain long.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `l`:\\[in\\] Needs to be in [0]..[elem\\_count-1].
 ### Prototype
 ```c
-static inline void * sc_array_index_long (sc_array_t * array, long l);
+inline void * sc_array_index_long (sc_array_t * array, long l);
 ```
 """
 function sc_array_index_long(array, l)
@@ -1968,9 +2019,14 @@ end
 """
     sc_array_index_ssize_t(array, is)
 
+Returns a pointer to an array element indexed by a ssize\\_t.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `is`:\\[in\\] Needs to be in [0]..[elem\\_count-1].
 ### Prototype
 ```c
-static inline void * sc_array_index_ssize_t (sc_array_t * array, ssize_t is);
+inline void * sc_array_index_ssize_t (sc_array_t * array, ssize_t is);
 ```
 """
 function sc_array_index_ssize_t(array, is)
@@ -1980,9 +2036,14 @@ end
 """
     sc_array_index_int16(array, i16)
 
+Returns a pointer to an array element indexed by a int16\\_t.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `i16`:\\[in\\] Needs to be in [0]..[elem\\_count-1].
 ### Prototype
 ```c
-static inline void * sc_array_index_int16 (sc_array_t * array, int16_t i16);
+inline void * sc_array_index_int16 (sc_array_t * array, int16_t i16);
 ```
 """
 function sc_array_index_int16(array, i16)
@@ -1992,9 +2053,14 @@ end
 """
     sc_array_position(array, element)
 
+Return the index of an object in an array identified by a pointer.
+
+# Arguments
+* `array`:\\[in\\] Valid array.
+* `element`:\\[in\\] Needs to be the address of an element in **array**.
 ### Prototype
 ```c
-static inline size_t sc_array_position (sc_array_t * array, void *element);
+inline size_t sc_array_position (sc_array_t * array, void *element);
 ```
 """
 function sc_array_position(array, element)
@@ -2004,9 +2070,13 @@ end
 """
     sc_array_pop(array)
 
+Remove the last element from an array and return a pointer to it. This function is not allowed for views.
+
+# Returns
+The pointer to the removed object. Will be valid as long as no other function is called on this array.
 ### Prototype
 ```c
-static inline void * sc_array_pop (sc_array_t * array);
+inline void * sc_array_pop (sc_array_t * array);
 ```
 """
 function sc_array_pop(array)
@@ -2016,9 +2086,13 @@ end
 """
     sc_array_push_count(array, add_count)
 
+Enlarge an array by a number of elements. Grows the array if necessary. This function is not allowed for views.
+
+# Returns
+Returns a pointer to the uninitialized newly added elements.
 ### Prototype
 ```c
-static inline void * sc_array_push_count (sc_array_t * array, size_t add_count);
+inline void * sc_array_push_count (sc_array_t * array, size_t add_count);
 ```
 """
 function sc_array_push_count(array, add_count)
@@ -2028,9 +2102,13 @@ end
 """
     sc_array_push(array)
 
+Enlarge an array by one element. Grows the array if necessary. This function is not allowed for views.
+
+# Returns
+Returns a pointer to the uninitialized newly added element.
 ### Prototype
 ```c
-static inline void * sc_array_push (sc_array_t * array);
+inline void * sc_array_push (sc_array_t * array);
 ```
 """
 function sc_array_push(array)
@@ -2311,9 +2389,13 @@ end
 """
     sc_mempool_alloc(mempool)
 
+Allocate a single element. Elements previously returned to the pool are recycled.
+
+# Returns
+Returns a new or recycled element pointer.
 ### Prototype
 ```c
-static inline void * sc_mempool_alloc (sc_mempool_t * mempool);
+inline void * sc_mempool_alloc (sc_mempool_t * mempool);
 ```
 """
 function sc_mempool_alloc(mempool)
@@ -2323,9 +2405,14 @@ end
 """
     sc_mempool_free(mempool, elem)
 
+Return a previously allocated element to the pool.
+
+# Arguments
+* `mempool`:\\[in,out\\] Valid memory pool.
+* `elem`:\\[in\\] The element to be returned to the pool.
 ### Prototype
 ```c
-static inline void sc_mempool_free (sc_mempool_t * mempool, void *elem);
+inline void sc_mempool_free (sc_mempool_t * mempool, void *elem);
 ```
 """
 function sc_mempool_free(mempool, elem)
@@ -4954,7 +5041,7 @@ function t8_element_get_last_descendant(scheme, tree_class, element, desc, level
 end
 
 """
-    t8_element_get_successor(scheme, tree_class, elem1, elem2)
+    t8_element_construct_successor(scheme, tree_class, elem1, elem2)
 
 Construct the successor in a uniform refinement of a given element.
 
@@ -4965,11 +5052,11 @@ Construct the successor in a uniform refinement of a given element.
 * `elem2`:\\[in,out\\] The element whose entries will be set.
 ### Prototype
 ```c
-void t8_element_get_successor (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *elem1, t8_element_t *elem2);
+void t8_element_construct_successor (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *elem1, t8_element_t *elem2);
 ```
 """
-function t8_element_get_successor(scheme, tree_class, elem1, elem2)
-    @ccall libt8.t8_element_get_successor(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cvoid
+function t8_element_construct_successor(scheme, tree_class, elem1, elem2)
+    @ccall libt8.t8_element_construct_successor(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -20921,25 +21008,27 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 2.8.7"
+const SC_PACKAGE_STRING = "libsc 0.0.0"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "2.8.7"
+const SC_PACKAGE_VERSION = "0.0.0"
 
-const SC_VERSION = "2.8.7"
+const SC_VERSION = "0.0.0"
 
-const SC_VERSION_MAJOR = 2
+const SC_VERSION_MAJOR = 0
 
-const SC_VERSION_MINOR = 8
+const SC_VERSION_MINOR = 0
 
-const SC_VERSION_POINT = 7
+const SC_VERSION_POINT = 0
 
 # Skipping MacroDefinition: _sc_const const
 
 # Skipping MacroDefinition: SC_DLL_PUBLIC __attribute__ ( ( visibility ( "default" ) ) )
+
+# Skipping MacroDefinition: SC_NORETURN __attribute__ ( ( noreturn ) )
 
 const sc_MPI_COMM_WORLD = MPI.COMM_WORLD
 

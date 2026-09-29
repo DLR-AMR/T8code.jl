@@ -59,44 +59,44 @@ jobs:
         t8code_version:
           - '4.0.0'
         t8code_snapshot:
-          - '26.07'
+          - '26.08'
         include:
         - julia-version: '1.10'
           julia-arch: 'default'
           os: macos-latest
           mpi-provider: JLL_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
         - julia-version: '1'
           julia-arch: 'default'
           os: macos-latest
           mpi-provider: JLL_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
         - julia-version: 'nightly'
           julia-arch: 'default'
           os: macos-latest
           mpi-provider: JLL_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
         - julia-version: '1.10'
           julia-arch: 'x64'
           os: ubuntu-latest
           mpi-provider: SYSTEM_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
         - julia-version: '1'
           julia-arch: 'x64'
           os: ubuntu-latest
           mpi-provider: SYSTEM_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
         - julia-version: 'nightly'
           julia-arch: 'x64'
           os: ubuntu-latest
           mpi-provider: SYSTEM_MPI
           t8code_version: '4.0.0'
-          t8code_snapshot: '26.07'
+          t8code_snapshot: '26.08'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

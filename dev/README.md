@@ -89,8 +89,11 @@ julia> Pkg.test("T8code")
 ```
 
 If anything fails, you might have to update the generator workflow (step 7) or start
-debugging the tests. If all goes well, go ahead and open a pull request. Make sure to
-include `Artifacts.toml`, reflecting the sources you used. Include `dev/Manifest.toml` as
-well to make the generation reproducible.
+debugging the tests. If all goes well, go ahead and open a pull request.
+
+- make sure to include `Artifacts.toml`, reflecting the sources you used
+- include `dev/Manifest.toml` to make the generation reproducible
+- adapt the t8code version in `.github/workflows/test.yml`
+
 Once this pull request has been merged, downstream packages can start adopting your new
 t8code release!

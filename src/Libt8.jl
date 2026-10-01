@@ -15802,65 +15802,6 @@ function t8_geom_load_tree_data_vertices(cmesh, gtreeid, user_data)
 end
 
 """
-    t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
-
-Set the vertex coordinates of a tree in the cmesh. This is currently inefficient, since the vertices are duplicated for each tree. Eventually this function will be replaced by a more efficient one. It is not allowed to call this function after t8_cmesh_commit. The eclass of the tree has to be set before calling this function.
-
-# Arguments
-* `cmesh`:\\[in,out\\] The cmesh to be updated.
-* `gtree_id`:\\[in\\] The global number of the tree.
-* `vertices`:\\[in\\] An array of 3 doubles per tree vertex.
-* `num_vertices`:\\[in\\] The number of verticess in *vertices*. Must match the number of corners of the tree.
-### Prototype
-```c
-void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, const t8_gloidx_t gtree_id, const double *vertices, const int num_vertices);
-```
-"""
-function t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
-    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
-end
-
-mutable struct t8_geometry_cad end
-
-"""This typedef holds virtual functions for a particular geometry. We need it so that we can use [`t8_geometry_cad_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling)"""
-const t8_geometry_cad_c = t8_geometry_cad
-
-"""
-    t8_geometry_cad_new(fileprefix, name_in)
-
-Create a new cad geometry with a given dimension. The geometry is currently viable with quad/hex and triangle trees. Tets will be supported soon. The geometry uses as many vertices as the tree type has, as well as additional geometry information, which is extracted from a .brep file. The vertices are saved via the t8_cmesh_set_tree_vertices function. Since the internals of this geometry are finely tuned to the .brep file it is recommended to only use it with the t8_cmesh_from_msh_file function.
-
-# Arguments
-* `fileprefix`:\\[in\\] Prefix of a .brep file from which to extract an cad geometry.
-* `name_in`:\\[in\\] The name to give this geometry.
-# Returns
-A pointer to an allocated [`t8_geometry_cad`](@ref) struct, as if the t8_geometry_cad (std::string fileprefix, std::string name) constructor was called.
-### Prototype
-```c
-t8_geometry_cad_c * t8_geometry_cad_new (const char *fileprefix, const char *name_in);
-```
-"""
-function t8_geometry_cad_new(fileprefix, name_in)
-    @ccall libt8.t8_geometry_cad_new(fileprefix::Cstring, name_in::Cstring)::Ptr{t8_geometry_cad_c}
-end
-
-"""
-    t8_geometry_cad_destroy(geom)
-
-Destroy a cad geometry that was created with t8_geometry_cad_new.
-
-# Arguments
-* `geom`:\\[in,out\\] A cad geometry. Set to NULL on output.
-### Prototype
-```c
-void t8_geometry_cad_destroy (t8_geometry_cad_c **geom);
-```
-"""
-function t8_geometry_cad_destroy(geom)
-    @ccall libt8.t8_geometry_cad_destroy(geom::Ptr{Ptr{t8_geometry_cad_c}})::Cvoid
-end
-
-"""
     t8_geometry_destroy(geom)
 
 Destroy a geometry object.
@@ -15976,6 +15917,25 @@ t8_geometry_c * t8_geometry_cubed_sphere_new ();
 """
 function t8_geometry_cubed_sphere_new()
     @ccall libt8.t8_geometry_cubed_sphere_new()::Ptr{t8_geometry_c}
+end
+
+"""
+    t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
+
+Set the vertex coordinates of a tree in the cmesh. This is currently inefficient, since the vertices are duplicated for each tree. Eventually this function will be replaced by a more efficient one. It is not allowed to call this function after t8_cmesh_commit. The eclass of the tree has to be set before calling this function.
+
+# Arguments
+* `cmesh`:\\[in,out\\] The cmesh to be updated.
+* `gtree_id`:\\[in\\] The global number of the tree.
+* `vertices`:\\[in\\] An array of 3 doubles per tree vertex.
+* `num_vertices`:\\[in\\] The number of verticess in *vertices*. Must match the number of corners of the tree.
+### Prototype
+```c
+void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, const t8_gloidx_t gtree_id, const double *vertices, const int num_vertices);
+```
+"""
+function t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
+    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
 end
 
 # no prototype is found for this function at t8_geometry_lagrange.h:47:1, please use with caution
@@ -20638,8 +20598,6 @@ const SC_HAVE_ZLIB = 1
 
 const SC_ENABLE_PTHREAD = 1
 
-const SC_ENABLE_DEBUG = 1
-
 const SC_ENABLE_MEMALIGN = 1
 
 const SC_ENABLE_MPI = 1
@@ -20796,9 +20754,9 @@ const SC_LP_ERROR = 8
 
 const SC_LP_SILENT = 9
 
-const SC_LP_THRESHOLD = SC_LP_TRACE
+const SC_LP_THRESHOLD = SC_LP_INFO
 
-const SC_LP_APPLICATION = SC_LP_DEBUG
+const SC_LP_APPLICATION = SC_LP_STATISTICS
 
 const T8_MPI_LOCIDX = sc_MPI_INT
 
@@ -20884,8 +20842,6 @@ const P4EST_ENABLE_BUILD_3D = 1
 
 const P4EST_ENABLE_BUILD_P6EST = 1
 
-const P4EST_ENABLE_DEBUG = 1
-
 const P4EST_ENABLE_MEMALIGN = 1
 
 const P4EST_ENABLE_MPI = 1
@@ -20905,8 +20861,6 @@ const P4EST_ENABLE_VTK_BINARY = 1
 const P4EST_ENABLE_VTK_COMPRESSION = 1
 
 const P4EST_HAVE_FSYNC = 1
-
-const HAVE_LPTHREAD = 1
 
 const P4EST_HAVE_POSIX_MEMALIGN = 1
 

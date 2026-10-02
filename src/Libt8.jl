@@ -10577,6 +10577,18 @@ function t8_cmesh_new_hypercube_hybrid(cmesh, comm, periodic)
 end
 
 """
+    t8_cmesh_new_2D_hypercube_hybrid(cmesh, comm)
+
+### Prototype
+```c
+void t8_cmesh_new_2D_hypercube_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_2D_hypercube_hybrid(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_2D_hypercube_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
+end
+
+"""
     t8_cmesh_new_periodic(cmesh, comm, dim)
 
 ### Prototype
@@ -12900,7 +12912,7 @@ Return a leaf element of the forest.
 # Returns
 A pointer to the leaf element. NULL if this element does not exist. Ghost elements are not considered as local.
 # See also
-[`t8_forest_ghost_get_leaf_element`](@ref) to access ghost leaf elements.
+t8\\_forest\\_ghost\\_get\\_leaf\\_element to access ghost leaf elements.
 
 ### Prototype
 ```c
@@ -14603,484 +14615,6 @@ int t8_forest_write_vtk (t8_forest_t forest, const char *fileprefix);
 """
 function t8_forest_write_vtk(forest, fileprefix)
     @ccall libt8.t8_forest_write_vtk(forest::t8_forest_t, fileprefix::Cstring)::Cint
-end
-
-"""
-    t8_forest_adapt(forest)
-
-Adapt a forest.
-
-# Arguments
-* `forest`:\\[in,out\\] The forest to be adapted
-### Prototype
-```c
-void t8_forest_adapt (t8_forest_t forest);
-```
-"""
-function t8_forest_adapt(forest)
-    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
-end
-
-"""
-    t8_profile
-
-This struct holds profiling information, such as timings or statistics about communication.
-
-| Field                          | Note                                                                                                           |
-| :----------------------------- | :------------------------------------------------------------------------------------------------------------- |
-| partition\\_elements\\_shipped | The number of elements this process has sent to other in the last partition call.                              |
-| partition\\_elements\\_recv    | The number of elements this process has received from other in the last partition call.                        |
-| partition\\_bytes\\_sent       | The total number of bytes sent to other processes in the last partition call.                                  |
-| partition\\_procs\\_sent       | The number of different processes this process has send local elements to in the last partition call.          |
-| ghosts\\_shipped               | The number of ghost elements this process has sent to other processes.                                         |
-| ghosts\\_received              | The number of ghost elements this process has received from other processes.                                   |
-| ghosts\\_remotes               | The number of processes this process have sent ghost elements to (and received from).                          |
-| balance\\_rounds               | The number of iterations during balance.                                                                       |
-| adapt\\_runtime                | The runtime of the last call to [`t8_forest_adapt`](@ref) (not counting adaptation in t8\\_forest\\_balance).  |
-| partition\\_runtime            | The runtime of the last call to *t8_cmesh_partition* (not count in partition in t8\\_forest\\_balance).        |
-| ghost\\_runtime                | The runtime of the last call to [`t8_forest_ghost_create`](@ref).                                              |
-| ghost\\_waittime               | Amount of synchronisation time in ghost.                                                                       |
-| balance\\_runtime              | The runtime of the last call to *t8_forest_balance*.                                                           |
-| commit\\_runtime               | The runtime of the last call to [`t8_cmesh_commit`](@ref).                                                     |
-| cmesh\\_offsets\\_runtime      | The runtime of the last call to [`t8_forest_partition_create_tree_offsets`](@ref).                             |
-| forest\\_offsets\\_runtime     | The runtime of the last call to [`t8_forest_partition_create_offsets`](@ref).                                  |
-| first\\_descendant\\_runtime   | The runtime of the last call to [`t8_forest_partition_create_first_desc`](@ref).                               |
-"""
-struct t8_profile
-    partition_elements_shipped::t8_locidx_t
-    partition_elements_recv::t8_locidx_t
-    partition_bytes_sent::Csize_t
-    partition_procs_sent::Cint
-    ghosts_shipped::t8_locidx_t
-    ghosts_received::t8_locidx_t
-    ghosts_remotes::Cint
-    balance_rounds::Cint
-    adapt_runtime::Cdouble
-    partition_runtime::Cdouble
-    ghost_runtime::Cdouble
-    ghost_waittime::Cdouble
-    balance_runtime::Cdouble
-    commit_runtime::Cdouble
-    cmesh_offsets_runtime::Cdouble
-    forest_offsets_runtime::Cdouble
-    first_descendant_runtime::Cdouble
-end
-
-"""This struct holds profiling information, such as timings or statistics about communication."""
-const t8_profile_t = t8_profile
-
-"""
-    t8_forest_ghost
-
-This struct stores various information about a forest's ghost elements and ghost trees.
-
-| Field                             | Note                                                                                                                                                                                                                                                                                                                                                      |
-| :-------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| rc                                | The reference counter.                                                                                                                                                                                                                                                                                                                                    |
-| num\\_ghosts\\_elements           | The count of non-local ghost leaf elements                                                                                                                                                                                                                                                                                                                |
-| num\\_remote\\_elements           | The count of local leaf elements that are ghost to another process.                                                                                                                                                                                                                                                                                       |
-| ghost\\_type                      | Describes which neighbors are considered ghosts.                                                                                                                                                                                                                                                                                                          |
-| ghost\\_trees                     | ghost tree data: global\\_id. eclass. elements. In linear id order                                                                                                                                                                                                                                                                                        |
-| global\\_tree\\_to\\_ghost\\_tree | Indexes into ghost\\_trees. Given a global tree id I give the index i such that the tree is in ghost\\_trees[i]                                                                                                                                                                                                                                           |
-| process\\_offsets                 | Given a process, return the first ghost tree and within it the first element of that process.                                                                                                                                                                                                                                                             |
-| remote\\_ghosts                   | array of local trees that have ghost elements for another process. for each tree an array of [`t8_element_t`](@ref) * of the local ghost elements. Also an array of [`t8_locidx_t`](@ref) of the local indices of these elements within the tree. It is a hash table, hashed with the rank of a remote process. Sorted within each process by linear id.  |
-| remote\\_processes                | The ranks of the processes for which local elements are ghost. Array of int's.                                                                                                                                                                                                                                                                            |
-| glo\\_tree\\_mempool              | The global tree memory pool.                                                                                                                                                                                                                                                                                                                              |
-| proc\\_offset\\_mempool           | The process offset memory pool.                                                                                                                                                                                                                                                                                                                           |
-"""
-struct t8_forest_ghost
-    rc::t8_refcount_t
-    num_ghosts_elements::t8_locidx_t
-    num_remote_elements::t8_locidx_t
-    ghost_type::t8_ghost_type_t
-    ghost_trees::Ptr{sc_array_t}
-    global_tree_to_ghost_tree::Ptr{sc_hash_t}
-    process_offsets::Ptr{sc_hash_t}
-    remote_ghosts::Ptr{sc_hash_array_t}
-    remote_processes::Ptr{sc_array_t}
-    glo_tree_mempool::Ptr{sc_mempool_t}
-    proc_offset_mempool::Ptr{sc_mempool_t}
-end
-
-const t8_forest_ghost_t = Ptr{t8_forest_ghost}
-
-"""If a forest is to be derived from another forest, there are different possibilities how the original forest is modified. Currently we support: Copying, adapting, partitioning, and balancing a forest. The latter 3 can be combined, in which case the order is 1. Adapt, 2. Partition, 3. Balance. We store the methods in an int8\\_t and use these defines to distinguish between them."""
-const t8_forest_from_t = Int8
-
-"""This structure is private to the implementation."""
-const t8_forest_struct_t = t8_forest
-
-"""The t8 tree datatype"""
-const t8_tree_struct_t = t8_tree
-
-"""This struct holds profiling information, such as timings or statistics about communication."""
-const t8_profile_struct_t = t8_profile
-
-"""This struct stores various information about a forest's ghost elements and ghost trees."""
-const t8_forest_ghost_struct_t = t8_forest_ghost
-
-"""
-    t8_forest_ghost_init(pghost, ghost_type)
-
-Initialize a ghost type of a forest.
-
-# Arguments
-* `pghost`:\\[out\\] Pointer to the forest's ghost.
-* `ghost_type`:\\[in\\] The type of the ghost elements,
-# See also
-[`t8_ghost_type_t`](@ref).
-
-### Prototype
-```c
-void t8_forest_ghost_init (t8_forest_ghost_t *pghost, t8_ghost_type_t ghost_type);
-```
-"""
-function t8_forest_ghost_init(pghost, ghost_type)
-    @ccall libt8.t8_forest_ghost_init(pghost::Ptr{t8_forest_ghost_t}, ghost_type::t8_ghost_type_t)::Cvoid
-end
-
-"""
-    t8_forest_ghost_num_trees(forest)
-
-Return the number of trees in a ghost.
-
-# Arguments
-* `forest`:\\[in\\] The forest.
-# Returns
-The number of trees in the forest's ghost (or 0 if ghost structure does not exist).
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_num_trees (const t8_forest_t forest);
-```
-"""
-function t8_forest_ghost_num_trees(forest)
-    @ccall libt8.t8_forest_ghost_num_trees(forest::t8_forest_t)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
-
-Return the element offset of a ghost tree.
-
-!!! note
-
-    forest must be committed before calling this function.
-
-# Arguments
-* `forest`:\\[in\\] The forest with constructed ghost layer.
-* `lghost_tree`:\\[in\\] A local ghost id of a ghost tree.
-# Returns
-The element offset of this ghost tree within the set of local ghost elements.
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_get_tree_element_offset (t8_forest_t forest, t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
-    @ccall libt8.t8_forest_ghost_get_tree_element_offset(forest::t8_forest_t, lghost_tree::t8_locidx_t)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_tree_num_leaf_elements(forest, lghost_tree)
-
-Given an index in the ghost\\_tree array, return this tree's number of leaf elements
-
-# Arguments
-* `forest`:\\[in\\] The *forest*. Ghost layer must exist.
-* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree.
-# Returns
-The number of ghost leaf elements of the tree. *forest* must be committed before calling this function.
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_tree_num_leaf_elements (t8_forest_t forest, t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_ghost_tree_num_leaf_elements(forest, lghost_tree)
-    @ccall libt8.t8_forest_ghost_tree_num_leaf_elements(forest::t8_forest_t, lghost_tree::t8_locidx_t)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_get_tree_leaf_elements(forest, lghost_tree)
-
-Get a pointer to the ghost leaf element array of a ghost tree.
-
-# Arguments
-* `forest`:\\[in\\] The forest. Ghost layer must exist.
-* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree. 0 <= *lghost_tree* < num\\_ghost\\_trees
-# Returns
-A pointer to the array of ghost leaf elements of the tree. *forest* must be committed before calling this function.
-### Prototype
-```c
-t8_element_array_t * t8_forest_ghost_get_tree_leaf_elements (const t8_forest_t forest, const t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_ghost_get_tree_leaf_elements(forest, lghost_tree)
-    @ccall libt8.t8_forest_ghost_get_tree_leaf_elements(forest::t8_forest_t, lghost_tree::t8_locidx_t)::Ptr{t8_element_array_t}
-end
-
-"""
-    t8_forest_ghost_get_ghost_treeid(forest, gtreeid)
-
-Given a global tree compute the ghost local tree id of it.
-
-# Arguments
-* `forest`:\\[in\\] The forest. Ghost layer must exist.
-* `gtreeid`:\\[in\\] A global tree in *forest*.
-# Returns
-If *gtreeid* is also a ghost tree, the index in the ghost->ghost\\_trees array of the tree. Otherwise a negative number. *forest* must be committed before calling this function.
-# See also
-https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
-
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_get_ghost_treeid (t8_forest_t forest, t8_gloidx_t gtreeid);
-```
-"""
-function t8_forest_ghost_get_ghost_treeid(forest, gtreeid)
-    @ccall libt8.t8_forest_ghost_get_ghost_treeid(forest::t8_forest_t, gtreeid::t8_gloidx_t)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_get_tree_class(forest, lghost_tree)
-
-Given an index in the ghost\\_tree array, return this tree's element class.
-
-# Arguments
-* `forest`:\\[in\\] A committed forest.
-* `lghost_tree`:\\[in\\] The tree's local index in the ghost\\_tree array.
-# Returns
-The element class of the given tree.
-### Prototype
-```c
-t8_eclass_t t8_forest_ghost_get_tree_class (const t8_forest_t forest, const t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_ghost_get_tree_class(forest, lghost_tree)
-    @ccall libt8.t8_forest_ghost_get_tree_class(forest::t8_forest_t, lghost_tree::t8_locidx_t)::t8_eclass_t
-end
-
-"""
-    t8_forest_ghost_get_global_treeid(forest, lghost_tree)
-
-Given a local ghost tree compute the global tree id of it.
-
-# Arguments
-* `forest`:\\[in\\] The forest. Ghost layer must exist.
-* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree. (0 <= *lghost_tree* < num\\_ghost\\_trees)
-# Returns
-The global id of the local ghost tree *lghost_tree*. *forest* must be committed before calling this function.
-# See also
-https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
-
-### Prototype
-```c
-t8_gloidx_t t8_forest_ghost_get_global_treeid (const t8_forest_t forest, const t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_ghost_get_global_treeid(forest, lghost_tree)
-    @ccall libt8.t8_forest_ghost_get_global_treeid(forest::t8_forest_t, lghost_tree::t8_locidx_t)::t8_gloidx_t
-end
-
-"""
-    t8_forest_ghost_get_leaf_element(forest, lghost_tree, lelement)
-
-Given an index into the ghost\\_trees array and for that tree an element index, return the corresponding element.
-
-# Arguments
-* `forest`:\\[in\\] The *forest*. Ghost layer must exist.
-* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree.
-* `lelement`:\\[in\\] The local id of the ghost leaf element considered.
-# Returns
-A pointer to the ghost leaf element. *forest* must be committed before calling this function.
-### Prototype
-```c
-t8_element_t * t8_forest_ghost_get_leaf_element (t8_forest_t forest, t8_locidx_t lghost_tree, t8_locidx_t lelement);
-```
-"""
-function t8_forest_ghost_get_leaf_element(forest, lghost_tree, lelement)
-    @ccall libt8.t8_forest_ghost_get_leaf_element(forest::t8_forest_t, lghost_tree::t8_locidx_t, lelement::t8_locidx_t)::Ptr{t8_element_t}
-end
-
-"""
-    t8_forest_element_is_ghost(forest, element, lghost_tree)
-
-Query whether a given element is a ghost of a certain tree in a forest.
-
-!!! note
-
-    *forest* must be committed before calling this function.
-
-# Arguments
-* `forest`:\\[in\\] The forest.
-* `element`:\\[in\\] An element of a ghost tree in *forest*.
-* `lghost_tree`:\\[in\\] A local ghost tree id of *forest*. (0 <= *lghost_tree* < num\\_ghost\\_trees)
-# Returns
-True (non-zero) if and only if *element* is a ghost in *lghost_tree* of *forest*.
-### Prototype
-```c
-int t8_forest_element_is_ghost (const t8_forest_t forest, const t8_element_t *element, const t8_locidx_t lghost_tree);
-```
-"""
-function t8_forest_element_is_ghost(forest, element, lghost_tree)
-    @ccall libt8.t8_forest_element_is_ghost(forest::t8_forest_t, element::Ptr{t8_element_t}, lghost_tree::t8_locidx_t)::Cint
-end
-
-"""
-    t8_forest_ghost_get_remotes(forest, num_remotes)
-
-Return the array of remote ranks.
-
-# Arguments
-* `forest`:\\[in\\] A forest with constructed ghost layer.
-* `num_remotes`:\\[in,out\\] On output the number of remote ranks is stored here.
-# Returns
-The array of remote ranks in ascending order.
-### Prototype
-```c
-int * t8_forest_ghost_get_remotes (t8_forest_t forest, int *num_remotes);
-```
-"""
-function t8_forest_ghost_get_remotes(forest, num_remotes)
-    @ccall libt8.t8_forest_ghost_get_remotes(forest::t8_forest_t, num_remotes::Ptr{Cint})::Ptr{Cint}
-end
-
-"""
-    t8_forest_ghost_remote_first_tree(forest, remote)
-
-Return the first local ghost tree of a remote rank.
-
-# Arguments
-* `forest`:\\[in\\] A forest with constructed ghost layer.
-* `remote`:\\[in\\] A remote rank of the ghost layer in *forest*.
-# Returns
-The ghost tree id of the first ghost tree that stores ghost elements of *remote*.
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_remote_first_tree (t8_forest_t forest, int remote);
-```
-"""
-function t8_forest_ghost_remote_first_tree(forest, remote)
-    @ccall libt8.t8_forest_ghost_remote_first_tree(forest::t8_forest_t, remote::Cint)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_remote_first_elem(forest, remote)
-
-Return the local index of the first ghost element that belongs to a given remote rank.
-
-# Arguments
-* `forest`:\\[in\\] A forest with constructed ghost layer.
-* `remote`:\\[in\\] A remote rank of the ghost layer in *forest*.
-# Returns
-The index i in the ghost elements of the first element of rank *remote*
-### Prototype
-```c
-t8_locidx_t t8_forest_ghost_remote_first_elem (t8_forest_t forest, int remote);
-```
-"""
-function t8_forest_ghost_remote_first_elem(forest, remote)
-    @ccall libt8.t8_forest_ghost_remote_first_elem(forest::t8_forest_t, remote::Cint)::t8_locidx_t
-end
-
-"""
-    t8_forest_ghost_ref(ghost)
-
-Increase the reference count of a ghost structure.
-
-# Arguments
-* `ghost`:\\[in,out\\] On input, this ghost structure must exist with positive reference count.
-### Prototype
-```c
-void t8_forest_ghost_ref (t8_forest_ghost_t ghost);
-```
-"""
-function t8_forest_ghost_ref(ghost)
-    @ccall libt8.t8_forest_ghost_ref(ghost::t8_forest_ghost_t)::Cvoid
-end
-
-"""
-    t8_forest_ghost_unref(pghost)
-
-Decrease the reference count of a ghost structure. If the counter reaches zero, the ghost structure is destroyed. See also t8_forest_ghost_destroy, which is to be preferred when it is known that the last reference to a cmesh is deleted.
-
-# Arguments
-* `pghost`:\\[in,out\\] On input, the ghost structure pointed to must exist with positive reference count. If the reference count reaches zero, the ghost structure is destroyed and this pointer is set to NULL. Otherwise, the pointer is not changed.
-### Prototype
-```c
-void t8_forest_ghost_unref (t8_forest_ghost_t *pghost);
-```
-"""
-function t8_forest_ghost_unref(pghost)
-    @ccall libt8.t8_forest_ghost_unref(pghost::Ptr{t8_forest_ghost_t})::Cvoid
-end
-
-"""
-    t8_forest_ghost_destroy(pghost)
-
-Verify that a ghost structure has only one reference left and destroy it. This function is preferred over t8_forest_ghost_unref when it is known that the last reference is to be deleted.
-
-# Arguments
-* `pghost`:\\[in,out\\] This ghost structure must have a reference count of one. It can be in any state (committed or not). Then it effectively calls t8_forest_ghost_unref.
-### Prototype
-```c
-void t8_forest_ghost_destroy (t8_forest_ghost_t *pghost);
-```
-"""
-function t8_forest_ghost_destroy(pghost)
-    @ccall libt8.t8_forest_ghost_destroy(pghost::Ptr{t8_forest_ghost_t})::Cvoid
-end
-
-"""
-    t8_forest_ghost_create(forest)
-
-Create one layer of ghost elements for a forest.
-
-# Arguments
-* `forest`:\\[in,out\\] The forest. *forest* must be committed before calling this function.
-# See also
-[`t8_forest_set_ghost`](@ref)
-
-### Prototype
-```c
-void t8_forest_ghost_create (t8_forest_t forest);
-```
-"""
-function t8_forest_ghost_create(forest)
-    @ccall libt8.t8_forest_ghost_create(forest::t8_forest_t)::Cvoid
-end
-
-"""
-    t8_forest_ghost_create_balanced_only(forest)
-
-Create one layer of ghost elements for a forest. This version only works with balanced forests and is the original algorithm from p4est: Scalable Algorithms For Parallel Adaptive Mesh Refinement On Forests of Octrees
-
-!!! note
-
-    The user should prefer t8_forest_ghost_create even for balanced forests.
-
-# Arguments
-* `forest`:\\[in,out\\] The balanced forest/ *forest* must be committed before calling this function.
-### Prototype
-```c
-void t8_forest_ghost_create_balanced_only (t8_forest_t forest);
-```
-"""
-function t8_forest_ghost_create_balanced_only(forest)
-    @ccall libt8.t8_forest_ghost_create_balanced_only(forest::t8_forest_t)::Cvoid
-end
-
-"""
-    t8_forest_ghost_create_topdown(forest)
-
-Experimental version of t8_forest_ghost_create using the ghost\\_v3 algorithm
-
-### Prototype
-```c
-void t8_forest_ghost_create_topdown (t8_forest_t forest);
-```
-"""
-function t8_forest_ghost_create_topdown(forest)
-    @ccall libt8.t8_forest_ghost_create_topdown(forest::t8_forest_t)::Cvoid
 end
 
 # typedef int ( * t8_forest_iterate_face_fn ) ( const t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int face , const int is_leaf , const t8_element_array_t * leaf_elements , const t8_locidx_t tree_leaf_index , void * user_data )
@@ -20857,6 +20391,120 @@ end
 const vtk_read_success_t = vtk_read_success
 
 """
+    t8_forest_adapt(forest)
+
+Adapt a forest.
+
+# Arguments
+* `forest`:\\[in,out\\] The forest to be adapted
+### Prototype
+```c
+void t8_forest_adapt (t8_forest_t forest);
+```
+"""
+function t8_forest_adapt(forest)
+    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_profile
+
+This struct holds profiling information, such as timings or statistics about communication.
+
+| Field                          | Note                                                                                                           |
+| :----------------------------- | :------------------------------------------------------------------------------------------------------------- |
+| partition\\_elements\\_shipped | The number of elements this process has sent to other in the last partition call.                              |
+| partition\\_elements\\_recv    | The number of elements this process has received from other in the last partition call.                        |
+| partition\\_bytes\\_sent       | The total number of bytes sent to other processes in the last partition call.                                  |
+| partition\\_procs\\_sent       | The number of different processes this process has send local elements to in the last partition call.          |
+| ghosts\\_shipped               | The number of ghost elements this process has sent to other processes.                                         |
+| ghosts\\_received              | The number of ghost elements this process has received from other processes.                                   |
+| ghosts\\_remotes               | The number of processes this process have sent ghost elements to (and received from).                          |
+| balance\\_rounds               | The number of iterations during balance.                                                                       |
+| adapt\\_runtime                | The runtime of the last call to [`t8_forest_adapt`](@ref) (not counting adaptation in t8\\_forest\\_balance).  |
+| partition\\_runtime            | The runtime of the last call to *t8_cmesh_partition* (not count in partition in t8\\_forest\\_balance).        |
+| ghost\\_runtime                | The runtime of the last call to *t8_forest_ghost_create*.                                                      |
+| ghost\\_waittime               | Amount of synchronisation time in ghost.                                                                       |
+| balance\\_runtime              | The runtime of the last call to *t8_forest_balance*.                                                           |
+| commit\\_runtime               | The runtime of the last call to [`t8_cmesh_commit`](@ref).                                                     |
+| cmesh\\_offsets\\_runtime      | The runtime of the last call to [`t8_forest_partition_create_tree_offsets`](@ref).                             |
+| forest\\_offsets\\_runtime     | The runtime of the last call to [`t8_forest_partition_create_offsets`](@ref).                                  |
+| first\\_descendant\\_runtime   | The runtime of the last call to [`t8_forest_partition_create_first_desc`](@ref).                               |
+"""
+struct t8_profile
+    partition_elements_shipped::t8_locidx_t
+    partition_elements_recv::t8_locidx_t
+    partition_bytes_sent::Csize_t
+    partition_procs_sent::Cint
+    ghosts_shipped::t8_locidx_t
+    ghosts_received::t8_locidx_t
+    ghosts_remotes::Cint
+    balance_rounds::Cint
+    adapt_runtime::Cdouble
+    partition_runtime::Cdouble
+    ghost_runtime::Cdouble
+    ghost_waittime::Cdouble
+    balance_runtime::Cdouble
+    commit_runtime::Cdouble
+    cmesh_offsets_runtime::Cdouble
+    forest_offsets_runtime::Cdouble
+    first_descendant_runtime::Cdouble
+end
+
+"""This struct holds profiling information, such as timings or statistics about communication."""
+const t8_profile_t = t8_profile
+
+"""
+    t8_forest_ghost
+
+This struct stores various information about a forest's ghost elements and ghost trees.
+
+| Field                             | Note                                                                                                                                                                                                                                                                                                                                                      |
+| :-------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| rc                                | The reference counter.                                                                                                                                                                                                                                                                                                                                    |
+| num\\_ghosts\\_elements           | The count of non-local ghost leaf elements                                                                                                                                                                                                                                                                                                                |
+| num\\_remote\\_elements           | The count of local leaf elements that are ghost to another process.                                                                                                                                                                                                                                                                                       |
+| ghost\\_type                      | Describes which neighbors are considered ghosts.                                                                                                                                                                                                                                                                                                          |
+| ghost\\_trees                     | ghost tree data: global\\_id. eclass. elements. In linear id order                                                                                                                                                                                                                                                                                        |
+| global\\_tree\\_to\\_ghost\\_tree | Indexes into ghost\\_trees. Given a global tree id I give the index i such that the tree is in ghost\\_trees[i]                                                                                                                                                                                                                                           |
+| process\\_offsets                 | Given a process, return the first ghost tree and within it the first element of that process.                                                                                                                                                                                                                                                             |
+| remote\\_ghosts                   | array of local trees that have ghost elements for another process. for each tree an array of [`t8_element_t`](@ref) * of the local ghost elements. Also an array of [`t8_locidx_t`](@ref) of the local indices of these elements within the tree. It is a hash table, hashed with the rank of a remote process. Sorted within each process by linear id.  |
+| remote\\_processes                | The ranks of the processes for which local elements are ghost. Array of int's.                                                                                                                                                                                                                                                                            |
+| glo\\_tree\\_mempool              | The global tree memory pool.                                                                                                                                                                                                                                                                                                                              |
+| proc\\_offset\\_mempool           | The process offset memory pool.                                                                                                                                                                                                                                                                                                                           |
+"""
+struct t8_forest_ghost
+    rc::t8_refcount_t
+    num_ghosts_elements::t8_locidx_t
+    num_remote_elements::t8_locidx_t
+    ghost_type::t8_ghost_type_t
+    ghost_trees::Ptr{sc_array_t}
+    global_tree_to_ghost_tree::Ptr{sc_hash_t}
+    process_offsets::Ptr{sc_hash_t}
+    remote_ghosts::Ptr{sc_hash_array_t}
+    remote_processes::Ptr{sc_array_t}
+    glo_tree_mempool::Ptr{sc_mempool_t}
+    proc_offset_mempool::Ptr{sc_mempool_t}
+end
+
+const t8_forest_ghost_t = Ptr{t8_forest_ghost}
+
+"""If a forest is to be derived from another forest, there are different possibilities how the original forest is modified. Currently we support: Copying, adapting, partitioning, and balancing a forest. The latter 3 can be combined, in which case the order is 1. Adapt, 2. Partition, 3. Balance. We store the methods in an int8\\_t and use these defines to distinguish between them."""
+const t8_forest_from_t = Int8
+
+"""This structure is private to the implementation."""
+const t8_forest_struct_t = t8_forest
+
+"""The t8 tree datatype"""
+const t8_tree_struct_t = t8_tree
+
+"""This struct holds profiling information, such as timings or statistics about communication."""
+const t8_profile_struct_t = t8_profile
+
+"""This struct stores various information about a forest's ghost elements and ghost trees."""
+const t8_forest_ghost_struct_t = t8_forest_ghost
+
+"""
     t8_forest_vtk_write_file_via_API(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, curved_flag, write_ghosts, num_data, data)
 
 Write the forest in .pvtu file format. Writes one .vtu file per process and a meta .pvtu file. This function uses the vtk library. t8code must be configured with "-DT8CODE\\_ENABLE\\_VTK=ON" in order to use it. Currently does not support pyramid elements.
@@ -21344,26 +20992,6 @@ const T8_VTK_FLOAT_TYPE = Float32
 
 const T8_VTK_FORMAT_STRING = "ascii"
 
-const T8_FOREST_FROM_FIRST = 0
-
-const T8_FOREST_FROM_COPY = 0
-
-const T8_FOREST_FROM_ADAPT = 0x01
-
-const T8_FOREST_FROM_PARTITION = 0x02
-
-const T8_FOREST_FROM_BALANCE = 0x04
-
-const T8_FOREST_FROM_NONE = 0x08
-
-const T8_FOREST_FROM_LAST = T8_FOREST_FROM_NONE
-
-const T8_FOREST_BALANCE_REPART = 1
-
-const T8_FOREST_BALANCE_NO_REPART = 2
-
-const T8_PROFILE_NUM_STATS = 17
-
 const T8_DHEX_CHILDREN = 8
 
 const T8_DHEX_FACES = 6
@@ -21485,6 +21113,26 @@ const T8_DTET_DIM = 3
 const T8_DTRI_DIM = 2
 
 # Skipping MacroDefinition: t8_dtri_face_corner t8_face_vertex_to_tree_vertex [ T8_ECLASS_TRIANGLE ]
+
+const T8_FOREST_FROM_FIRST = 0
+
+const T8_FOREST_FROM_COPY = 0
+
+const T8_FOREST_FROM_ADAPT = 0x01
+
+const T8_FOREST_FROM_PARTITION = 0x02
+
+const T8_FOREST_FROM_BALANCE = 0x04
+
+const T8_FOREST_FROM_NONE = 0x08
+
+const T8_FOREST_FROM_LAST = T8_FOREST_FROM_NONE
+
+const T8_FOREST_BALANCE_REPART = 1
+
+const T8_FOREST_BALANCE_NO_REPART = 2
+
+const T8_PROFILE_NUM_STATS = 17
 
 # exports
 const PREFIXES = ["t8_", "T8_"]

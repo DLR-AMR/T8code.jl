@@ -340,13 +340,13 @@ function t8_step6_output_data_to_vtu(forest, element_data, prefix)
     # WARNING: This code hangs for Julia v1.8.* or older. Use at least Julia v1.9.
     vtk_data = [
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("height\0", 8192, ' ')),
+                            NTuple{T8_VTK_MAX_STRING_LENGTH, Cchar}(rpad("height\0", T8_VTK_MAX_STRING_LENGTH, ' ')),
                             pointer(heights)),
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("schlieren\0", 8192, ' ')),
+                            NTuple{T8_VTK_MAX_STRING_LENGTH, Cchar}(rpad("schlieren\0", T8_VTK_MAX_STRING_LENGTH, ' ')),
                             pointer(schlieren)),
         t8_vtk_data_field_t(T8_VTK_SCALAR,
-                            NTuple{8192, Cchar}(rpad("curvature\0", 8192, ' ')),
+                            NTuple{T8_VTK_MAX_STRING_LENGTH, Cchar}(rpad("curvature\0", T8_VTK_MAX_STRING_LENGTH, ' ')),
                             pointer(curvature))
     ]
 

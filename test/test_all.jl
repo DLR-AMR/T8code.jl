@@ -10,6 +10,8 @@ using T8code.Libt8: SC_LP_PRODUCTION
 
 MPI.Init()
 
+comm = MPI.COMM_WORLD
+
 # When run in CI, check if we are running with system MPI or Julia artifacts
 JULIA_MPI_PROVIDER = get(ENV, "JULIA_MPI_PROVIDER", "JLL_MPI")
 

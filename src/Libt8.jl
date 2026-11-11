@@ -3,9 +3,10 @@ module Libt8
 using CEnum: CEnum, @cenum
 
 to_c_type(t::Type) = t
-to_c_type_pairs(va_list) = map(enumerate(to_c_type.(va_list))) do (ind, type)
-    :(va_list[$ind]::$type)
-end
+to_c_type_pairs(va_list) =
+    map(enumerate(to_c_type.(va_list))) do (ind, type)
+        :(va_list[$ind]::$type)
+    end
 
 using ..T8code: _PREFERENCE_LIBT8, _PREFERENCE_LIBP4EST, _PREFERENCE_LIBSC
 
@@ -70,7 +71,6 @@ const INT64_MIN = typemin(Clonglong)
 const INT64_MAX = typemax(Clonglong)
 const P4EST_QMAXLEVEL = 29
 
-
 """
     sc_extern_c_hack_1()
 
@@ -115,8 +115,9 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_abort_verbosef(filename, lineno, fmt, va_list...)
-        :(@ccall(libsc.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libsc.sc_abort_verbosef(filename::Cstring, lineno::Cint, fmt::Cstring;
+                                     $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 """
     sc_malloc(package, size)
@@ -196,13 +197,16 @@ void sc_log (const char *filename, int lineno, int package, int category, int pr
 ```
 """
 function sc_log(filename, lineno, package, category, priority, msg)
-    @ccall libsc.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, msg::Cstring)::Cvoid
+    @ccall libsc.sc_log(filename::Cstring, lineno::Cint, package::Cint, category::Cint,
+                        priority::Cint, msg::Cstring)::Cvoid
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_logf(filename, lineno, package, category, priority, fmt, va_list...)
-        :(@ccall(libsc.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libsc.sc_logf(filename::Cstring, lineno::Cint, package::Cint, category::Cint,
+                           priority::Cint, fmt::Cstring;
+                           $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 """
     sc_array
@@ -242,7 +246,8 @@ sc_array_t *sc_array_new_count (size_t elem_size, size_t elem_count);
 ```
 """
 function sc_array_new_count(elem_size, elem_count)
-    @ccall libsc.sc_array_new_count(elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_count(elem_size::Csize_t,
+                                    elem_count::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -300,7 +305,8 @@ void *sc_shmem_malloc (int package, size_t elem_size, size_t elem_count, sc_MPI_
 ```
 """
 function sc_shmem_malloc(package, elem_size, elem_count, comm)
-    @ccall libsc.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Ptr{Cvoid}
+    @ccall libsc.sc_shmem_malloc(package::Cint, elem_size::Csize_t, elem_count::Csize_t,
+                                 comm::MPI_Comm)::Ptr{Cvoid}
 end
 
 """
@@ -446,62 +452,6 @@ function sc_refcount_is_last(rc)
 end
 
 """
-    sc_MPI_Error_string(errorcode, string, resultlen)
-
-Turn MPI error code into a string.
-
-# Arguments
-* `errorcode`:\\[in\\] This (MPI) error code is converted.
-* `string`:\\[in,out\\] At least [`sc_MPI_MAX_ERROR_STRING`](@ref) bytes.
-* `resultlen`:\\[out\\] Length of string on return.
-# Returns
-[`sc_MPI_SUCCESS`](@ref) on success or other MPI error cocde on invalid arguments.
-### Prototype
-```c
-int sc_MPI_Error_string (int errorcode, char *string, int *resultlen);
-```
-"""
-function sc_MPI_Error_string(errorcode, string, resultlen)
-    @ccall libsc.sc_MPI_Error_string(errorcode::Cint, string::Cstring, resultlen::Ptr{Cint})::Cint
-end
-
-"""
-    sc_io_read(mpifile, ptr, zcount, t, errmsg)
-
-### Prototype
-```c
-void sc_io_read (sc_MPI_File mpifile, void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
-```
-"""
-function sc_io_read(mpifile, ptr, zcount, t, errmsg)
-    @ccall libsc.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
-end
-
-"""
-    sc_io_write(mpifile, ptr, zcount, t, errmsg)
-
-### Prototype
-```c
-void sc_io_write (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
-```
-"""
-function sc_io_write(mpifile, ptr, zcount, t, errmsg)
-    @ccall libsc.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint, errmsg::Cstring)::Cvoid
-end
-
-"""Typedef for quadrant coordinates."""
-const p4est_qcoord_t = Int32
-
-"""Typedef for counting topological entities (trees, tree vertices)."""
-const p4est_topidx_t = Int32
-
-"""Typedef for processor-local indexing of quadrants and nodes."""
-const p4est_locidx_t = Int32
-
-"""Typedef for globally unique indexing of quadrants."""
-const p4est_gloidx_t = Int64
-
-"""
     sc_mpi_is_enabled()
 
 Return whether MPI is configured.
@@ -595,7 +545,8 @@ int sc_MPI_Testall (int, sc_MPI_Request *, int *, sc_MPI_Status *);
 ```
 """
 function sc_MPI_Testall(arg1, arg2, arg3, arg4)
-    @ccall libsc.sc_MPI_Testall(arg1::Cint, arg2::Ptr{Cint}, arg3::Ptr{Cint}, arg4::Ptr{Cint})::Cint
+    @ccall libsc.sc_MPI_Testall(arg1::Cint, arg2::Ptr{Cint}, arg3::Ptr{Cint},
+                                arg4::Ptr{Cint})::Cint
 end
 
 """
@@ -615,6 +566,27 @@ int sc_MPI_Error_class (int errorcode, int *errorclass);
 """
 function sc_MPI_Error_class(errorcode, errorclass)
     @ccall libsc.sc_MPI_Error_class(errorcode::Cint, errorclass::Ptr{Cint})::Cint
+end
+
+"""
+    sc_MPI_Error_string(errorcode, string, resultlen)
+
+Turn MPI error code into a string.
+
+# Arguments
+* `errorcode`:\\[in\\] This (MPI) error code is converted.
+* `string`:\\[in,out\\] At least [`sc_MPI_MAX_ERROR_STRING`](@ref) bytes.
+* `resultlen`:\\[out\\] Length of string on return.
+# Returns
+[`sc_MPI_SUCCESS`](@ref) on success or other MPI error cocde on invalid arguments.
+### Prototype
+```c
+int sc_MPI_Error_string (int errorcode, char *string, int *resultlen);
+```
+"""
+function sc_MPI_Error_string(errorcode, string, resultlen)
+    @ccall libsc.sc_MPI_Error_string(errorcode::Cint, string::Cstring,
+                                     resultlen::Ptr{Cint})::Cint
 end
 
 """
@@ -638,7 +610,8 @@ void sc_mpi_comm_attach_node_comms (sc_MPI_Comm comm, int processes_per_node);
 ```
 """
 function sc_mpi_comm_attach_node_comms(comm, processes_per_node)
-    @ccall libsc.sc_mpi_comm_attach_node_comms(comm::MPI_Comm, processes_per_node::Cint)::Cvoid
+    @ccall libsc.sc_mpi_comm_attach_node_comms(comm::MPI_Comm,
+                                               processes_per_node::Cint)::Cvoid
 end
 
 """
@@ -662,7 +635,8 @@ void sc_mpi_comm_get_node_comms (sc_MPI_Comm comm, sc_MPI_Comm * intranode, sc_M
 ```
 """
 function sc_mpi_comm_get_node_comms(comm, intranode, internode)
-    @ccall libsc.sc_mpi_comm_get_node_comms(comm::MPI_Comm, intranode::Ptr{MPI_Comm}, internode::Ptr{MPI_Comm})::Cvoid
+    @ccall libsc.sc_mpi_comm_get_node_comms(comm::MPI_Comm, intranode::Ptr{MPI_Comm},
+                                            internode::Ptr{MPI_Comm})::Cvoid
 end
 
 """
@@ -822,7 +796,9 @@ void sc_set_log_defaults (FILE * log_stream, sc_log_handler_t log_handler, int l
 ```
 """
 function sc_set_log_defaults(log_stream, log_handler, log_threshold)
-    @ccall libsc.sc_set_log_defaults(log_stream::Ptr{Libc.FILE}, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libsc.sc_set_log_defaults(log_stream::Ptr{Libc.FILE},
+                                     log_handler::sc_log_handler_t,
+                                     log_threshold::Cint)::Cvoid
 end
 
 """
@@ -938,7 +914,8 @@ int sc_package_register (sc_log_handler_t log_handler, int log_threshold, const 
 ```
 """
 function sc_package_register(log_handler, log_threshold, name, full)
-    @ccall libsc.sc_package_register(log_handler::sc_log_handler_t, log_threshold::Cint, name::Cstring, full::Cstring)::Cint
+    @ccall libsc.sc_package_register(log_handler::sc_log_handler_t, log_threshold::Cint,
+                                     name::Cstring, full::Cstring)::Cint
 end
 
 """
@@ -1022,7 +999,8 @@ void sc_package_set_abort_alloc_mismatch (int package_id, int set_abort);
 ```
 """
 function sc_package_set_abort_alloc_mismatch(package_id, set_abort)
-    @ccall libsc.sc_package_set_abort_alloc_mismatch(package_id::Cint, set_abort::Cint)::Cvoid
+    @ccall libsc.sc_package_set_abort_alloc_mismatch(package_id::Cint,
+                                                     set_abort::Cint)::Cvoid
 end
 
 """
@@ -1064,7 +1042,8 @@ void sc_init (sc_MPI_Comm mpicomm, int catch_signals, int print_backtrace, sc_lo
 ```
 """
 function sc_init(mpicomm, catch_signals, print_backtrace, log_handler, log_threshold)
-    @ccall libsc.sc_init(mpicomm::MPI_Comm, catch_signals::Cint, print_backtrace::Cint, log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
+    @ccall libsc.sc_init(mpicomm::MPI_Comm, catch_signals::Cint, print_backtrace::Cint,
+                         log_handler::sc_log_handler_t, log_threshold::Cint)::Cvoid
 end
 
 """
@@ -1175,8 +1154,9 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_snprintf(str, size, format, va_list...)
-        :(@ccall(libsc.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libsc.sc_snprintf(str::Cstring, size::Csize_t, format::Cstring;
+                               $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 """
     sc_version()
@@ -1379,7 +1359,8 @@ sc_array_t *sc_array_new_view (sc_array_t * array, size_t offset, size_t length)
 ```
 """
 function sc_array_new_view(array, offset, length)
-    @ccall libsc.sc_array_new_view(array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_view(array::Ptr{sc_array_t}, offset::Csize_t,
+                                   length::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -1397,7 +1378,8 @@ sc_array_t *sc_array_new_data (void *base, size_t elem_size, size_t elem_count);
 ```
 """
 function sc_array_new_data(base, elem_size, elem_count)
-    @ccall libsc.sc_array_new_data(base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Ptr{sc_array_t}
+    @ccall libsc.sc_array_new_data(base::Ptr{Cvoid}, elem_size::Csize_t,
+                                   elem_count::Csize_t)::Ptr{sc_array_t}
 end
 
 """
@@ -1464,7 +1446,8 @@ void sc_array_init_size (sc_array_t * array, size_t elem_size, size_t elem_count
 ```
 """
 function sc_array_init_size(array, elem_size, elem_count)
-    @ccall libsc.sc_array_init_size(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_size(array::Ptr{sc_array_t}, elem_size::Csize_t,
+                                    elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1482,7 +1465,8 @@ void sc_array_init_count (sc_array_t * array, size_t elem_size, size_t elem_coun
 ```
 """
 function sc_array_init_count(array, elem_size, elem_count)
-    @ccall libsc.sc_array_init_count(array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_count(array::Ptr{sc_array_t}, elem_size::Csize_t,
+                                     elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1501,7 +1485,8 @@ void sc_array_init_view (sc_array_t * view, sc_array_t * array, size_t offset, s
 ```
 """
 function sc_array_init_view(view, array, offset, length)
-    @ccall libsc.sc_array_init_view(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_view(view::Ptr{sc_array_t}, array::Ptr{sc_array_t},
+                                    offset::Csize_t, length::Csize_t)::Cvoid
 end
 
 """
@@ -1520,7 +1505,8 @@ void sc_array_init_reshape (sc_array_t * view, sc_array_t * array, size_t elem_s
 ```
 """
 function sc_array_init_reshape(view, array, elem_size, elem_count)
-    @ccall libsc.sc_array_init_reshape(view::Ptr{sc_array_t}, array::Ptr{sc_array_t}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_reshape(view::Ptr{sc_array_t}, array::Ptr{sc_array_t},
+                                       elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1539,7 +1525,8 @@ void sc_array_init_data (sc_array_t * view, void *base, size_t elem_size, size_t
 ```
 """
 function sc_array_init_data(view, base, elem_size, elem_count)
-    @ccall libsc.sc_array_init_data(view::Ptr{sc_array_t}, base::Ptr{Cvoid}, elem_size::Csize_t, elem_count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_init_data(view::Ptr{sc_array_t}, base::Ptr{Cvoid},
+                                    elem_size::Csize_t, elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -1665,7 +1652,8 @@ void sc_array_copy_into (sc_array_t * dest, size_t dest_offset, sc_array_t * src
 ```
 """
 function sc_array_copy_into(dest, dest_offset, src)
-    @ccall libsc.sc_array_copy_into(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_array_copy_into(dest::Ptr{sc_array_t}, dest_offset::Csize_t,
+                                    src::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -1685,7 +1673,9 @@ void sc_array_move_part (sc_array_t * dest, size_t dest_offset, sc_array_t * src
 ```
 """
 function sc_array_move_part(dest, dest_offset, src, src_offset, count)
-    @ccall libsc.sc_array_move_part(dest::Ptr{sc_array_t}, dest_offset::Csize_t, src::Ptr{sc_array_t}, src_offset::Csize_t, count::Csize_t)::Cvoid
+    @ccall libsc.sc_array_move_part(dest::Ptr{sc_array_t}, dest_offset::Csize_t,
+                                    src::Ptr{sc_array_t}, src_offset::Csize_t,
+                                    count::Csize_t)::Cvoid
 end
 
 """
@@ -1777,7 +1767,8 @@ ssize_t sc_array_bsearch (sc_array_t * array, const void *key, int (*compar) (co
 ```
 """
 function sc_array_bsearch(array, key, compar)
-    @ccall libsc.sc_array_bsearch(array::Ptr{sc_array_t}, key::Ptr{Cvoid}, compar::Ptr{Cvoid})::Cssize_t
+    @ccall libsc.sc_array_bsearch(array::Ptr{sc_array_t}, key::Ptr{Cvoid},
+                                  compar::Ptr{Cvoid})::Cssize_t
 end
 
 # typedef size_t ( * sc_array_type_t ) ( sc_array_t * array , size_t index , void * data )
@@ -1808,7 +1799,9 @@ void sc_array_split (sc_array_t * array, sc_array_t * offsets, size_t num_types,
 ```
 """
 function sc_array_split(array, offsets, num_types, type_fn, data)
-    @ccall libsc.sc_array_split(array::Ptr{sc_array_t}, offsets::Ptr{sc_array_t}, num_types::Csize_t, type_fn::sc_array_type_t, data::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_array_split(array::Ptr{sc_array_t}, offsets::Ptr{sc_array_t},
+                                num_types::Csize_t, type_fn::sc_array_type_t,
+                                data::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -1844,7 +1837,8 @@ void sc_array_permute (sc_array_t * array, sc_array_t * newindices, int keepperm
 ```
 """
 function sc_array_permute(array, newindices, keepperm)
-    @ccall libsc.sc_array_permute(array::Ptr{sc_array_t}, newindices::Ptr{sc_array_t}, keepperm::Cint)::Cvoid
+    @ccall libsc.sc_array_permute(array::Ptr{sc_array_t}, newindices::Ptr{sc_array_t},
+                                  keepperm::Cint)::Cvoid
 end
 
 """
@@ -1879,7 +1873,8 @@ size_t sc_array_pqueue_siftup (sc_array_t * array, size_t pos, void *newval, int
 ```
 """
 function sc_array_pqueue_siftup(array, pos, newval, compar)
-    @ccall libsc.sc_array_pqueue_siftup(array::Ptr{sc_array_t}, pos::Csize_t, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_siftup(array::Ptr{sc_array_t}, pos::Csize_t,
+                                        newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1899,7 +1894,8 @@ size_t sc_array_pqueue_insert (sc_array_t * array, void *newval, int (*compar) (
 ```
 """
 function sc_array_pqueue_insert(array, newval, compar)
-    @ccall libsc.sc_array_pqueue_insert(array::Ptr{sc_array_t}, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_insert(array::Ptr{sc_array_t}, newval::Ptr{Cvoid},
+                                        compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1921,7 +1917,9 @@ size_t sc_array_pqueue_siftdown (sc_array_t * array, size_t maxcount, size_t pos
 ```
 """
 function sc_array_pqueue_siftdown(array, maxcount, pos, newval, compar)
-    @ccall libsc.sc_array_pqueue_siftdown(array::Ptr{sc_array_t}, maxcount::Csize_t, pos::Csize_t, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_siftdown(array::Ptr{sc_array_t}, maxcount::Csize_t,
+                                          pos::Csize_t, newval::Ptr{Cvoid},
+                                          compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -1941,7 +1939,8 @@ size_t sc_array_pqueue_pop (sc_array_t * array, void *newval, int (*compar) (con
 ```
 """
 function sc_array_pqueue_pop(array, newval, compar)
-    @ccall libsc.sc_array_pqueue_pop(array::Ptr{sc_array_t}, newval::Ptr{Cvoid}, compar::Ptr{Cvoid})::Csize_t
+    @ccall libsc.sc_array_pqueue_pop(array::Ptr{sc_array_t}, newval::Ptr{Cvoid},
+                                     compar::Ptr{Cvoid})::Csize_t
 end
 
 """
@@ -2156,7 +2155,8 @@ void sc_mstamp_init (sc_mstamp_t * mst, size_t stamp_unit, size_t elem_size);
 ```
 """
 function sc_mstamp_init(mst, stamp_unit, elem_size)
-    @ccall libsc.sc_mstamp_init(mst::Ptr{sc_mstamp_t}, stamp_unit::Csize_t, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_mstamp_init(mst::Ptr{sc_mstamp_t}, stamp_unit::Csize_t,
+                                elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -2626,7 +2626,8 @@ sc_link_t *sc_list_insert (sc_list_t * list, sc_link_t * pred, void *data);
 ```
 """
 function sc_list_insert(list, pred, data)
-    @ccall libsc.sc_list_insert(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t}, data::Ptr{Cvoid})::Ptr{sc_link_t}
+    @ccall libsc.sc_list_insert(list::Ptr{sc_list_t}, pred::Ptr{sc_link_t},
+                                data::Ptr{Cvoid})::Ptr{sc_link_t}
 end
 
 """
@@ -2751,7 +2752,9 @@ sc_hash_t *sc_hash_new (sc_hash_function_t hash_fn, sc_equal_function_t equal_fn
 ```
 """
 function sc_hash_new(hash_fn, equal_fn, user_data, allocator)
-    @ccall libsc.sc_hash_new(hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid}, allocator::Ptr{sc_mempool_t})::Ptr{sc_hash_t}
+    @ccall libsc.sc_hash_new(hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t,
+                             user_data::Ptr{Cvoid},
+                             allocator::Ptr{sc_mempool_t})::Ptr{sc_hash_t}
 end
 
 """
@@ -2857,7 +2860,8 @@ int sc_hash_lookup (sc_hash_t * hash, void *v, void ***found);
 ```
 """
 function sc_hash_lookup(hash, v, found)
-    @ccall libsc.sc_hash_lookup(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
+    @ccall libsc.sc_hash_lookup(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid},
+                                found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
 end
 
 """
@@ -2877,7 +2881,8 @@ int sc_hash_insert_unique (sc_hash_t * hash, void *v, void ***found);
 ```
 """
 function sc_hash_insert_unique(hash, v, found)
-    @ccall libsc.sc_hash_insert_unique(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
+    @ccall libsc.sc_hash_insert_unique(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid},
+                                       found::Ptr{Ptr{Ptr{Cvoid}}})::Cint
 end
 
 """
@@ -2897,7 +2902,8 @@ int sc_hash_remove (sc_hash_t * hash, void *v, void **found);
 ```
 """
 function sc_hash_remove(hash, v, found)
-    @ccall libsc.sc_hash_remove(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid}, found::Ptr{Ptr{Cvoid}})::Cint
+    @ccall libsc.sc_hash_remove(hash::Ptr{sc_hash_t}, v::Ptr{Cvoid},
+                                found::Ptr{Ptr{Cvoid}})::Cint
 end
 
 """
@@ -2932,7 +2938,8 @@ void sc_hash_print_statistics (int package_id, int log_priority, sc_hash_t * has
 ```
 """
 function sc_hash_print_statistics(package_id, log_priority, hash)
-    @ccall libsc.sc_hash_print_statistics(package_id::Cint, log_priority::Cint, hash::Ptr{sc_hash_t})::Cvoid
+    @ccall libsc.sc_hash_print_statistics(package_id::Cint, log_priority::Cint,
+                                          hash::Ptr{sc_hash_t})::Cvoid
 end
 
 mutable struct sc_hash_array_data end
@@ -2996,7 +3003,9 @@ sc_hash_array_t *sc_hash_array_new (size_t elem_size, sc_hash_function_t hash_fn
 ```
 """
 function sc_hash_array_new(elem_size, hash_fn, equal_fn, user_data)
-    @ccall libsc.sc_hash_array_new(elem_size::Csize_t, hash_fn::sc_hash_function_t, equal_fn::sc_equal_function_t, user_data::Ptr{Cvoid})::Ptr{sc_hash_array_t}
+    @ccall libsc.sc_hash_array_new(elem_size::Csize_t, hash_fn::sc_hash_function_t,
+                                   equal_fn::sc_equal_function_t,
+                                   user_data::Ptr{Cvoid})::Ptr{sc_hash_array_t}
 end
 
 """
@@ -3066,7 +3075,8 @@ int sc_hash_array_lookup (sc_hash_array_t * hash_array, void *v, size_t *positio
 ```
 """
 function sc_hash_array_lookup(hash_array, v, position)
-    @ccall libsc.sc_hash_array_lookup(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_hash_array_lookup(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid},
+                                      position::Ptr{Csize_t})::Cint
 end
 
 """
@@ -3086,7 +3096,9 @@ void *sc_hash_array_insert_unique (sc_hash_array_t * hash_array, void *v, size_t
 ```
 """
 function sc_hash_array_insert_unique(hash_array, v, position)
-    @ccall libsc.sc_hash_array_insert_unique(hash_array::Ptr{sc_hash_array_t}, v::Ptr{Cvoid}, position::Ptr{Csize_t})::Ptr{Cvoid}
+    @ccall libsc.sc_hash_array_insert_unique(hash_array::Ptr{sc_hash_array_t},
+                                             v::Ptr{Cvoid},
+                                             position::Ptr{Csize_t})::Ptr{Cvoid}
 end
 
 """
@@ -3103,7 +3115,8 @@ void sc_hash_array_foreach (sc_hash_array_t * hash_array, sc_hash_foreach_t fn);
 ```
 """
 function sc_hash_array_foreach(hash_array, fn)
-    @ccall libsc.sc_hash_array_foreach(hash_array::Ptr{sc_hash_array_t}, fn::sc_hash_foreach_t)::Cvoid
+    @ccall libsc.sc_hash_array_foreach(hash_array::Ptr{sc_hash_array_t},
+                                       fn::sc_hash_foreach_t)::Cvoid
 end
 
 """
@@ -3120,7 +3133,8 @@ void sc_hash_array_rip (sc_hash_array_t * hash_array, sc_array_t * rip);
 ```
 """
 function sc_hash_array_rip(hash_array, rip)
-    @ccall libsc.sc_hash_array_rip(hash_array::Ptr{sc_hash_array_t}, rip::Ptr{sc_array_t})::Cvoid
+    @ccall libsc.sc_hash_array_rip(hash_array::Ptr{sc_hash_array_t},
+                                   rip::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -3163,7 +3177,8 @@ void sc_recycle_array_init (sc_recycle_array_t * rec_array, size_t elem_size);
 ```
 """
 function sc_recycle_array_init(rec_array, elem_size)
-    @ccall libsc.sc_recycle_array_init(rec_array::Ptr{sc_recycle_array_t}, elem_size::Csize_t)::Cvoid
+    @ccall libsc.sc_recycle_array_init(rec_array::Ptr{sc_recycle_array_t},
+                                       elem_size::Csize_t)::Cvoid
 end
 
 """
@@ -3198,7 +3213,8 @@ void *sc_recycle_array_insert (sc_recycle_array_t * rec_array, size_t *position)
 ```
 """
 function sc_recycle_array_insert(rec_array, position)
-    @ccall libsc.sc_recycle_array_insert(rec_array::Ptr{sc_recycle_array_t}, position::Ptr{Csize_t})::Ptr{Cvoid}
+    @ccall libsc.sc_recycle_array_insert(rec_array::Ptr{sc_recycle_array_t},
+                                         position::Ptr{Csize_t})::Ptr{Cvoid}
 end
 
 """
@@ -3217,7 +3233,8 @@ void *sc_recycle_array_remove (sc_recycle_array_t * rec_array, size_t position);
 ```
 """
 function sc_recycle_array_remove(rec_array, position)
-    @ccall libsc.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t}, position::Csize_t)::Ptr{Cvoid}
+    @ccall libsc.sc_recycle_array_remove(rec_array::Ptr{sc_recycle_array_t},
+                                         position::Csize_t)::Ptr{Cvoid}
 end
 
 """A type for holding process ids."""
@@ -3231,18 +3248,19 @@ const t8_linearidx_t = UInt64
 
 Communication tags used internal to t8code.
 
-| Enumerator                                  | Note                                                     |
-| :------------------------------------------ | :------------------------------------------------------- |
-| T8\\_MPI\\_TAG\\_FIRST                      | Dummy first MPT tag.                                     |
-| T8\\_MPI\\_PARTITION\\_CMESH                | Used for coarse mesh partitioning                        |
-| T8\\_MPI\\_PARTITION\\_FOREST               | Used for forest partitioning                             |
-| T8\\_MPI\\_GHOST\\_FOREST                   | Used for for ghost layer creation                        |
-| T8\\_MPI\\_GHOST\\_EXC\\_FOREST             | Used for ghost data exchange                             |
-| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_START | Used for cmesh uniform bounds computation.               |
-| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_END   |                                                          |
-| T8\\_MPI\\_TEST\\_ELEMENT\\_PACK\\_TAG      | Used for testing mpi pack and unpack functionality       |
-| T8\\_MPI\\_PFC\\_TAG                        | Used for data exchange during partition for coarsening.  |
-| T8\\_MPI\\_TAG\\_LAST                       | Dummy last MPI tag.                                      |
+| Enumerator                                   | Note                                                         |
+| :------------------------------------------- | :----------------------------------------------------------- |
+| T8\\_MPI\\_TAG\\_FIRST                       | Dummy first MPT tag.                                         |
+| T8\\_MPI\\_PARTITION\\_CMESH                 | Used for coarse mesh partitioning                            |
+| T8\\_MPI\\_PARTITION\\_FOREST                | Used for forest partitioning                                 |
+| T8\\_MPI\\_GHOST\\_FOREST                    | Used for for ghost layer creation                            |
+| T8\\_MPI\\_GHOST\\_EXC\\_FOREST              | Used for ghost data exchange                                 |
+| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_START  | Used for cmesh uniform bounds computation.                   |
+| T8\\_MPI\\_CMESH\\_UNIFORM\\_BOUNDS\\_END    |                                                              |
+| T8\\_MPI\\_TEST\\_ELEMENT\\_PACK\\_TAG       | Used for testing mpi pack and unpack functionality           |
+| T8\\_MPI\\_PFC\\_TAG                         | Used for data exchange during partition for coarsening.      |
+| T8\\_MPI\\_BOUNDARY\\_CONDITION\\_SYNC\\_TAG | Used for the global synchronization of boundary conditions.  |
+| T8\\_MPI\\_TAG\\_LAST                        | Dummy last MPI tag.                                          |
 """
 @cenum t8_MPI_tag_t::UInt32 begin
     T8_MPI_TAG_FIRST = 214
@@ -3254,13 +3272,15 @@ Communication tags used internal to t8code.
     T8_MPI_CMESH_UNIFORM_BOUNDS_END = 300
     T8_MPI_TEST_ELEMENT_PACK_TAG = 301
     T8_MPI_PFC_TAG = 302
-    T8_MPI_TAG_LAST = 303
+    T8_MPI_BOUNDARY_CONDITION_SYNC_TAG = 303
+    T8_MPI_TAG_LAST = 304
 end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_logf(category, priority, fmt, va_list...)
-        :(@ccall(libt8.t8_logf(category::Cint, priority::Cint, fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_logf(category::Cint, priority::Cint, fmt::Cstring;
+                           $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 """
     t8_log_indent_push()
@@ -3292,43 +3312,45 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_global_errorf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_global_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_global_essentialf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_essentialf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_global_essentialf(fmt::Cstring;
+                                        $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_global_productionf(fmt, va_list...)
-        :(@ccall(libt8.t8_global_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_global_productionf(fmt::Cstring;
+                                         $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_global_infof(fmt, va_list...)
-        :(@ccall(libt8.t8_global_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_global_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_infof(fmt, va_list...)
-        :(@ccall(libt8.t8_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_infof(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_productionf(fmt, va_list...)
-        :(@ccall(libt8.t8_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_productionf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_debugf(fmt, va_list...)
-        :(@ccall(libt8.t8_debugf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_debugf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function t8_errorf(fmt, va_list...)
-        :(@ccall(libt8.t8_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
-    end
+    :(@ccall(libt8.t8_errorf(fmt::Cstring; $(to_c_type_pairs(va_list)...))::Cvoid))
+end
 
 """
     t8_set_external_log_fcn(log_fcn)
@@ -3378,7 +3400,8 @@ void * t8_sc_array_index_locidx (const sc_array_t *array, const t8_locidx_t inde
 ```
 """
 function t8_sc_array_index_locidx(array, index)
-    @ccall libt8.t8_sc_array_index_locidx(array::Ptr{sc_array_t}, index::t8_locidx_t)::Ptr{Cvoid}
+    @ccall libt8.t8_sc_array_index_locidx(array::Ptr{sc_array_t},
+                                          index::t8_locidx_t)::Ptr{Cvoid}
 end
 
 """
@@ -3459,7 +3482,8 @@ void sc_shmem_memcpy (void *destarray, void *srcarray, size_t bytes, sc_MPI_Comm
 ```
 """
 function sc_shmem_memcpy(destarray, srcarray, bytes, comm)
-    @ccall libsc.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid}, bytes::Csize_t, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_memcpy(destarray::Ptr{Cvoid}, srcarray::Ptr{Cvoid},
+                                 bytes::Csize_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3470,8 +3494,11 @@ end
 void sc_shmem_allgather (void *sendbuf, int sendcount, sc_MPI_Datatype sendtype, void *recvbuf, int recvcount, sc_MPI_Datatype recvtype, sc_MPI_Comm comm);
 ```
 """
-function sc_shmem_allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm)
-    @ccall libsc.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint, comm::MPI_Comm)::Cvoid
+function sc_shmem_allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype,
+                            comm)
+    @ccall libsc.sc_shmem_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint,
+                                    recvbuf::Ptr{Cvoid}, recvcount::Cint, recvtype::Cint,
+                                    comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3483,7 +3510,8 @@ void sc_shmem_prefix (void *sendbuf, void *recvbuf, int count, sc_MPI_Datatype t
 ```
 """
 function sc_shmem_prefix(sendbuf, recvbuf, count, type, op, comm)
-    @ccall libsc.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libsc.sc_shmem_prefix(sendbuf::Ptr{Cvoid}, recvbuf::Ptr{Cvoid}, count::Cint,
+                                 type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
 end
 
 mutable struct t8_shmem_array end
@@ -3535,7 +3563,8 @@ void t8_shmem_array_init (t8_shmem_array_t *parray, size_t elem_size, size_t ele
 ```
 """
 function t8_shmem_array_init(parray, elem_size, elem_count, comm)
-    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t, elem_count::Csize_t, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_shmem_array_init(parray::Ptr{t8_shmem_array_t}, elem_size::Csize_t,
+                                     elem_count::Csize_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3598,7 +3627,8 @@ void t8_shmem_array_set_gloidx (t8_shmem_array_t array, int index, t8_gloidx_t v
 ```
 """
 function t8_shmem_array_set_gloidx(array, index, value)
-    @ccall libt8.t8_shmem_array_set_gloidx(array::t8_shmem_array_t, index::Cint, value::t8_gloidx_t)::Cvoid
+    @ccall libt8.t8_shmem_array_set_gloidx(array::t8_shmem_array_t, index::Cint,
+                                           value::t8_gloidx_t)::Cvoid
 end
 
 """
@@ -3623,7 +3653,8 @@ void t8_shmem_array_copy (t8_shmem_array_t dest, t8_shmem_array_t source);
 ```
 """
 function t8_shmem_array_copy(dest, source)
-    @ccall libt8.t8_shmem_array_copy(dest::t8_shmem_array_t, source::t8_shmem_array_t)::Cvoid
+    @ccall libt8.t8_shmem_array_copy(dest::t8_shmem_array_t,
+                                     source::t8_shmem_array_t)::Cvoid
 end
 
 """
@@ -3634,8 +3665,11 @@ end
 void t8_shmem_array_allgather (const void *sendbuf, int sendcount, sc_MPI_Datatype sendtype, t8_shmem_array_t recvarray, int recvcount, sc_MPI_Datatype recvtype);
 ```
 """
-function t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount, recvtype)
-    @ccall libt8.t8_shmem_array_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvcount::Cint, recvtype::Cint)::Cvoid
+function t8_shmem_array_allgather(sendbuf, sendcount, sendtype, recvarray, recvcount,
+                                  recvtype)
+    @ccall libt8.t8_shmem_array_allgather(sendbuf::Ptr{Cvoid}, sendcount::Cint,
+                                          sendtype::Cint, recvarray::t8_shmem_array_t,
+                                          recvcount::Cint, recvtype::Cint)::Cvoid
 end
 
 """
@@ -3647,7 +3681,9 @@ void t8_shmem_array_allgatherv (void *sendbuf, const int sendcount, sc_MPI_Datat
 ```
 """
 function t8_shmem_array_allgatherv(sendbuf, sendcount, sendtype, recvarray, recvtype, comm)
-    @ccall libt8.t8_shmem_array_allgatherv(sendbuf::Ptr{Cvoid}, sendcount::Cint, sendtype::Cint, recvarray::t8_shmem_array_t, recvtype::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_shmem_array_allgatherv(sendbuf::Ptr{Cvoid}, sendcount::Cint,
+                                           sendtype::Cint, recvarray::t8_shmem_array_t,
+                                           recvtype::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3659,7 +3695,9 @@ void t8_shmem_array_prefix (const void *sendbuf, t8_shmem_array_t recvarray, con
 ```
 """
 function t8_shmem_array_prefix(sendbuf, recvarray, count, type, op, comm)
-    @ccall libt8.t8_shmem_array_prefix(sendbuf::Ptr{Cvoid}, recvarray::t8_shmem_array_t, count::Cint, type::Cint, op::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_shmem_array_prefix(sendbuf::Ptr{Cvoid}, recvarray::t8_shmem_array_t,
+                                       count::Cint, type::Cint, op::Cint,
+                                       comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -3770,7 +3808,8 @@ t8_gloidx_t t8_shmem_array_get_gloidx (t8_shmem_array_t array, int index);
 ```
 """
 function t8_shmem_array_get_gloidx(array, index)
-    @ccall libt8.t8_shmem_array_get_gloidx(array::t8_shmem_array_t, index::Cint)::t8_gloidx_t
+    @ccall libt8.t8_shmem_array_get_gloidx(array::t8_shmem_array_t,
+                                           index::Cint)::t8_gloidx_t
 end
 
 """
@@ -3846,7 +3885,8 @@ void * t8_shmem_array_index_for_writing (t8_shmem_array_t array, size_t index);
 ```
 """
 function t8_shmem_array_index_for_writing(array, index)
-    @ccall libt8.t8_shmem_array_index_for_writing(array::t8_shmem_array_t, index::Csize_t)::Ptr{Cvoid}
+    @ccall libt8.t8_shmem_array_index_for_writing(array::t8_shmem_array_t,
+                                                  index::Csize_t)::Ptr{Cvoid}
 end
 
 """
@@ -3869,7 +3909,8 @@ int t8_shmem_array_is_equal (t8_shmem_array_t array_a, t8_shmem_array_t array_b)
 ```
 """
 function t8_shmem_array_is_equal(array_a, array_b)
-    @ccall libt8.t8_shmem_array_is_equal(array_a::t8_shmem_array_t, array_b::t8_shmem_array_t)::Cint
+    @ccall libt8.t8_shmem_array_is_equal(array_a::t8_shmem_array_t,
+                                         array_b::t8_shmem_array_t)::Cint
 end
 
 """
@@ -3906,7 +3947,8 @@ int t8_shmem_array_binary_search (t8_shmem_array_t array, const t8_gloidx_t valu
 ```
 """
 function t8_shmem_array_binary_search(array, value, size, compare)
-    @ccall libt8.t8_shmem_array_binary_search(array::t8_shmem_array_t, value::t8_gloidx_t, size::Cint, compare::Ptr{Cvoid})::Cint
+    @ccall libt8.t8_shmem_array_binary_search(array::t8_shmem_array_t, value::t8_gloidx_t,
+                                              size::Cint, compare::Ptr{Cvoid})::Cint
 end
 
 """
@@ -3950,7 +3992,8 @@ int t8_eclass_count_boundary (t8_eclass_t theclass, int min_dim, int *per_eclass
 ```
 """
 function t8_eclass_count_boundary(theclass, min_dim, per_eclass)
-    @ccall libt8.t8_eclass_count_boundary(theclass::t8_eclass_t, min_dim::Cint, per_eclass::Ptr{Cint})::Cint
+    @ccall libt8.t8_eclass_count_boundary(theclass::t8_eclass_t, min_dim::Cint,
+                                          per_eclass::Ptr{Cint})::Cint
 end
 
 """
@@ -4062,7 +4105,28 @@ int t8_element_shape_t8_to_vtk_corner_number (int element_shape, int index);
 ```
 """
 function t8_element_shape_t8_to_vtk_corner_number(element_shape, index)
-    @ccall libt8.t8_element_shape_t8_to_vtk_corner_number(element_shape::Cint, index::Cint)::Cint
+    @ccall libt8.t8_element_shape_t8_to_vtk_corner_number(element_shape::Cint,
+                                                          index::Cint)::Cint
+end
+
+"""
+    t8_element_shape_vtk_to_t8_corner_number(element_shape, index)
+
+Maps the vtk corner number of the element to the t8code corner number
+
+# Arguments
+* `element_shape`:\\[in\\] The shape of the element.
+* `index`:\\[in\\] The index of the corner in vtk ordering.
+# Returns
+The corresponding t8code index.
+### Prototype
+```c
+int t8_element_shape_vtk_to_t8_corner_number (int element_shape, int index);
+```
+"""
+function t8_element_shape_vtk_to_t8_corner_number(element_shape, index)
+    @ccall libt8.t8_element_shape_vtk_to_t8_corner_number(element_shape::Cint,
+                                                          index::Cint)::Cint
 end
 
 """
@@ -4114,7 +4178,8 @@ int t8_element_shape_compare (t8_element_shape_t element_shape1, t8_element_shap
 ```
 """
 function t8_element_shape_compare(element_shape1, element_shape2)
-    @ccall libt8.t8_element_shape_compare(element_shape1::t8_element_shape_t, element_shape2::t8_element_shape_t)::Cint
+    @ccall libt8.t8_element_shape_compare(element_shape1::t8_element_shape_t,
+                                          element_shape2::t8_element_shape_t)::Cint
 end
 
 mutable struct t8_element end
@@ -4172,7 +4237,8 @@ size_t t8_element_get_element_size (const t8_scheme_c *scheme, const t8_eclass_t
 ```
 """
 function t8_element_get_element_size(scheme, tree_class)
-    @ccall libt8.t8_element_get_element_size(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Csize_t
+    @ccall libt8.t8_element_get_element_size(scheme::Ptr{t8_scheme_c},
+                                             tree_class::t8_eclass_t)::Csize_t
 end
 
 """
@@ -4186,7 +4252,8 @@ int t8_element_refines_irregular (const t8_scheme_c *scheme, const t8_eclass_t t
 ```
 """
 function t8_element_refines_irregular(scheme, tree_class)
-    @ccall libt8.t8_element_refines_irregular(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Cint
+    @ccall libt8.t8_element_refines_irregular(scheme::Ptr{t8_scheme_c},
+                                              tree_class::t8_eclass_t)::Cint
 end
 
 """
@@ -4205,7 +4272,8 @@ int t8_element_get_maxlevel (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_element_get_maxlevel(scheme, tree_class)
-    @ccall libt8.t8_element_get_maxlevel(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Cint
+    @ccall libt8.t8_element_get_maxlevel(scheme::Ptr{t8_scheme_c},
+                                         tree_class::t8_eclass_t)::Cint
 end
 
 """
@@ -4225,7 +4293,8 @@ int t8_element_get_level (const t8_scheme_c *scheme, const t8_eclass_t tree_clas
 ```
 """
 function t8_element_get_level(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_level(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_level(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                      element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4248,7 +4317,8 @@ void t8_element_copy (const t8_scheme_c *scheme, const t8_eclass_t tree_class, c
 ```
 """
 function t8_element_copy(scheme, tree_class, source, dest)
-    @ccall libt8.t8_element_copy(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, source::Ptr{t8_element_t}, dest::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_copy(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                 source::Ptr{t8_element_t}, dest::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -4269,7 +4339,9 @@ int t8_element_compare (const t8_scheme_c *scheme, const t8_eclass_t tree_class,
 ```
 """
 function t8_element_compare(scheme, tree_class, elem1, elem2)
-    @ccall libt8.t8_element_compare(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_compare(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                    elem1::Ptr{t8_element_t},
+                                    elem2::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4290,7 +4362,9 @@ int t8_element_is_equal (const t8_scheme_c *scheme, const t8_eclass_t tree_class
 ```
 """
 function t8_element_is_equal(scheme, tree_class, elem1, elem2)
-    @ccall libt8.t8_element_is_equal(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_is_equal(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                     elem1::Ptr{t8_element_t},
+                                     elem2::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4310,7 +4384,8 @@ int element_is_refinable (const t8_scheme_c *scheme, const t8_eclass_t tree_clas
 ```
 """
 function element_is_refinable(scheme, tree_class, element)
-    @ccall libt8.element_is_refinable(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.element_is_refinable(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                      element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4329,13 +4404,15 @@ void t8_element_get_parent (const t8_scheme_c *scheme, const t8_eclass_t tree_cl
 ```
 """
 function t8_element_get_parent(scheme, tree_class, element, parent)
-    @ccall libt8.t8_element_get_parent(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, parent::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_get_parent(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                       element::Ptr{t8_element_t},
+                                       parent::Ptr{t8_element_t})::Cvoid
 end
 
 """
     t8_element_get_num_siblings(scheme, tree_class, element)
 
-Compute the number of siblings of an element. That is the number of  Children of its parent.
+Compute the number of siblings of an element. That is the number of Children of its parent.
 
 # Arguments
 * `scheme`:\\[in\\] The scheme of the forest.
@@ -4349,7 +4426,9 @@ int t8_element_get_num_siblings (const t8_scheme_c *scheme, const t8_eclass_t tr
 ```
 """
 function t8_element_get_num_siblings(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_num_siblings(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_num_siblings(scheme::Ptr{t8_scheme_c},
+                                             tree_class::t8_eclass_t,
+                                             element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4369,7 +4448,9 @@ void t8_element_get_sibling (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_element_get_sibling(scheme, tree_class, elem, sibid, sibling)
-    @ccall libt8.t8_element_get_sibling(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem::Ptr{t8_element_t}, sibid::Cint, sibling::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_get_sibling(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                        elem::Ptr{t8_element_t}, sibid::Cint,
+                                        sibling::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -4389,7 +4470,9 @@ int t8_element_get_num_corners (const t8_scheme_c *scheme, const t8_eclass_t tre
 ```
 """
 function t8_element_get_num_corners(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_num_corners(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_num_corners(scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4409,7 +4492,8 @@ int t8_element_get_num_faces (const t8_scheme_c *scheme, const t8_eclass_t tree_
 ```
 """
 function t8_element_get_num_faces(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_num_faces(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_num_faces(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                          element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4429,7 +4513,9 @@ int t8_element_get_max_num_faces (const t8_scheme_c *scheme, const t8_eclass_t t
 ```
 """
 function t8_element_get_max_num_faces(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_max_num_faces(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_max_num_faces(scheme::Ptr{t8_scheme_c},
+                                              tree_class::t8_eclass_t,
+                                              element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4449,7 +4535,9 @@ int t8_element_get_num_children (const t8_scheme_c *scheme, const t8_eclass_t tr
 ```
 """
 function t8_element_get_num_children(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_num_children(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_num_children(scheme::Ptr{t8_scheme_c},
+                                             tree_class::t8_eclass_t,
+                                             element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4468,7 +4556,8 @@ int t8_get_max_num_children (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_get_max_num_children(scheme, tree_class)
-    @ccall libt8.t8_get_max_num_children(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Cint
+    @ccall libt8.t8_get_max_num_children(scheme::Ptr{t8_scheme_c},
+                                         tree_class::t8_eclass_t)::Cint
 end
 
 """
@@ -4489,7 +4578,10 @@ int t8_element_get_num_face_children (const t8_scheme_c *scheme, const t8_eclass
 ```
 """
 function t8_element_get_num_face_children(scheme, tree_class, element, face)
-    @ccall libt8.t8_element_get_num_face_children(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint)::Cint
+    @ccall libt8.t8_element_get_num_face_children(scheme::Ptr{t8_scheme_c},
+                                                  tree_class::t8_eclass_t,
+                                                  element::Ptr{t8_element_t},
+                                                  face::Cint)::Cint
 end
 
 """
@@ -4513,7 +4605,10 @@ int t8_element_get_face_corner (const t8_scheme_c *scheme, const t8_eclass_t tre
 ```
 """
 function t8_element_get_face_corner(scheme, tree_class, element, face, corner)
-    @ccall libt8.t8_element_get_face_corner(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, corner::Cint)::Cint
+    @ccall libt8.t8_element_get_face_corner(scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            element::Ptr{t8_element_t}, face::Cint,
+                                            corner::Cint)::Cint
 end
 
 """
@@ -4535,7 +4630,10 @@ int t8_element_get_corner_face (const t8_scheme_c *scheme, const t8_eclass_t tre
 ```
 """
 function t8_element_get_corner_face(scheme, tree_class, element, corner, face)
-    @ccall libt8.t8_element_get_corner_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, corner::Cint, face::Cint)::Cint
+    @ccall libt8.t8_element_get_corner_face(scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            element::Ptr{t8_element_t}, corner::Cint,
+                                            face::Cint)::Cint
 end
 
 """
@@ -4555,7 +4653,9 @@ void t8_element_get_child (const t8_scheme_c *scheme, const t8_eclass_t tree_cla
 ```
 """
 function t8_element_get_child(scheme, tree_class, element, childid, child)
-    @ccall libt8.t8_element_get_child(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, childid::Cint, child::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_get_child(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                      element::Ptr{t8_element_t}, childid::Cint,
+                                      child::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -4578,7 +4678,9 @@ void t8_element_get_children (const t8_scheme_c *scheme, const t8_eclass_t tree_
 ```
 """
 function t8_element_get_children(scheme, tree_class, element, length, c)
-    @ccall libt8.t8_element_get_children(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, length::Cint, c::Ptr{Ptr{t8_element_t}})::Cvoid
+    @ccall libt8.t8_element_get_children(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                         element::Ptr{t8_element_t}, length::Cint,
+                                         c::Ptr{Ptr{t8_element_t}})::Cvoid
 end
 
 """
@@ -4598,7 +4700,8 @@ int t8_element_get_child_id (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_element_get_child_id(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_child_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cint
+    @ccall libt8.t8_element_get_child_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                         element::Ptr{t8_element_t})::Cint
 end
 
 """
@@ -4619,7 +4722,9 @@ int t8_element_get_ancestor_id (const t8_scheme_c *scheme, const t8_eclass_t tre
 ```
 """
 function t8_element_get_ancestor_id(scheme, tree_class, element, level)
-    @ccall libt8.t8_element_get_ancestor_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, level::Cint)::Cint
+    @ccall libt8.t8_element_get_ancestor_id(scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            element::Ptr{t8_element_t}, level::Cint)::Cint
 end
 
 """
@@ -4639,7 +4744,8 @@ int t8_elements_are_family (const t8_scheme_c *scheme, const t8_eclass_t tree_cl
 ```
 """
 function t8_elements_are_family(scheme, tree_class, fam)
-    @ccall libt8.t8_elements_are_family(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, fam::Ptr{Ptr{t8_element_t}})::Cint
+    @ccall libt8.t8_elements_are_family(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                        fam::Ptr{Ptr{t8_element_t}})::Cint
 end
 
 """
@@ -4659,7 +4765,9 @@ void t8_element_get_nca (const t8_scheme_c *scheme, const t8_eclass_t tree_class
 ```
 """
 function t8_element_get_nca(scheme, tree_class, elem1, elem2, nca)
-    @ccall libt8.t8_element_get_nca(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t}, nca::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_get_nca(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                    elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t},
+                                    nca::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -4680,7 +4788,10 @@ t8_element_shape_t t8_element_get_face_shape (const t8_scheme_c *scheme, const t
 ```
 """
 function t8_element_get_face_shape(scheme, tree_class, element, face)
-    @ccall libt8.t8_element_get_face_shape(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint)::t8_element_shape_t
+    @ccall libt8.t8_element_get_face_shape(scheme::Ptr{t8_scheme_c},
+                                           tree_class::t8_eclass_t,
+                                           element::Ptr{t8_element_t},
+                                           face::Cint)::t8_element_shape_t
 end
 
 """
@@ -4701,8 +4812,14 @@ Given an element and a face of the element, compute all children of the element 
 void t8_element_get_children_at_face (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const int face, t8_element_t *children[], const int num_children, int *child_indices);
 ```
 """
-function t8_element_get_children_at_face(scheme, tree_class, element, face, children, num_children, child_indices)
-    @ccall libt8.t8_element_get_children_at_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, children::Ptr{Ptr{t8_element_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
+function t8_element_get_children_at_face(scheme, tree_class, element, face, children,
+                                         num_children, child_indices)
+    @ccall libt8.t8_element_get_children_at_face(scheme::Ptr{t8_scheme_c},
+                                                 tree_class::t8_eclass_t,
+                                                 element::Ptr{t8_element_t}, face::Cint,
+                                                 children::Ptr{Ptr{t8_element_t}},
+                                                 num_children::Cint,
+                                                 child_indices::Ptr{Cint})::Cvoid
 end
 
 """
@@ -4733,7 +4850,10 @@ int t8_element_face_get_child_face (const t8_scheme_c *scheme, const t8_eclass_t
 ```
 """
 function t8_element_face_get_child_face(scheme, tree_class, element, face, face_child)
-    @ccall libt8.t8_element_face_get_child_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, face_child::Cint)::Cint
+    @ccall libt8.t8_element_face_get_child_face(scheme::Ptr{t8_scheme_c},
+                                                tree_class::t8_eclass_t,
+                                                element::Ptr{t8_element_t}, face::Cint,
+                                                face_child::Cint)::Cint
 end
 
 """
@@ -4758,7 +4878,10 @@ int t8_element_face_get_parent_face (const t8_scheme_c *scheme, const t8_eclass_
 ```
 """
 function t8_element_face_get_parent_face(scheme, tree_class, element, face)
-    @ccall libt8.t8_element_face_get_parent_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint)::Cint
+    @ccall libt8.t8_element_face_get_parent_face(scheme::Ptr{t8_scheme_c},
+                                                 tree_class::t8_eclass_t,
+                                                 element::Ptr{t8_element_t},
+                                                 face::Cint)::Cint
 end
 
 """
@@ -4779,7 +4902,8 @@ int t8_element_get_tree_face (const t8_scheme_c *scheme, const t8_eclass_t tree_
 ```
 """
 function t8_element_get_tree_face(scheme, tree_class, element, face)
-    @ccall libt8.t8_element_get_tree_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint)::Cint
+    @ccall libt8.t8_element_get_tree_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                          element::Ptr{t8_element_t}, face::Cint)::Cint
 end
 
 """
@@ -4807,8 +4931,13 @@ Suppose we have two trees that share a common face f. Given an element e that is
 void t8_element_transform_face (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *elem1, t8_element_t *elem2, const int orientation, const int sign, const int is_smaller_face);
 ```
 """
-function t8_element_transform_face(scheme, tree_class, elem1, elem2, orientation, sign, is_smaller_face)
-    @ccall libt8.t8_element_transform_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t}, orientation::Cint, sign::Cint, is_smaller_face::Cint)::Cvoid
+function t8_element_transform_face(scheme, tree_class, elem1, elem2, orientation, sign,
+                                   is_smaller_face)
+    @ccall libt8.t8_element_transform_face(scheme::Ptr{t8_scheme_c},
+                                           tree_class::t8_eclass_t,
+                                           elem1::Ptr{t8_element_t},
+                                           elem2::Ptr{t8_element_t}, orientation::Cint,
+                                           sign::Cint, is_smaller_face::Cint)::Cvoid
 end
 
 """
@@ -4830,7 +4959,9 @@ int t8_element_extrude_face (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_element_extrude_face(scheme, tree_class, face, element, root_face)
-    @ccall libt8.t8_element_extrude_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, face::Ptr{t8_element_t}, element::Ptr{t8_element_t}, root_face::Cint)::Cint
+    @ccall libt8.t8_element_extrude_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                         face::Ptr{t8_element_t},
+                                         element::Ptr{t8_element_t}, root_face::Cint)::Cint
 end
 
 """
@@ -4850,7 +4981,10 @@ void t8_element_get_boundary_face (const t8_scheme_c *scheme, const t8_eclass_t 
 ```
 """
 function t8_element_get_boundary_face(scheme, tree_class, element, face, boundary)
-    @ccall libt8.t8_element_get_boundary_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, boundary::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_get_boundary_face(scheme::Ptr{t8_scheme_c},
+                                              tree_class::t8_eclass_t,
+                                              element::Ptr{t8_element_t}, face::Cint,
+                                              boundary::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -4870,8 +5004,14 @@ Construct the first descendant of an element at a given level that touches a giv
 void t8_element_get_first_descendant_face (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const int face, t8_element_t *first_desc, const int level);
 ```
 """
-function t8_element_get_first_descendant_face(scheme, tree_class, element, face, first_desc, level)
-    @ccall libt8.t8_element_get_first_descendant_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, first_desc::Ptr{t8_element_t}, level::Cint)::Cvoid
+function t8_element_get_first_descendant_face(scheme, tree_class, element, face, first_desc,
+                                              level)
+    @ccall libt8.t8_element_get_first_descendant_face(scheme::Ptr{t8_scheme_c},
+                                                      tree_class::t8_eclass_t,
+                                                      element::Ptr{t8_element_t},
+                                                      face::Cint,
+                                                      first_desc::Ptr{t8_element_t},
+                                                      level::Cint)::Cvoid
 end
 
 """
@@ -4891,8 +5031,13 @@ Construct the last descendant of an element at a given level that touches a give
 void t8_element_get_last_descendant_face (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const int face, t8_element_t *last_desc, const int level);
 ```
 """
-function t8_element_get_last_descendant_face(scheme, tree_class, element, face, last_desc, level)
-    @ccall libt8.t8_element_get_last_descendant_face(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint, last_desc::Ptr{t8_element_t}, level::Cint)::Cvoid
+function t8_element_get_last_descendant_face(scheme, tree_class, element, face, last_desc,
+                                             level)
+    @ccall libt8.t8_element_get_last_descendant_face(scheme::Ptr{t8_scheme_c},
+                                                     tree_class::t8_eclass_t,
+                                                     element::Ptr{t8_element_t}, face::Cint,
+                                                     last_desc::Ptr{t8_element_t},
+                                                     level::Cint)::Cvoid
 end
 
 """
@@ -4913,7 +5058,9 @@ int t8_element_is_root_boundary (const t8_scheme_c *scheme, const t8_eclass_t tr
 ```
 """
 function t8_element_is_root_boundary(scheme, tree_class, element, face)
-    @ccall libt8.t8_element_is_root_boundary(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, face::Cint)::Cint
+    @ccall libt8.t8_element_is_root_boundary(scheme::Ptr{t8_scheme_c},
+                                             tree_class::t8_eclass_t,
+                                             element::Ptr{t8_element_t}, face::Cint)::Cint
 end
 
 """
@@ -4935,8 +5082,13 @@ True if *neigh* is inside the root tree. False if not. In this case *neigh*'s da
 int t8_element_get_face_neighbor_inside (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, t8_element_t *neigh, const int face, int *neigh_face);
 ```
 """
-function t8_element_get_face_neighbor_inside(scheme, tree_class, element, neigh, face, neigh_face)
-    @ccall libt8.t8_element_get_face_neighbor_inside(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, neigh::Ptr{t8_element_t}, face::Cint, neigh_face::Ptr{Cint})::Cint
+function t8_element_get_face_neighbor_inside(scheme, tree_class, element, neigh, face,
+                                             neigh_face)
+    @ccall libt8.t8_element_get_face_neighbor_inside(scheme::Ptr{t8_scheme_c},
+                                                     tree_class::t8_eclass_t,
+                                                     element::Ptr{t8_element_t},
+                                                     neigh::Ptr{t8_element_t}, face::Cint,
+                                                     neigh_face::Ptr{Cint})::Cint
 end
 
 """
@@ -4956,7 +5108,8 @@ t8_element_shape_t t8_element_get_shape (const t8_scheme_c *scheme, const t8_ecl
 ```
 """
 function t8_element_get_shape(scheme, tree_class, element)
-    @ccall libt8.t8_element_get_shape(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::t8_element_shape_t
+    @ccall libt8.t8_element_get_shape(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                      element::Ptr{t8_element_t})::t8_element_shape_t
 end
 
 """
@@ -4976,7 +5129,9 @@ void t8_element_set_linear_id (const t8_scheme_c *scheme, const t8_eclass_t tree
 ```
 """
 function t8_element_set_linear_id(scheme, tree_class, element, level, id)
-    @ccall libt8.t8_element_set_linear_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, level::Cint, id::t8_linearidx_t)::Cvoid
+    @ccall libt8.t8_element_set_linear_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                          element::Ptr{t8_element_t}, level::Cint,
+                                          id::t8_linearidx_t)::Cvoid
 end
 
 """
@@ -4997,7 +5152,9 @@ t8_linearidx_t t8_element_get_linear_id (const t8_scheme_c *scheme, const t8_ecl
 ```
 """
 function t8_element_get_linear_id(scheme, tree_class, element, level)
-    @ccall libt8.t8_element_get_linear_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, level::Cint)::t8_linearidx_t
+    @ccall libt8.t8_element_get_linear_id(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                          element::Ptr{t8_element_t},
+                                          level::Cint)::t8_linearidx_t
 end
 
 """
@@ -5017,7 +5174,11 @@ void t8_element_get_first_descendant (const t8_scheme_c *scheme, const t8_eclass
 ```
 """
 function t8_element_get_first_descendant(scheme, tree_class, element, desc, level)
-    @ccall libt8.t8_element_get_first_descendant(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, desc::Ptr{t8_element_t}, level::Cint)::Cvoid
+    @ccall libt8.t8_element_get_first_descendant(scheme::Ptr{t8_scheme_c},
+                                                 tree_class::t8_eclass_t,
+                                                 element::Ptr{t8_element_t},
+                                                 desc::Ptr{t8_element_t},
+                                                 level::Cint)::Cvoid
 end
 
 """
@@ -5037,7 +5198,10 @@ void t8_element_get_last_descendant (const t8_scheme_c *scheme, const t8_eclass_
 ```
 """
 function t8_element_get_last_descendant(scheme, tree_class, element, desc, level)
-    @ccall libt8.t8_element_get_last_descendant(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, desc::Ptr{t8_element_t}, level::Cint)::Cvoid
+    @ccall libt8.t8_element_get_last_descendant(scheme::Ptr{t8_scheme_c},
+                                                tree_class::t8_eclass_t,
+                                                element::Ptr{t8_element_t},
+                                                desc::Ptr{t8_element_t}, level::Cint)::Cvoid
 end
 
 """
@@ -5056,7 +5220,10 @@ void t8_element_construct_successor (const t8_scheme_c *scheme, const t8_eclass_
 ```
 """
 function t8_element_construct_successor(scheme, tree_class, elem1, elem2)
-    @ccall libt8.t8_element_construct_successor(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem1::Ptr{t8_element_t}, elem2::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_construct_successor(scheme::Ptr{t8_scheme_c},
+                                                tree_class::t8_eclass_t,
+                                                elem1::Ptr{t8_element_t},
+                                                elem2::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -5080,7 +5247,11 @@ void t8_element_get_vertex_reference_coords (const t8_scheme_c *scheme, const t8
 ```
 """
 function t8_element_get_vertex_reference_coords(scheme, tree_class, element, vertex, coords)
-    @ccall libt8.t8_element_get_vertex_reference_coords(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, vertex::Cint, coords::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_element_get_vertex_reference_coords(scheme::Ptr{t8_scheme_c},
+                                                        tree_class::t8_eclass_t,
+                                                        element::Ptr{t8_element_t},
+                                                        vertex::Cint,
+                                                        coords::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -5112,8 +5283,14 @@ of the point in the reference space of the element.
 void t8_element_get_reference_coords (const t8_scheme_c *scheme, const t8_eclass_t tree_class, const t8_element_t *element, const double *ref_coords, const size_t num_coords, double out_coords[]);
 ```
 """
-function t8_element_get_reference_coords(scheme, tree_class, element, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_element_get_reference_coords(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+function t8_element_get_reference_coords(scheme, tree_class, element, ref_coords,
+                                         num_coords, out_coords)
+    @ccall libt8.t8_element_get_reference_coords(scheme::Ptr{t8_scheme_c},
+                                                 tree_class::t8_eclass_t,
+                                                 element::Ptr{t8_element_t},
+                                                 ref_coords::Ptr{Cdouble},
+                                                 num_coords::Csize_t,
+                                                 out_coords::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -5136,7 +5313,9 @@ t8_gloidx_t t8_element_count_leaves (const t8_scheme_c *scheme, const t8_eclass_
 ```
 """
 function t8_element_count_leaves(scheme, tree_class, element, level)
-    @ccall libt8.t8_element_count_leaves(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, level::Cint)::t8_gloidx_t
+    @ccall libt8.t8_element_count_leaves(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                         element::Ptr{t8_element_t},
+                                         level::Cint)::t8_gloidx_t
 end
 
 """
@@ -5158,7 +5337,9 @@ t8_gloidx_t t8_element_count_leaves_from_root (const t8_scheme_c *scheme, const 
 ```
 """
 function t8_element_count_leaves_from_root(scheme, tree_class, level)
-    @ccall libt8.t8_element_count_leaves_from_root(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, level::Cint)::t8_gloidx_t
+    @ccall libt8.t8_element_count_leaves_from_root(scheme::Ptr{t8_scheme_c},
+                                                   tree_class::t8_eclass_t,
+                                                   level::Cint)::t8_gloidx_t
 end
 
 """
@@ -5178,7 +5359,9 @@ void t8_element_to_string (const t8_scheme_c *scheme, const t8_eclass_t tree_cla
 ```
 """
 function t8_element_to_string(scheme, tree_class, element, debug_string, string_size)
-    @ccall libt8.t8_element_to_string(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t}, debug_string::Cstring, string_size::Cint)::Cvoid
+    @ccall libt8.t8_element_to_string(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                      element::Ptr{t8_element_t}, debug_string::Cstring,
+                                      string_size::Cint)::Cvoid
 end
 
 """
@@ -5212,7 +5395,8 @@ void t8_element_new (const t8_scheme_c *scheme, const t8_eclass_t tree_class, co
 ```
 """
 function t8_element_new(scheme, tree_class, length, elems)
-    @ccall libt8.t8_element_new(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elems::Ptr{Ptr{t8_element_t}})::Cvoid
+    @ccall libt8.t8_element_new(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                length::Cint, elems::Ptr{Ptr{t8_element_t}})::Cvoid
 end
 
 """
@@ -5246,7 +5430,8 @@ void t8_element_init (const t8_scheme_c *scheme, const t8_eclass_t tree_class, c
 ```
 """
 function t8_element_init(scheme, tree_class, length, elem)
-    @ccall libt8.t8_element_init(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elem::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_init(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                 length::Cint, elem::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -5272,7 +5457,8 @@ void t8_element_deinit (const t8_scheme_c *scheme, const t8_eclass_t tree_class,
 ```
 """
 function t8_element_deinit(scheme, tree_class, length, elems)
-    @ccall libt8.t8_element_deinit(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elems::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_deinit(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                   length::Cint, elems::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -5291,7 +5477,8 @@ void t8_element_destroy (const t8_scheme_c *scheme, const t8_eclass_t tree_class
 ```
 """
 function t8_element_destroy(scheme, tree_class, length, elems)
-    @ccall libt8.t8_element_destroy(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, length::Cint, elems::Ptr{Ptr{t8_element_t}})::Cvoid
+    @ccall libt8.t8_element_destroy(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                    length::Cint, elems::Ptr{Ptr{t8_element_t}})::Cvoid
 end
 
 """
@@ -5309,7 +5496,8 @@ void t8_element_set_to_root (const t8_scheme_c *scheme, const t8_eclass_t tree_c
 ```
 """
 function t8_element_set_to_root(scheme, tree_class, element)
-    @ccall libt8.t8_element_set_to_root(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, element::Ptr{t8_element_t})::Cvoid
+    @ccall libt8.t8_element_set_to_root(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                        element::Ptr{t8_element_t})::Cvoid
 end
 
 """
@@ -5320,8 +5508,12 @@ end
 void t8_element_MPI_Pack (const t8_scheme_c *scheme, const t8_eclass_t tree_class, t8_element_t **const elements, const unsigned int count, void *send_buffer, const int buffer_size, int *position, sc_MPI_Comm comm);
 ```
 """
-function t8_element_MPI_Pack(scheme, tree_class, elements, count, send_buffer, buffer_size, position, comm)
-    @ccall libt8.t8_element_MPI_Pack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
+function t8_element_MPI_Pack(scheme, tree_class, elements, count, send_buffer, buffer_size,
+                             position, comm)
+    @ccall libt8.t8_element_MPI_Pack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                     elements::Ptr{Ptr{t8_element_t}}, count::Cuint,
+                                     send_buffer::Ptr{Cvoid}, buffer_size::Cint,
+                                     position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -5333,7 +5525,9 @@ void t8_element_MPI_Pack_size (const t8_scheme_c *scheme, const t8_eclass_t tree
 ```
 """
 function t8_element_MPI_Pack_size(scheme, tree_class, count, comm, pack_size)
-    @ccall libt8.t8_element_MPI_Pack_size(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
+    @ccall libt8.t8_element_MPI_Pack_size(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                          count::Cuint, comm::MPI_Comm,
+                                          pack_size::Ptr{Cint})::Cvoid
 end
 
 """
@@ -5344,8 +5538,13 @@ end
 void t8_element_MPI_Unpack (const t8_scheme_c *scheme, const t8_eclass_t tree_class, void *recvbuf, const int buffer_size, int *position, t8_element_t **elements, const unsigned int count, sc_MPI_Comm comm);
 ```
 """
-function t8_element_MPI_Unpack(scheme, tree_class, recvbuf, buffer_size, position, elements, count, comm)
-    @ccall libt8.t8_element_MPI_Unpack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_element_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
+function t8_element_MPI_Unpack(scheme, tree_class, recvbuf, buffer_size, position, elements,
+                               count, comm)
+    @ccall libt8.t8_element_MPI_Unpack(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t,
+                                       recvbuf::Ptr{Cvoid}, buffer_size::Cint,
+                                       position::Ptr{Cint},
+                                       elements::Ptr{Ptr{t8_element_t}}, count::Cuint,
+                                       comm::MPI_Comm)::Cvoid
 end
 
 mutable struct t8_cmesh end
@@ -5510,7 +5709,6 @@ const t8_geometry_c = t8_geometry
 
 mutable struct t8_geometry_handler end
 
-"""This typedef holds virtual functions for the geometry handler. We need it so that we can use [`t8_geometry_handler_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling) TODO: Delete this when the cmesh is a proper cpp class."""
 const t8_geometry_handler_c = t8_geometry_handler
 
 """
@@ -5530,7 +5728,9 @@ void t8_geometry_evaluate (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const double *
 ```
 """
 function t8_geometry_evaluate(cmesh, gtreeid, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_geometry_evaluate(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_geometry_evaluate(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t,
+                                      ref_coords::Ptr{Cdouble}, num_coords::Csize_t,
+                                      out_coords::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -5550,7 +5750,9 @@ void t8_geometry_jacobian (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const double *
 ```
 """
 function t8_geometry_jacobian(cmesh, gtreeid, ref_coords, num_coords, jacobian)
-    @ccall libt8.t8_geometry_jacobian(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, jacobian::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_geometry_jacobian(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t,
+                                      ref_coords::Ptr{Cdouble}, num_coords::Csize_t,
+                                      jacobian::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -5569,7 +5771,8 @@ t8_geometry_type_t t8_geometry_get_type (t8_cmesh_t cmesh, t8_gloidx_t gtreeid);
 ```
 """
 function t8_geometry_get_type(cmesh, gtreeid)
-    @ccall libt8.t8_geometry_get_type(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::t8_geometry_type_t
+    @ccall libt8.t8_geometry_get_type(cmesh::t8_cmesh_t,
+                                      gtreeid::t8_gloidx_t)::t8_geometry_type_t
 end
 
 """
@@ -5588,7 +5791,8 @@ int t8_geometry_tree_negative_volume (const t8_cmesh_t cmesh, const t8_gloidx_t 
 ```
 """
 function t8_geometry_tree_negative_volume(cmesh, gtreeid)
-    @ccall libt8.t8_geometry_tree_negative_volume(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Cint
+    @ccall libt8.t8_geometry_tree_negative_volume(cmesh::t8_cmesh_t,
+                                                  gtreeid::t8_gloidx_t)::Cint
 end
 
 mutable struct t8_ctree end
@@ -5756,8 +5960,11 @@ t8\\_cmesh\\_set\\_partition\\_offset, [`t8_cmesh_set_partition_uniform`](@ref)
 void t8_cmesh_set_partition_range (t8_cmesh_t cmesh, int set_face_knowledge, t8_gloidx_t first_local_tree, t8_gloidx_t last_local_tree);
 ```
 """
-function t8_cmesh_set_partition_range(cmesh, set_face_knowledge, first_local_tree, last_local_tree)
-    @ccall libt8.t8_cmesh_set_partition_range(cmesh::t8_cmesh_t, set_face_knowledge::Cint, first_local_tree::t8_gloidx_t, last_local_tree::t8_gloidx_t)::Cvoid
+function t8_cmesh_set_partition_range(cmesh, set_face_knowledge, first_local_tree,
+                                      last_local_tree)
+    @ccall libt8.t8_cmesh_set_partition_range(cmesh::t8_cmesh_t, set_face_knowledge::Cint,
+                                              first_local_tree::t8_gloidx_t,
+                                              last_local_tree::t8_gloidx_t)::Cvoid
 end
 
 """
@@ -5774,7 +5981,8 @@ void t8_cmesh_set_partition_offsets (t8_cmesh_t cmesh, t8_shmem_array_t tree_off
 ```
 """
 function t8_cmesh_set_partition_offsets(cmesh, tree_offsets)
-    @ccall libt8.t8_cmesh_set_partition_offsets(cmesh::t8_cmesh_t, tree_offsets::t8_shmem_array_t)::Cvoid
+    @ccall libt8.t8_cmesh_set_partition_offsets(cmesh::t8_cmesh_t,
+                                                tree_offsets::t8_shmem_array_t)::Cvoid
 end
 
 """
@@ -5792,7 +6000,8 @@ void t8_cmesh_set_partition_uniform (t8_cmesh_t cmesh, const int element_level, 
 ```
 """
 function t8_cmesh_set_partition_uniform(cmesh, element_level, scheme)
-    @ccall libt8.t8_cmesh_set_partition_uniform(cmesh::t8_cmesh_t, element_level::Cint, scheme::Ptr{t8_scheme_c})::Cvoid
+    @ccall libt8.t8_cmesh_set_partition_uniform(cmesh::t8_cmesh_t, element_level::Cint,
+                                                scheme::Ptr{t8_scheme_c})::Cvoid
 end
 
 """
@@ -5806,7 +6015,8 @@ void t8_cmesh_set_refine (t8_cmesh_t cmesh, const int level, const t8_scheme_c *
 ```
 """
 function t8_cmesh_set_refine(cmesh, level, scheme)
-    @ccall libt8.t8_cmesh_set_refine(cmesh::t8_cmesh_t, level::Cint, scheme::Ptr{t8_scheme_c})::Cvoid
+    @ccall libt8.t8_cmesh_set_refine(cmesh::t8_cmesh_t, level::Cint,
+                                     scheme::Ptr{t8_scheme_c})::Cvoid
 end
 
 """
@@ -5841,7 +6051,8 @@ void t8_cmesh_set_tree_class (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, t8_eclass_
 ```
 """
 function t8_cmesh_set_tree_class(cmesh, gtree_id, tree_class)
-    @ccall libt8.t8_cmesh_set_tree_class(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, tree_class::t8_eclass_t)::Cvoid
+    @ccall libt8.t8_cmesh_set_tree_class(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t,
+                                         tree_class::t8_eclass_t)::Cvoid
 end
 
 """
@@ -5869,8 +6080,11 @@ Store an attribute at a tree in a cmesh. Attributes can be arbitrary data that i
 void t8_cmesh_set_attribute (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, int package_id, int key, void *data, size_t data_size, int data_persists);
 ```
 """
-function t8_cmesh_set_attribute(cmesh, gtree_id, package_id, key, data, data_size, data_persists)
-    @ccall libt8.t8_cmesh_set_attribute(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, package_id::Cint, key::Cint, data::Ptr{Cvoid}, data_size::Csize_t, data_persists::Cint)::Cvoid
+function t8_cmesh_set_attribute(cmesh, gtree_id, package_id, key, data, data_size,
+                                data_persists)
+    @ccall libt8.t8_cmesh_set_attribute(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t,
+                                        package_id::Cint, key::Cint, data::Ptr{Cvoid},
+                                        data_size::Csize_t, data_persists::Cint)::Cvoid
 end
 
 """
@@ -5901,7 +6115,9 @@ void t8_cmesh_set_attribute_string (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, int 
 ```
 """
 function t8_cmesh_set_attribute_string(cmesh, gtree_id, package_id, key, string)
-    @ccall libt8.t8_cmesh_set_attribute_string(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, package_id::Cint, key::Cint, string::Cstring)::Cvoid
+    @ccall libt8.t8_cmesh_set_attribute_string(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t,
+                                               package_id::Cint, key::Cint,
+                                               string::Cstring)::Cvoid
 end
 
 """
@@ -5937,8 +6153,14 @@ Store an array of [`t8_gloidx_t`](@ref) as an attribute at a tree in a cmesh.
 void t8_cmesh_set_attribute_gloidx_array (t8_cmesh_t cmesh, t8_gloidx_t gtree_id, int package_id, int key, const t8_gloidx_t *data, const size_t data_count, int data_persists);
 ```
 """
-function t8_cmesh_set_attribute_gloidx_array(cmesh, gtree_id, package_id, key, data, data_count, data_persists)
-    @ccall libt8.t8_cmesh_set_attribute_gloidx_array(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, package_id::Cint, key::Cint, data::Ptr{t8_gloidx_t}, data_count::Csize_t, data_persists::Cint)::Cvoid
+function t8_cmesh_set_attribute_gloidx_array(cmesh, gtree_id, package_id, key, data,
+                                             data_count, data_persists)
+    @ccall libt8.t8_cmesh_set_attribute_gloidx_array(cmesh::t8_cmesh_t,
+                                                     gtree_id::t8_gloidx_t,
+                                                     package_id::Cint, key::Cint,
+                                                     data::Ptr{t8_gloidx_t},
+                                                     data_count::Csize_t,
+                                                     data_persists::Cint)::Cvoid
 end
 
 """
@@ -5963,7 +6185,9 @@ void t8_cmesh_set_join (t8_cmesh_t cmesh, t8_gloidx_t gtree1, t8_gloidx_t gtree2
 ```
 """
 function t8_cmesh_set_join(cmesh, gtree1, gtree2, face1, face2, orientation)
-    @ccall libt8.t8_cmesh_set_join(cmesh::t8_cmesh_t, gtree1::t8_gloidx_t, gtree2::t8_gloidx_t, face1::Cint, face2::Cint, orientation::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_set_join(cmesh::t8_cmesh_t, gtree1::t8_gloidx_t,
+                                   gtree2::t8_gloidx_t, face1::Cint, face2::Cint,
+                                   orientation::Cint)::Cvoid
 end
 
 """
@@ -6034,7 +6258,8 @@ t8_cmesh_t t8_cmesh_bcast (t8_cmesh_t cmesh_in, int root, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_bcast(cmesh_in, root, comm)
-    @ccall libt8.t8_cmesh_bcast(cmesh_in::t8_cmesh_t, root::Cint, comm::MPI_Comm)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_bcast(cmesh_in::t8_cmesh_t, root::Cint,
+                                comm::MPI_Comm)::t8_cmesh_t
 end
 
 """
@@ -6049,7 +6274,7 @@ If no geometry is registered and cmesh is modified from another cmesh then the o
     If you need to use t8_cmesh_bcast, then all geometries must be registered *after* the bcast operation, not before.
 
 # Arguments
-* `cmesh`:\\[in,out\\] The cmesh.
+* `cmesh`:\\[in,out\\] The cmesh. Must be initialized but not committed.
 * `geometry`:\\[in\\] The geometry to register.
 ### Prototype
 ```c
@@ -6057,7 +6282,8 @@ void t8_cmesh_register_geometry (t8_cmesh_t cmesh, t8_geometry_c *geometry);
 ```
 """
 function t8_cmesh_register_geometry(cmesh, geometry)
-    @ccall libt8.t8_cmesh_register_geometry(cmesh::t8_cmesh_t, geometry::Ptr{t8_geometry_c})::Cvoid
+    @ccall libt8.t8_cmesh_register_geometry(cmesh::t8_cmesh_t,
+                                            geometry::Ptr{t8_geometry_c})::Cvoid
 end
 
 """
@@ -6075,7 +6301,8 @@ void t8_cmesh_set_tree_geometry (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const t8
 ```
 """
 function t8_cmesh_set_tree_geometry(cmesh, gtreeid, geom)
-    @ccall libt8.t8_cmesh_set_tree_geometry(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, geom::Ptr{t8_geometry_c})::Cvoid
+    @ccall libt8.t8_cmesh_set_tree_geometry(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t,
+                                            geom::Ptr{t8_geometry_c})::Cvoid
 end
 
 """
@@ -6136,7 +6363,9 @@ t8_cmesh_t t8_cmesh_load_and_distribute (const char *fileprefix, int num_files, 
 ```
 """
 function t8_cmesh_load_and_distribute(fileprefix, num_files, comm, mode, procs_per_node)
-    @ccall libt8.t8_cmesh_load_and_distribute(fileprefix::Cstring, num_files::Cint, comm::MPI_Comm, mode::t8_load_mode_t, procs_per_node::Cint)::t8_cmesh_t
+    @ccall libt8.t8_cmesh_load_and_distribute(fileprefix::Cstring, num_files::Cint,
+                                              comm::MPI_Comm, mode::t8_load_mode_t,
+                                              procs_per_node::Cint)::t8_cmesh_t
 end
 
 """
@@ -6273,7 +6502,8 @@ const t8_geometry_c * t8_cmesh_get_tree_geometry (t8_cmesh_t cmesh, t8_gloidx_t 
 ```
 """
 function t8_cmesh_get_tree_geometry(cmesh, gtreeid)
-    @ccall libt8.t8_cmesh_get_tree_geometry(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t)::Ptr{t8_geometry_c}
+    @ccall libt8.t8_cmesh_get_tree_geometry(cmesh::t8_cmesh_t,
+                                            gtreeid::t8_gloidx_t)::Ptr{t8_geometry_c}
 end
 
 """
@@ -6292,7 +6522,8 @@ int t8_cmesh_treeid_is_local_tree (const t8_cmesh_t cmesh, const t8_locidx_t ltr
 ```
 """
 function t8_cmesh_treeid_is_local_tree(cmesh, ltreeid)
-    @ccall libt8.t8_cmesh_treeid_is_local_tree(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t)::Cint
+    @ccall libt8.t8_cmesh_treeid_is_local_tree(cmesh::t8_cmesh_t,
+                                               ltreeid::t8_locidx_t)::Cint
 end
 
 """
@@ -6330,7 +6561,8 @@ t8_locidx_t t8_cmesh_ltreeid_to_ghostid (const t8_cmesh_t cmesh, const t8_locidx
 ```
 """
 function t8_cmesh_ltreeid_to_ghostid(cmesh, ltreeid)
-    @ccall libt8.t8_cmesh_ltreeid_to_ghostid(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t)::t8_locidx_t
+    @ccall libt8.t8_cmesh_ltreeid_to_ghostid(cmesh::t8_cmesh_t,
+                                             ltreeid::t8_locidx_t)::t8_locidx_t
 end
 
 """
@@ -6405,7 +6637,8 @@ t8_eclass_t t8_cmesh_get_tree_class (t8_cmesh_t cmesh, t8_locidx_t ltree_id);
 ```
 """
 function t8_cmesh_get_tree_class(cmesh, ltree_id)
-    @ccall libt8.t8_cmesh_get_tree_class(cmesh::t8_cmesh_t, ltree_id::t8_locidx_t)::t8_eclass_t
+    @ccall libt8.t8_cmesh_get_tree_class(cmesh::t8_cmesh_t,
+                                         ltree_id::t8_locidx_t)::t8_eclass_t
 end
 
 """
@@ -6425,7 +6658,8 @@ int t8_cmesh_tree_face_is_boundary (t8_cmesh_t cmesh, t8_locidx_t ltree_id, int 
 ```
 """
 function t8_cmesh_tree_face_is_boundary(cmesh, ltree_id, face)
-    @ccall libt8.t8_cmesh_tree_face_is_boundary(cmesh::t8_cmesh_t, ltree_id::t8_locidx_t, face::Cint)::Cint
+    @ccall libt8.t8_cmesh_tree_face_is_boundary(cmesh::t8_cmesh_t, ltree_id::t8_locidx_t,
+                                                face::Cint)::Cint
 end
 
 """
@@ -6444,7 +6678,8 @@ t8_eclass_t t8_cmesh_get_ghost_class (t8_cmesh_t cmesh, t8_locidx_t lghost_id);
 ```
 """
 function t8_cmesh_get_ghost_class(cmesh, lghost_id)
-    @ccall libt8.t8_cmesh_get_ghost_class(cmesh::t8_cmesh_t, lghost_id::t8_locidx_t)::t8_eclass_t
+    @ccall libt8.t8_cmesh_get_ghost_class(cmesh::t8_cmesh_t,
+                                          lghost_id::t8_locidx_t)::t8_eclass_t
 end
 
 """
@@ -6466,7 +6701,8 @@ t8_gloidx_t t8_cmesh_get_global_id (t8_cmesh_t cmesh, t8_locidx_t local_id);
 ```
 """
 function t8_cmesh_get_global_id(cmesh, local_id)
-    @ccall libt8.t8_cmesh_get_global_id(cmesh::t8_cmesh_t, local_id::t8_locidx_t)::t8_gloidx_t
+    @ccall libt8.t8_cmesh_get_global_id(cmesh::t8_cmesh_t,
+                                        local_id::t8_locidx_t)::t8_gloidx_t
 end
 
 """
@@ -6488,7 +6724,8 @@ t8_locidx_t t8_cmesh_get_local_id (t8_cmesh_t cmesh, t8_gloidx_t global_id);
 ```
 """
 function t8_cmesh_get_local_id(cmesh, global_id)
-    @ccall libt8.t8_cmesh_get_local_id(cmesh::t8_cmesh_t, global_id::t8_gloidx_t)::t8_locidx_t
+    @ccall libt8.t8_cmesh_get_local_id(cmesh::t8_cmesh_t,
+                                       global_id::t8_gloidx_t)::t8_locidx_t
 end
 
 """
@@ -6517,7 +6754,9 @@ t8_locidx_t t8_cmesh_get_face_neighbor (const t8_cmesh_t cmesh, const t8_locidx_
 ```
 """
 function t8_cmesh_get_face_neighbor(cmesh, ltreeid, face, dual_face, orientation)
-    @ccall libt8.t8_cmesh_get_face_neighbor(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t, face::Cint, dual_face::Ptr{Cint}, orientation::Ptr{Cint})::t8_locidx_t
+    @ccall libt8.t8_cmesh_get_face_neighbor(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t,
+                                            face::Cint, dual_face::Ptr{Cint},
+                                            orientation::Ptr{Cint})::t8_locidx_t
 end
 
 """
@@ -6537,7 +6776,9 @@ t8_eclass_t t8_cmesh_get_tree_face_neighbor_eclass (const t8_cmesh_t cmesh, cons
 ```
 """
 function t8_cmesh_get_tree_face_neighbor_eclass(cmesh, ltreeid, face)
-    @ccall libt8.t8_cmesh_get_tree_face_neighbor_eclass(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t, face::Cint)::t8_eclass_t
+    @ccall libt8.t8_cmesh_get_tree_face_neighbor_eclass(cmesh::t8_cmesh_t,
+                                                        ltreeid::t8_locidx_t,
+                                                        face::Cint)::t8_eclass_t
 end
 
 """
@@ -6577,7 +6818,8 @@ double * t8_cmesh_get_tree_vertices (t8_cmesh_t cmesh, t8_locidx_t ltreeid);
 ```
 """
 function t8_cmesh_get_tree_vertices(cmesh, ltreeid)
-    @ccall libt8.t8_cmesh_get_tree_vertices(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t)::Ptr{Cdouble}
+    @ccall libt8.t8_cmesh_get_tree_vertices(cmesh::t8_cmesh_t,
+                                            ltreeid::t8_locidx_t)::Ptr{Cdouble}
 end
 
 """
@@ -6605,7 +6847,8 @@ void * t8_cmesh_get_attribute (const t8_cmesh_t cmesh, const int package_id, con
 ```
 """
 function t8_cmesh_get_attribute(cmesh, package_id, key, ltree_id)
-    @ccall libt8.t8_cmesh_get_attribute(cmesh::t8_cmesh_t, package_id::Cint, key::Cint, ltree_id::t8_locidx_t)::Ptr{Cvoid}
+    @ccall libt8.t8_cmesh_get_attribute(cmesh::t8_cmesh_t, package_id::Cint, key::Cint,
+                                        ltree_id::t8_locidx_t)::Ptr{Cvoid}
 end
 
 """
@@ -6638,7 +6881,9 @@ t8_gloidx_t * t8_cmesh_get_attribute_gloidx_array (const t8_cmesh_t cmesh, const
 ```
 """
 function t8_cmesh_get_attribute_gloidx_array(cmesh, package_id, key, ltree_id, data_count)
-    @ccall libt8.t8_cmesh_get_attribute_gloidx_array(cmesh::t8_cmesh_t, package_id::Cint, key::Cint, ltree_id::t8_locidx_t, data_count::Csize_t)::Ptr{t8_gloidx_t}
+    @ccall libt8.t8_cmesh_get_attribute_gloidx_array(cmesh::t8_cmesh_t, package_id::Cint,
+                                                     key::Cint, ltree_id::t8_locidx_t,
+                                                     data_count::Csize_t)::Ptr{t8_gloidx_t}
 end
 
 """
@@ -6678,8 +6923,17 @@ Calculate the section of a uniform forest for the current rank.
 void t8_cmesh_uniform_bounds_equal_element_count (t8_cmesh_t cmesh, const int level, const t8_scheme_c *tree_scheme, t8_gloidx_t *first_local_tree, t8_gloidx_t *child_in_tree_begin, t8_gloidx_t *last_local_tree, t8_gloidx_t *child_in_tree_end, int8_t *first_tree_shared);
 ```
 """
-function t8_cmesh_uniform_bounds_equal_element_count(cmesh, level, tree_scheme, first_local_tree, child_in_tree_begin, last_local_tree, child_in_tree_end, first_tree_shared)
-    @ccall libt8.t8_cmesh_uniform_bounds_equal_element_count(cmesh::t8_cmesh_t, level::Cint, tree_scheme::Ptr{t8_scheme_c}, first_local_tree::Ptr{t8_gloidx_t}, child_in_tree_begin::Ptr{t8_gloidx_t}, last_local_tree::Ptr{t8_gloidx_t}, child_in_tree_end::Ptr{t8_gloidx_t}, first_tree_shared::Ptr{Int8})::Cvoid
+function t8_cmesh_uniform_bounds_equal_element_count(cmesh, level, tree_scheme,
+                                                     first_local_tree, child_in_tree_begin,
+                                                     last_local_tree, child_in_tree_end,
+                                                     first_tree_shared)
+    @ccall libt8.t8_cmesh_uniform_bounds_equal_element_count(cmesh::t8_cmesh_t, level::Cint,
+                                                             tree_scheme::Ptr{t8_scheme_c},
+                                                             first_local_tree::Ptr{t8_gloidx_t},
+                                                             child_in_tree_begin::Ptr{t8_gloidx_t},
+                                                             last_local_tree::Ptr{t8_gloidx_t},
+                                                             child_in_tree_end::Ptr{t8_gloidx_t},
+                                                             first_tree_shared::Ptr{Int8})::Cvoid
 end
 
 """
@@ -6690,8 +6944,21 @@ end
 void t8_cmesh_uniform_bounds_for_irregular_refinement (const t8_cmesh_t cmesh, const int level, const t8_scheme_c *scheme, t8_gloidx_t *first_local_tree, t8_gloidx_t *child_in_tree_begin, t8_gloidx_t *last_local_tree, t8_gloidx_t *child_in_tree_end, int8_t *first_tree_shared, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh, level, scheme, first_local_tree, child_in_tree_begin, last_local_tree, child_in_tree_end, first_tree_shared, comm)
-    @ccall libt8.t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh::t8_cmesh_t, level::Cint, scheme::Ptr{t8_scheme_c}, first_local_tree::Ptr{t8_gloidx_t}, child_in_tree_begin::Ptr{t8_gloidx_t}, last_local_tree::Ptr{t8_gloidx_t}, child_in_tree_end::Ptr{t8_gloidx_t}, first_tree_shared::Ptr{Int8}, comm::MPI_Comm)::Cvoid
+function t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh, level, scheme,
+                                                          first_local_tree,
+                                                          child_in_tree_begin,
+                                                          last_local_tree,
+                                                          child_in_tree_end,
+                                                          first_tree_shared, comm)
+    @ccall libt8.t8_cmesh_uniform_bounds_for_irregular_refinement(cmesh::t8_cmesh_t,
+                                                                  level::Cint,
+                                                                  scheme::Ptr{t8_scheme_c},
+                                                                  first_local_tree::Ptr{t8_gloidx_t},
+                                                                  child_in_tree_begin::Ptr{t8_gloidx_t},
+                                                                  last_local_tree::Ptr{t8_gloidx_t},
+                                                                  child_in_tree_end::Ptr{t8_gloidx_t},
+                                                                  first_tree_shared::Ptr{Int8},
+                                                                  comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -6759,7 +7026,9 @@ void t8_cmesh_coords_axb (const double *coords_in, double *coords_out, int num_v
 ```
 """
 function t8_cmesh_coords_axb(coords_in, coords_out, num_vertices, alpha, b)
-    @ccall libt8.t8_cmesh_coords_axb(coords_in::Ptr{Cdouble}, coords_out::Ptr{Cdouble}, num_vertices::Cint, alpha::Cdouble, b::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_cmesh_coords_axb(coords_in::Ptr{Cdouble}, coords_out::Ptr{Cdouble},
+                                     num_vertices::Cint, alpha::Cdouble,
+                                     b::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -6778,7 +7047,10 @@ void t8_cmesh_translate_coordinates (const double *coords_in, double *coords_out
 ```
 """
 function t8_cmesh_translate_coordinates(coords_in, coords_out, num_vertices, translate)
-    @ccall libt8.t8_cmesh_translate_coordinates(coords_in::Ptr{Cdouble}, coords_out::Ptr{Cdouble}, num_vertices::Cint, translate::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_cmesh_translate_coordinates(coords_in::Ptr{Cdouble},
+                                                coords_out::Ptr{Cdouble},
+                                                num_vertices::Cint,
+                                                translate::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -6791,8 +7063,12 @@ TODO: Add proper documentation
 void t8_cmesh_new_translate_vertices_to_attributes (const t8_locidx_t *tvertices, const double *vertices, double *attr_vertices, const int num_vertices);
 ```
 """
-function t8_cmesh_new_translate_vertices_to_attributes(tvertices, vertices, attr_vertices, num_vertices)
-    @ccall libt8.t8_cmesh_new_translate_vertices_to_attributes(tvertices::Ptr{t8_locidx_t}, vertices::Ptr{Cdouble}, attr_vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
+function t8_cmesh_new_translate_vertices_to_attributes(tvertices, vertices, attr_vertices,
+                                                       num_vertices)
+    @ccall libt8.t8_cmesh_new_translate_vertices_to_attributes(tvertices::Ptr{t8_locidx_t},
+                                                               vertices::Ptr{Cdouble},
+                                                               attr_vertices::Ptr{Cdouble},
+                                                               num_vertices::Cint)::Cvoid
 end
 
 """
@@ -6823,8 +7099,123 @@ int t8_cmesh_get_local_bounding_box (const t8_cmesh_t cmesh, double bounds[6]);
 ```
 """
 function t8_cmesh_get_local_bounding_box(cmesh, bounds)
-    @ccall libt8.t8_cmesh_get_local_bounding_box(cmesh::t8_cmesh_t, bounds::Ptr{Cdouble})::Cint
+    @ccall libt8.t8_cmesh_get_local_bounding_box(cmesh::t8_cmesh_t,
+                                                 bounds::Ptr{Cdouble})::Cint
 end
+
+mutable struct t8_cmesh_boundary_condition_handler end
+
+"""This typedef is used for the opaque pointers to the handler. We need it so that we can use [`t8_cmesh_boundary_condition_handler_c`](@ref) pointers in .c files without them seeing the actual C++ code (and then not compiling). We have one cpp version with the correct namespace and one c version pointing to nothing. TODO: Delete this when the cmesh is a proper cpp class."""
+const t8_cmesh_boundary_condition_handler_c = t8_cmesh_boundary_condition_handler
+
+"""
+    t8_cmesh_set_boundary_conditions(cmesh, gtreeid, boundary_conditions, length)
+
+Applies boundary conditions to the faces of a cmesh cell.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh.
+* `gtreeid`:\\[in\\] The global id of the tree the boundary conditions should be set for.
+* `boundary_conditions`:\\[in\\] The boundary conditions to set.
+* `length`:\\[in\\] The length of *boundary_conditions*. Container must have the same length as the eclass of the cell has faces.
+### Prototype
+```c
+void t8_cmesh_set_boundary_conditions (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, const char *boundary_conditions[], size_t length);
+```
+"""
+function t8_cmesh_set_boundary_conditions(cmesh, gtreeid, boundary_conditions, length)
+    @ccall libt8.t8_cmesh_set_boundary_conditions(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t,
+                                                  boundary_conditions::Ptr{Cstring},
+                                                  length::Csize_t)::Cvoid
+end
+
+"""
+    t8_cmesh_get_boundary_conditions(cmesh, ltreeid, boundary_conditions, length)
+
+Retrieves the boundary conditions of a cmesh cell.
+
+!!! note
+
+    The cmesh local cell id is a different one as the tree id inside the forest.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh the cell lives in.
+* `ltreeid`:\\[in\\] The local cmesh id of the cell.
+* `boundary_conditions`:\\[out\\] The boundary conditions of the faces.
+* `length`:\\[out\\] The length of *boundary_conditions*.
+### Prototype
+```c
+void t8_cmesh_get_boundary_conditions (t8_cmesh_t cmesh, t8_locidx_t ltreeid, const char *boundary_conditions[T8_ECLASS_MAX_FACES], size_t *length);
+```
+"""
+function t8_cmesh_get_boundary_conditions(cmesh, ltreeid, boundary_conditions, length)
+    @ccall libt8.t8_cmesh_get_boundary_conditions(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t,
+                                                  boundary_conditions::Ptr{Cstring},
+                                                  length::Ptr{Csize_t})::Cvoid
+end
+
+"""
+    t8_cmesh_get_boundary_condition(cmesh, ltreeid, face, boundary_condition)
+
+Retrieves the boundary condition of one face of a cmesh cell. Retrieving all boundary conditions at once via t8_cmesh_get_boundary_conditions() will be faster.
+
+!!! note
+
+    The cmesh local cell id is a different one as the tree id inside the forest.
+
+# Arguments
+* `cmesh`:\\[in\\] The cmesh the cell lives in.
+* `ltreeid`:\\[in\\] The local cmesh id of the cell.
+* `face`:\\[in\\] The face id of the cell.
+* `boundary_condition`:\\[out\\] The boundary condition of the tree face.
+### Prototype
+```c
+void t8_cmesh_get_boundary_condition (t8_cmesh_t cmesh, t8_locidx_t ltreeid, int face, const char **boundary_condition);
+```
+"""
+function t8_cmesh_get_boundary_condition(cmesh, ltreeid, face, boundary_condition)
+    @ccall libt8.t8_cmesh_get_boundary_condition(cmesh::t8_cmesh_t, ltreeid::t8_locidx_t,
+                                                 face::Cint,
+                                                 boundary_condition::Ptr{Cstring})::Cvoid
+end
+
+"""
+    sc_io_read(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_io_read (sc_MPI_File mpifile, void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_io_read(mpifile, ptr, zcount, t, errmsg)
+    @ccall libsc.sc_io_read(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint,
+                            errmsg::Cstring)::Cvoid
+end
+
+"""
+    sc_io_write(mpifile, ptr, zcount, t, errmsg)
+
+### Prototype
+```c
+void sc_io_write (sc_MPI_File mpifile, const void *ptr, size_t zcount, sc_MPI_Datatype t, const char *errmsg);
+```
+"""
+function sc_io_write(mpifile, ptr, zcount, t, errmsg)
+    @ccall libsc.sc_io_write(mpifile::MPI_File, ptr::Ptr{Cvoid}, zcount::Csize_t, t::Cint,
+                             errmsg::Cstring)::Cvoid
+end
+
+"""Typedef for quadrant coordinates."""
+const p4est_qcoord_t = Int32
+
+"""Typedef for counting topological entities (trees, tree vertices)."""
+const p4est_topidx_t = Int32
+
+"""Typedef for processor-local indexing of quadrants and nodes."""
+const p4est_locidx_t = Int32
+
+"""Typedef for globally unique indexing of quadrants."""
+const p4est_gloidx_t = Int64
 
 """
     sc_io_error_t
@@ -6979,8 +7370,9 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_io_sink_new(iotype, iomode, ioencode, va_list...)
-        :(@ccall(libsc.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
-    end
+    :(@ccall(libsc.sc_io_sink_new(iotype::Cint, iomode::Cint, ioencode::Cint;
+                                  $(to_c_type_pairs(va_list)...))::Ptr{sc_io_sink_t}))
+end
 
 """
     sc_io_sink_destroy(sink)
@@ -7035,7 +7427,8 @@ int sc_io_sink_write (sc_io_sink_t * sink, const void *data, size_t bytes_avail)
 ```
 """
 function sc_io_sink_write(sink, data, bytes_avail)
-    @ccall libsc.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t)::Cint
+    @ccall libsc.sc_io_sink_write(sink::Ptr{sc_io_sink_t}, data::Ptr{Cvoid},
+                                  bytes_avail::Csize_t)::Cint
 end
 
 """
@@ -7055,7 +7448,8 @@ int sc_io_sink_complete (sc_io_sink_t * sink, size_t *bytes_in, size_t *bytes_ou
 ```
 """
 function sc_io_sink_complete(sink, bytes_in, bytes_out)
-    @ccall libsc.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_sink_complete(sink::Ptr{sc_io_sink_t}, bytes_in::Ptr{Csize_t},
+                                     bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -7079,8 +7473,9 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_io_source_new(iotype, ioencode, va_list...)
-        :(@ccall(libsc.sc_io_source_new(iotype::Cint, ioencode::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
-    end
+    :(@ccall(libsc.sc_io_source_new(iotype::Cint, ioencode::Cint;
+                                    $(to_c_type_pairs(va_list)...))::Ptr{sc_io_source_t}))
+end
 
 """
     sc_io_source_destroy(source)
@@ -7136,7 +7531,8 @@ int sc_io_source_read (sc_io_source_t * source, void *data, size_t bytes_avail, 
 ```
 """
 function sc_io_source_read(source, data, bytes_avail, bytes_out)
-    @ccall libsc.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_read(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid},
+                                   bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -7156,7 +7552,8 @@ int sc_io_source_complete (sc_io_source_t * source, size_t *bytes_in, size_t *by
 ```
 """
 function sc_io_source_complete(source, bytes_in, bytes_out)
-    @ccall libsc.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t}, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_complete(source::Ptr{sc_io_source_t}, bytes_in::Ptr{Csize_t},
+                                       bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -7214,7 +7611,9 @@ int sc_io_source_read_mirror (sc_io_source_t * source, void *data, size_t bytes_
 ```
 """
 function sc_io_source_read_mirror(source, data, bytes_avail, bytes_out)
-    @ccall libsc.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid}, bytes_avail::Csize_t, bytes_out::Ptr{Csize_t})::Cint
+    @ccall libsc.sc_io_source_read_mirror(source::Ptr{sc_io_source_t}, data::Ptr{Cvoid},
+                                          bytes_avail::Csize_t,
+                                          bytes_out::Ptr{Csize_t})::Cint
 end
 
 """
@@ -7298,7 +7697,9 @@ void sc_io_encode_zlib (sc_array_t *data, sc_array_t *out, int zlib_compression_
 ```
 """
 function sc_io_encode_zlib(data, out, zlib_compression_level, line_break_character)
-    @ccall libsc.sc_io_encode_zlib(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, zlib_compression_level::Cint, line_break_character::Cint)::Cvoid
+    @ccall libsc.sc_io_encode_zlib(data::Ptr{sc_array_t}, out::Ptr{sc_array_t},
+                                   zlib_compression_level::Cint,
+                                   line_break_character::Cint)::Cvoid
 end
 
 """
@@ -7323,7 +7724,8 @@ int sc_io_decode_info (sc_array_t *data, size_t *original_size, char *format_cha
 ```
 """
 function sc_io_decode_info(data, original_size, format_char, re)
-    @ccall libsc.sc_io_decode_info(data::Ptr{sc_array_t}, original_size::Ptr{Csize_t}, format_char::Cstring, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_io_decode_info(data::Ptr{sc_array_t}, original_size::Ptr{Csize_t},
+                                   format_char::Cstring, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -7356,7 +7758,8 @@ int sc_io_decode (sc_array_t *data, sc_array_t *out, size_t max_original_size, v
 ```
 """
 function sc_io_decode(data, out, max_original_size, re)
-    @ccall libsc.sc_io_decode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t}, max_original_size::Csize_t, re::Ptr{Cvoid})::Cint
+    @ccall libsc.sc_io_decode(data::Ptr{sc_array_t}, out::Ptr{sc_array_t},
+                              max_original_size::Csize_t, re::Ptr{Cvoid})::Cint
 end
 
 """
@@ -7376,7 +7779,8 @@ int sc_vtk_write_binary (FILE * vtkfile, char *numeric_data, size_t byte_length)
 ```
 """
 function sc_vtk_write_binary(vtkfile, numeric_data, byte_length)
-    @ccall libsc.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+    @ccall libsc.sc_vtk_write_binary(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring,
+                                     byte_length::Csize_t)::Cint
 end
 
 """
@@ -7396,7 +7800,8 @@ int sc_vtk_write_compressed (FILE * vtkfile, char *numeric_data, size_t byte_len
 ```
 """
 function sc_vtk_write_compressed(vtkfile, numeric_data, byte_length)
-    @ccall libsc.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring, byte_length::Csize_t)::Cint
+    @ccall libsc.sc_vtk_write_compressed(vtkfile::Ptr{Libc.FILE}, numeric_data::Cstring,
+                                         byte_length::Csize_t)::Cint
 end
 
 """
@@ -7434,7 +7839,8 @@ void sc_fwrite (const void *ptr, size_t size, size_t nmemb, FILE * file, const c
 ```
 """
 function sc_fwrite(ptr, size, nmemb, file, errmsg)
-    @ccall libsc.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_fwrite(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t,
+                           file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -7458,7 +7864,8 @@ void sc_fread (void *ptr, size_t size, size_t nmemb, FILE * file, const char *er
 ```
 """
 function sc_fread(ptr, size, nmemb, file, errmsg)
-    @ccall libsc.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t, file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
+    @ccall libsc.sc_fread(ptr::Ptr{Cvoid}, size::Csize_t, nmemb::Csize_t,
+                          file::Ptr{Libc.FILE}, errmsg::Cstring)::Cvoid
 end
 
 """
@@ -7486,7 +7893,8 @@ int sc_io_open (sc_MPI_Comm mpicomm, const char *filename, sc_io_open_mode_t amo
 ```
 """
 function sc_io_open(mpicomm, filename, amode, mpiinfo, mpifile)
-    @ccall libsc.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t, mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_open(mpicomm::MPI_Comm, filename::Cstring, amode::sc_io_open_mode_t,
+                            mpiinfo::Cint, mpifile::Ptr{Cint})::Cint
 end
 
 """
@@ -7498,7 +7906,8 @@ int sc_io_read_at (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int cou
 ```
 """
 function sc_io_read_at(mpifile, offset, ptr, count, t, ocount)
-    @ccall libsc.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_read_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid},
+                               count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -7510,7 +7919,8 @@ int sc_io_read_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, void *ptr, int
 ```
 """
 function sc_io_read_at_all(mpifile, offset, ptr, count, t, ocount)
-    @ccall libsc.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_read_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid},
+                                   count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -7522,7 +7932,8 @@ int sc_io_write_at (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *ptr, 
 ```
 """
 function sc_io_write_at(mpifile, offset, ptr, count, t, ocount)
-    @ccall libsc.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_write_at(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid},
+                                count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -7534,7 +7945,8 @@ int sc_io_write_at_all (sc_MPI_File mpifile, sc_MPI_Offset offset, const void *p
 ```
 """
 function sc_io_write_at_all(mpifile, offset, ptr, count, t, ocount)
-    @ccall libsc.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid}, count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
+    @ccall libsc.sc_io_write_at_all(mpifile::MPI_File, offset::Cint, ptr::Ptr{Cvoid},
+                                    count::Cint, t::Cint, ocount::Ptr{Cint})::Cint
 end
 
 """
@@ -7743,7 +8155,8 @@ static inline uint64_t p4est_partition_cut_uint64 (uint64_t global_num, int p, i
 ```
 """
 function p4est_partition_cut_uint64(global_num, p, num_procs)
-    @ccall libp4est.p4est_partition_cut_uint64(global_num::UInt64, p::Cint, num_procs::Cint)::UInt64
+    @ccall libp4est.p4est_partition_cut_uint64(global_num::UInt64, p::Cint,
+                                               num_procs::Cint)::UInt64
 end
 
 """
@@ -7755,7 +8168,8 @@ static inline p4est_gloidx_t p4est_partition_cut_gloidx (p4est_gloidx_t global_n
 ```
 """
 function p4est_partition_cut_gloidx(global_num, p, num_procs)
-    @ccall libp4est.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint, num_procs::Cint)::p4est_gloidx_t
+    @ccall libp4est.p4est_partition_cut_gloidx(global_num::p4est_gloidx_t, p::Cint,
+                                               num_procs::Cint)::p4est_gloidx_t
 end
 
 """
@@ -8066,7 +8480,9 @@ void p4est_neighbor_transform_coordinates (const p4est_neighbor_transform_t * nt
 ```
 """
 function p4est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
-    @ccall libp4est.p4est_neighbor_transform_coordinates(nt::Ptr{p4est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p4est_neighbor_transform_coordinates(nt::Ptr{p4est_neighbor_transform_t},
+                                                         self_coords::Ptr{p4est_qcoord_t},
+                                                         neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -8084,7 +8500,9 @@ void p4est_neighbor_transform_coordinates_reverse (const p4est_neighbor_transfor
 ```
 """
 function p4est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
-    @ccall libp4est.p4est_neighbor_transform_coordinates_reverse(nt::Ptr{p4est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p4est_neighbor_transform_coordinates_reverse(nt::Ptr{p4est_neighbor_transform_t},
+                                                                 neigh_coords::Ptr{p4est_qcoord_t},
+                                                                 self_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -8103,8 +8521,14 @@ Fill an array with the neighbor transforms based on a specific boundary type. Th
 void p4est_connectivity_get_neighbor_transforms (p4est_connectivity_t *conn, p4est_topidx_t tree_id, p4est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
 ```
 """
-function p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
-    @ccall libp4est.p4est_connectivity_get_neighbor_transforms(conn::Ptr{p4est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p4est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+function p4est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type,
+                                                    boundary_index,
+                                                    neighbor_transform_array)
+    @ccall libp4est.p4est_connectivity_get_neighbor_transforms(conn::Ptr{p4est_connectivity_t},
+                                                               tree_id::p4est_topidx_t,
+                                                               boundary_type::p4est_connect_type_t,
+                                                               boundary_index::Cint,
+                                                               neighbor_transform_array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -8127,8 +8551,13 @@ To uniquely identify a coordinate, this function identifies the lowest numbered 
 void p4est_connectivity_coordinates_canonicalize (p4est_connectivity_t *conn, p4est_topidx_t treeid, const p4est_qcoord_t coords[], p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
 ```
 """
-function p4est_connectivity_coordinates_canonicalize(conn, treeid, coords, treeid_out, coords_out)
-    @ccall libp4est.p4est_connectivity_coordinates_canonicalize(conn::Ptr{p4est_connectivity_t}, treeid::p4est_topidx_t, coords::Ptr{p4est_qcoord_t}, treeid_out::Ptr{p4est_topidx_t}, coords_out::Ptr{p4est_qcoord_t})::Cvoid
+function p4est_connectivity_coordinates_canonicalize(conn, treeid, coords, treeid_out,
+                                                     coords_out)
+    @ccall libp4est.p4est_connectivity_coordinates_canonicalize(conn::Ptr{p4est_connectivity_t},
+                                                                treeid::p4est_topidx_t,
+                                                                coords::Ptr{p4est_qcoord_t},
+                                                                treeid_out::Ptr{p4est_topidx_t},
+                                                                coords_out::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -8149,7 +8578,8 @@ int p4est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
 ```
 """
 function p4est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libp4est.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p4est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint,
+                                                                 nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -8170,7 +8600,8 @@ int p4est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
 ```
 """
 function p4est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libp4est.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p4est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint,
+                                                            o::Cint)::Cint
 end
 
 """
@@ -8191,7 +8622,10 @@ p4est_connectivity_t *p4est_connectivity_new (p4est_topidx_t num_vertices, p4est
 ```
 """
 function p4est_connectivity_new(num_vertices, num_trees, num_corners, num_ctt)
-    @ccall libp4est.p4est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new(num_vertices::p4est_topidx_t,
+                                           num_trees::p4est_topidx_t,
+                                           num_corners::p4est_topidx_t,
+                                           num_ctt::p4est_topidx_t)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8218,8 +8652,18 @@ The connectivity is checked for validity.
 p4est_connectivity_t *p4est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
 ```
 """
-function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv, ttt, ttf, ttc, coff, ctt, ctc)
-    @ccall libp4est.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
+function p4est_connectivity_new_copy(num_vertices, num_trees, num_corners, vertices, ttv,
+                                     ttt, ttf, ttc, coff, ctt, ctc)
+    @ccall libp4est.p4est_connectivity_new_copy(num_vertices::p4est_topidx_t,
+                                                num_trees::p4est_topidx_t,
+                                                num_corners::p4est_topidx_t,
+                                                vertices::Ptr{Cdouble},
+                                                ttv::Ptr{p4est_topidx_t},
+                                                ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8},
+                                                ttc::Ptr{p4est_topidx_t},
+                                                coff::Ptr{p4est_topidx_t},
+                                                ctt::Ptr{p4est_topidx_t},
+                                                ctc::Ptr{Int8})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8238,7 +8682,8 @@ p4est_connectivity_t *p4est_connectivity_copy (p4est_connectivity_t *input, int 
 ```
 """
 function p4est_connectivity_copy(input, copy_attr)
-    @ccall libp4est.p4est_connectivity_copy(input::Ptr{p4est_connectivity_t}, copy_attr::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_copy(input::Ptr{p4est_connectivity_t},
+                                            copy_attr::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8250,7 +8695,8 @@ p4est_connectivity_t *p4est_connectivity_bcast (p4est_connectivity_t * conn_in, 
 ```
 """
 function p4est_connectivity_bcast(conn_in, root, comm)
-    @ccall libp4est.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_bcast(conn_in::Ptr{p4est_connectivity_t}, root::Cint,
+                                             comm::MPI_Comm)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8276,7 +8722,8 @@ p4est_connectivity_shared_t *p4est_connectivity_share (p4est_connectivity_t * co
 ```
 """
 function p4est_connectivity_share(conn_in, root, comm)
-    @ccall libp4est.p4est_connectivity_share(conn_in::Ptr{p4est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p4est_connectivity_shared_t}
+    @ccall libp4est.p4est_connectivity_share(conn_in::Ptr{p4est_connectivity_t}, root::Cint,
+                                             comm::MPI_Comm)::Ptr{p4est_connectivity_shared_t}
 end
 
 """
@@ -8288,7 +8735,9 @@ p4est_connectivity_shared_t * p4est_connectivity_mission (p4est_connectivity_t *
 ```
 """
 function p4est_connectivity_mission(conn_in, split_type, world_comm)
-    @ccall libp4est.p4est_connectivity_mission(conn_in::Ptr{p4est_connectivity_t}, split_type::Cint, world_comm::Cint)::Ptr{p4est_connectivity_shared_t}
+    @ccall libp4est.p4est_connectivity_mission(conn_in::Ptr{p4est_connectivity_t},
+                                               split_type::Cint,
+                                               world_comm::Cint)::Ptr{p4est_connectivity_shared_t}
 end
 
 """
@@ -8321,7 +8770,8 @@ void p4est_connectivity_set_attr (p4est_connectivity_t * conn, size_t bytes_per_
 ```
 """
 function p4est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libp4est.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+    @ccall libp4est.p4est_connectivity_set_attr(conn::Ptr{p4est_connectivity_t},
+                                                bytes_per_tree::Csize_t)::Cvoid
 end
 
 """
@@ -8353,7 +8803,8 @@ int p4est_connectivity_is_equal (p4est_connectivity_t * conn1, p4est_connectivit
 ```
 """
 function p4est_connectivity_is_equal(conn1, conn2)
-    @ccall libp4est.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_is_equal(conn1::Ptr{p4est_connectivity_t},
+                                                conn2::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -8372,7 +8823,8 @@ int p4est_connectivity_sink (p4est_connectivity_t * conn, sc_io_sink_t * sink);
 ```
 """
 function p4est_connectivity_sink(conn, sink)
-    @ccall libp4est.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+    @ccall libp4est.p4est_connectivity_sink(conn::Ptr{p4est_connectivity_t},
+                                            sink::Ptr{sc_io_sink_t})::Cint
 end
 
 """
@@ -8391,7 +8843,8 @@ sc_array_t *p4est_connectivity_deflate (p4est_connectivity_t * conn, p4est_conne
 ```
 """
 function p4est_connectivity_deflate(conn, code)
-    @ccall libp4est.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t}, code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
+    @ccall libp4est.p4est_connectivity_deflate(conn::Ptr{p4est_connectivity_t},
+                                               code::p4est_connectivity_encode_t)::Ptr{sc_array_t}
 end
 
 """
@@ -8410,7 +8863,8 @@ int p4est_connectivity_save (const char *filename, p4est_connectivity_t * connec
 ```
 """
 function p4est_connectivity_save(filename, connectivity)
-    @ccall libp4est.p4est_connectivity_save(filename::Cstring, connectivity::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_save(filename::Cstring,
+                                            connectivity::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -8465,7 +8919,8 @@ p4est_connectivity_t *p4est_connectivity_load (const char *filename, size_t *byt
 ```
 """
 function p4est_connectivity_load(filename, bytes)
-    @ccall libp4est.p4est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_load(filename::Cstring,
+                                            bytes::Ptr{Csize_t})::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8553,7 +9008,8 @@ p4est_connectivity_t *p4est_connectivity_new_twotrees (int l_face, int r_face, i
 ```
 """
 function p4est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libp4est.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_twotrees(l_face::Cint, r_face::Cint,
+                                                    orientation::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8674,7 +9130,8 @@ p4est_connectivity_t *p4est_connectivity_new_disk (int periodic_a, int periodic_
 ```
 """
 function p4est_connectivity_new_disk(periodic_a, periodic_b)
-    @ccall libp4est.p4est_connectivity_new_disk(periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_disk(periodic_a::Cint,
+                                                periodic_b::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8764,7 +9221,8 @@ p4est_connectivity_t *p4est_connectivity_new_brick (int mi, int ni, int periodic
 ```
 """
 function p4est_connectivity_new_brick(mi, ni, periodic_a, periodic_b)
-    @ccall libp4est.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint, periodic_b::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_new_brick(mi::Cint, ni::Cint, periodic_a::Cint,
+                                                 periodic_b::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8801,7 +9259,8 @@ p4est_connectivity_t *p4est_connectivity_refine (p4est_connectivity_t * conn, in
 ```
 """
 function p4est_connectivity_refine(conn, num_per_dim)
-    @ccall libp4est.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t}, num_per_dim::Cint)::Ptr{p4est_connectivity_t}
+    @ccall libp4est.p4est_connectivity_refine(conn::Ptr{p4est_connectivity_t},
+                                              num_per_dim::Cint)::Ptr{p4est_connectivity_t}
 end
 
 """
@@ -8819,7 +9278,8 @@ void p4est_expand_face_transform (int iface, int nface, int ftransform[]);
 ```
 """
 function p4est_expand_face_transform(iface, nface, ftransform)
-    @ccall libp4est.p4est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+    @ccall libp4est.p4est_expand_face_transform(iface::Cint, nface::Cint,
+                                                ftransform::Ptr{Cint})::Cvoid
 end
 
 """
@@ -8843,7 +9303,9 @@ p4est_topidx_t p4est_find_face_transform (p4est_connectivity_t * connectivity, p
 ```
 """
 function p4est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libp4est.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+    @ccall libp4est.p4est_find_face_transform(connectivity::Ptr{p4est_connectivity_t},
+                                              itree::p4est_topidx_t, iface::Cint,
+                                              ftransform::Ptr{Cint})::p4est_topidx_t
 end
 
 """
@@ -8862,7 +9324,9 @@ void p4est_find_corner_transform (p4est_connectivity_t * connectivity, p4est_top
 ```
 """
 function p4est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libp4est.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p4est_corner_info_t})::Cvoid
+    @ccall libp4est.p4est_find_corner_transform(connectivity::Ptr{p4est_connectivity_t},
+                                                itree::p4est_topidx_t, icorner::Cint,
+                                                ci::Ptr{p4est_corner_info_t})::Cvoid
 end
 
 """
@@ -8912,7 +9376,9 @@ void p4est_connectivity_permute (p4est_connectivity_t * conn, sc_array_t * perm,
 ```
 """
 function p4est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libp4est.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+    @ccall libp4est.p4est_connectivity_permute(conn::Ptr{p4est_connectivity_t},
+                                               perm::Ptr{sc_array_t},
+                                               is_current_to_new::Cint)::Cvoid
 end
 
 """
@@ -8932,8 +9398,13 @@ end
 void p4est_connectivity_join_faces (p4est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
 ```
 """
-function p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libp4est.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+function p4est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right,
+                                       orientation)
+    @ccall libp4est.p4est_connectivity_join_faces(conn::Ptr{p4est_connectivity_t},
+                                                  tree_left::p4est_topidx_t,
+                                                  tree_right::p4est_topidx_t,
+                                                  face_left::Cint, face_right::Cint,
+                                                  orientation::Cint)::Cvoid
 end
 
 """
@@ -8950,7 +9421,8 @@ int p4est_connectivity_is_equivalent (p4est_connectivity_t * conn1, p4est_connec
 ```
 """
 function p4est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libp4est.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t}, conn2::Ptr{p4est_connectivity_t})::Cint
+    @ccall libp4est.p4est_connectivity_is_equivalent(conn1::Ptr{p4est_connectivity_t},
+                                                     conn2::Ptr{p4est_connectivity_t})::Cint
 end
 
 """
@@ -8962,7 +9434,8 @@ static inline p4est_corner_transform_t * p4est_corner_array_index (sc_array_t * 
 ```
 """
 function p4est_corner_array_index(array, it)
-    @ccall libp4est.p4est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p4est_corner_transform_t}
+    @ccall libp4est.p4est_corner_array_index(array::Ptr{sc_array_t},
+                                             it::Csize_t)::Ptr{p4est_corner_transform_t}
 end
 
 """
@@ -9019,8 +9492,13 @@ This code can be called two ways. The first, when `vertex`==NULL and `tree_to_ve
 int p4est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
 ```
 """
-function p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libp4est.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+function p4est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices,
+                                            tree_to_vertex)
+    @ccall libp4est.p4est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE},
+                                                       num_vertices::Ptr{p4est_topidx_t},
+                                                       num_trees::Ptr{p4est_topidx_t},
+                                                       vertices::Ptr{Cdouble},
+                                                       tree_to_vertex::Ptr{p4est_topidx_t})::Cint
 end
 
 """
@@ -9397,7 +9875,9 @@ void p8est_neighbor_transform_coordinates (const p8est_neighbor_transform_t * nt
 ```
 """
 function p8est_neighbor_transform_coordinates(nt, self_coords, neigh_coords)
-    @ccall libp4est.p8est_neighbor_transform_coordinates(nt::Ptr{p8est_neighbor_transform_t}, self_coords::Ptr{p4est_qcoord_t}, neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p8est_neighbor_transform_coordinates(nt::Ptr{p8est_neighbor_transform_t},
+                                                         self_coords::Ptr{p4est_qcoord_t},
+                                                         neigh_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -9415,7 +9895,9 @@ void p8est_neighbor_transform_coordinates_reverse (const p8est_neighbor_transfor
 ```
 """
 function p8est_neighbor_transform_coordinates_reverse(nt, neigh_coords, self_coords)
-    @ccall libp4est.p8est_neighbor_transform_coordinates_reverse(nt::Ptr{p8est_neighbor_transform_t}, neigh_coords::Ptr{p4est_qcoord_t}, self_coords::Ptr{p4est_qcoord_t})::Cvoid
+    @ccall libp4est.p8est_neighbor_transform_coordinates_reverse(nt::Ptr{p8est_neighbor_transform_t},
+                                                                 neigh_coords::Ptr{p4est_qcoord_t},
+                                                                 self_coords::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -9434,8 +9916,14 @@ Fill an array with the neighbor transforms based on a specific boundary type. Th
 void p8est_connectivity_get_neighbor_transforms (p8est_connectivity_t *conn, p4est_topidx_t tree_id, p8est_connect_type_t boundary_type, int boundary_index, sc_array_t *neighbor_transform_array);
 ```
 """
-function p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type, boundary_index, neighbor_transform_array)
-    @ccall libp4est.p8est_connectivity_get_neighbor_transforms(conn::Ptr{p8est_connectivity_t}, tree_id::p4est_topidx_t, boundary_type::p8est_connect_type_t, boundary_index::Cint, neighbor_transform_array::Ptr{sc_array_t})::Cvoid
+function p8est_connectivity_get_neighbor_transforms(conn, tree_id, boundary_type,
+                                                    boundary_index,
+                                                    neighbor_transform_array)
+    @ccall libp4est.p8est_connectivity_get_neighbor_transforms(conn::Ptr{p8est_connectivity_t},
+                                                               tree_id::p4est_topidx_t,
+                                                               boundary_type::p8est_connect_type_t,
+                                                               boundary_index::Cint,
+                                                               neighbor_transform_array::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -9458,8 +9946,13 @@ To uniquely identify a coordinate, this function identifies the lowest numbered 
 void p8est_connectivity_coordinates_canonicalize (p8est_connectivity_t *conn, p4est_topidx_t treeid, const p4est_qcoord_t coords[], p4est_topidx_t *treeid_out, p4est_qcoord_t coords_out[]);
 ```
 """
-function p8est_connectivity_coordinates_canonicalize(conn, treeid, coords, treeid_out, coords_out)
-    @ccall libp4est.p8est_connectivity_coordinates_canonicalize(conn::Ptr{p8est_connectivity_t}, treeid::p4est_topidx_t, coords::Ptr{p4est_qcoord_t}, treeid_out::Ptr{p4est_topidx_t}, coords_out::Ptr{p4est_qcoord_t})::Cvoid
+function p8est_connectivity_coordinates_canonicalize(conn, treeid, coords, treeid_out,
+                                                     coords_out)
+    @ccall libp4est.p8est_connectivity_coordinates_canonicalize(conn::Ptr{p8est_connectivity_t},
+                                                                treeid::p4est_topidx_t,
+                                                                coords::Ptr{p4est_qcoord_t},
+                                                                treeid_out::Ptr{p4est_topidx_t},
+                                                                coords_out::Ptr{p4est_qcoord_t})::Cvoid
 end
 
 """
@@ -9480,7 +9973,8 @@ int p8est_connectivity_face_neighbor_corner_set (int c, int f, int nf, int set);
 ```
 """
 function p8est_connectivity_face_neighbor_corner_set(c, f, nf, set)
-    @ccall libp4est.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint, set::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_corner_set(c::Cint, f::Cint, nf::Cint,
+                                                                set::Cint)::Cint
 end
 
 """
@@ -9501,7 +9995,8 @@ int p8est_connectivity_face_neighbor_face_corner (int fc, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_face_corner(fc, f, nf, o)
-    @ccall libp4est.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_face_corner(fc::Cint, f::Cint,
+                                                                 nf::Cint, o::Cint)::Cint
 end
 
 """
@@ -9522,7 +10017,8 @@ int p8est_connectivity_face_neighbor_corner (int c, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_corner(c, f, nf, o)
-    @ccall libp4est.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_corner(c::Cint, f::Cint, nf::Cint,
+                                                            o::Cint)::Cint
 end
 
 """
@@ -9543,7 +10039,8 @@ int p8est_connectivity_face_neighbor_face_edge (int fe, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_face_edge(fe, f, nf, o)
-    @ccall libp4est.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_face_edge(fe::Cint, f::Cint, nf::Cint,
+                                                               o::Cint)::Cint
 end
 
 """
@@ -9564,7 +10061,8 @@ int p8est_connectivity_face_neighbor_edge (int e, int f, int nf, int o);
 ```
 """
 function p8est_connectivity_face_neighbor_edge(e, f, nf, o)
-    @ccall libp4est.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_face_neighbor_edge(e::Cint, f::Cint, nf::Cint,
+                                                          o::Cint)::Cint
 end
 
 """
@@ -9604,7 +10102,8 @@ int p8est_connectivity_edge_neighbor_corner (int c, int e, int ne, int o);
 ```
 """
 function p8est_connectivity_edge_neighbor_corner(c, e, ne, o)
-    @ccall libp4est.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint, o::Cint)::Cint
+    @ccall libp4est.p8est_connectivity_edge_neighbor_corner(c::Cint, e::Cint, ne::Cint,
+                                                            o::Cint)::Cint
 end
 
 """
@@ -9626,8 +10125,14 @@ A connectivity structure with allocated arrays.
 p8est_connectivity_t *p8est_connectivity_new (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_ett, p4est_topidx_t num_corners, p4est_topidx_t num_ctt);
 ```
 """
-function p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners, num_ctt)
-    @ccall libp4est.p8est_connectivity_new(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_ett::p4est_topidx_t, num_corners::p4est_topidx_t, num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
+function p8est_connectivity_new(num_vertices, num_trees, num_edges, num_ett, num_corners,
+                                num_ctt)
+    @ccall libp4est.p8est_connectivity_new(num_vertices::p4est_topidx_t,
+                                           num_trees::p4est_topidx_t,
+                                           num_edges::p4est_topidx_t,
+                                           num_ett::p4est_topidx_t,
+                                           num_corners::p4est_topidx_t,
+                                           num_ctt::p4est_topidx_t)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -9659,8 +10164,23 @@ The connectivity is checked for validity.
 p8est_connectivity_t *p8est_connectivity_new_copy (p4est_topidx_t num_vertices, p4est_topidx_t num_trees, p4est_topidx_t num_edges, p4est_topidx_t num_corners, const double *vertices, const p4est_topidx_t * ttv, const p4est_topidx_t * ttt, const int8_t * ttf, const p4est_topidx_t * tte, const p4est_topidx_t * eoff, const p4est_topidx_t * ett, const int8_t * ete, const p4est_topidx_t * ttc, const p4est_topidx_t * coff, const p4est_topidx_t * ctt, const int8_t * ctc);
 ```
 """
-function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners, vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc, coff, ctt, ctc)
-    @ccall libp4est.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t, num_trees::p4est_topidx_t, num_edges::p4est_topidx_t, num_corners::p4est_topidx_t, vertices::Ptr{Cdouble}, ttv::Ptr{p4est_topidx_t}, ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8}, tte::Ptr{p4est_topidx_t}, eoff::Ptr{p4est_topidx_t}, ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8}, ttc::Ptr{p4est_topidx_t}, coff::Ptr{p4est_topidx_t}, ctt::Ptr{p4est_topidx_t}, ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
+function p8est_connectivity_new_copy(num_vertices, num_trees, num_edges, num_corners,
+                                     vertices, ttv, ttt, ttf, tte, eoff, ett, ete, ttc,
+                                     coff, ctt, ctc)
+    @ccall libp4est.p8est_connectivity_new_copy(num_vertices::p4est_topidx_t,
+                                                num_trees::p4est_topidx_t,
+                                                num_edges::p4est_topidx_t,
+                                                num_corners::p4est_topidx_t,
+                                                vertices::Ptr{Cdouble},
+                                                ttv::Ptr{p4est_topidx_t},
+                                                ttt::Ptr{p4est_topidx_t}, ttf::Ptr{Int8},
+                                                tte::Ptr{p4est_topidx_t},
+                                                eoff::Ptr{p4est_topidx_t},
+                                                ett::Ptr{p4est_topidx_t}, ete::Ptr{Int8},
+                                                ttc::Ptr{p4est_topidx_t},
+                                                coff::Ptr{p4est_topidx_t},
+                                                ctt::Ptr{p4est_topidx_t},
+                                                ctc::Ptr{Int8})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -9679,7 +10199,8 @@ p8est_connectivity_t *p8est_connectivity_copy (p8est_connectivity_t *input, int 
 ```
 """
 function p8est_connectivity_copy(input, copy_attr)
-    @ccall libp4est.p8est_connectivity_copy(input::Ptr{p8est_connectivity_t}, copy_attr::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_copy(input::Ptr{p8est_connectivity_t},
+                                            copy_attr::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -9691,7 +10212,8 @@ p8est_connectivity_t *p8est_connectivity_bcast (p8est_connectivity_t * conn_in, 
 ```
 """
 function p8est_connectivity_bcast(conn_in, root, comm)
-    @ccall libp4est.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_bcast(conn_in::Ptr{p8est_connectivity_t}, root::Cint,
+                                             comm::MPI_Comm)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -9717,7 +10239,8 @@ p8est_connectivity_shared_t *p8est_connectivity_share (p8est_connectivity_t * co
 ```
 """
 function p8est_connectivity_share(conn_in, root, comm)
-    @ccall libp4est.p8est_connectivity_share(conn_in::Ptr{p8est_connectivity_t}, root::Cint, comm::MPI_Comm)::Ptr{p8est_connectivity_shared_t}
+    @ccall libp4est.p8est_connectivity_share(conn_in::Ptr{p8est_connectivity_t}, root::Cint,
+                                             comm::MPI_Comm)::Ptr{p8est_connectivity_shared_t}
 end
 
 """
@@ -9729,7 +10252,9 @@ p8est_connectivity_shared_t * p8est_connectivity_mission (p8est_connectivity_t *
 ```
 """
 function p8est_connectivity_mission(conn_in, split_type, world_comm)
-    @ccall libp4est.p8est_connectivity_mission(conn_in::Ptr{p8est_connectivity_t}, split_type::Cint, world_comm::Cint)::Ptr{p8est_connectivity_shared_t}
+    @ccall libp4est.p8est_connectivity_mission(conn_in::Ptr{p8est_connectivity_t},
+                                               split_type::Cint,
+                                               world_comm::Cint)::Ptr{p8est_connectivity_shared_t}
 end
 
 """
@@ -9762,7 +10287,8 @@ void p8est_connectivity_set_attr (p8est_connectivity_t * conn, size_t bytes_per_
 ```
 """
 function p8est_connectivity_set_attr(conn, bytes_per_tree)
-    @ccall libp4est.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t}, bytes_per_tree::Csize_t)::Cvoid
+    @ccall libp4est.p8est_connectivity_set_attr(conn::Ptr{p8est_connectivity_t},
+                                                bytes_per_tree::Csize_t)::Cvoid
 end
 
 """
@@ -9794,7 +10320,8 @@ int p8est_connectivity_is_equal (p8est_connectivity_t * conn1, p8est_connectivit
 ```
 """
 function p8est_connectivity_is_equal(conn1, conn2)
-    @ccall libp4est.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_is_equal(conn1::Ptr{p8est_connectivity_t},
+                                                conn2::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -9813,7 +10340,8 @@ int p8est_connectivity_sink (p8est_connectivity_t * conn, sc_io_sink_t * sink);
 ```
 """
 function p8est_connectivity_sink(conn, sink)
-    @ccall libp4est.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t}, sink::Ptr{sc_io_sink_t})::Cint
+    @ccall libp4est.p8est_connectivity_sink(conn::Ptr{p8est_connectivity_t},
+                                            sink::Ptr{sc_io_sink_t})::Cint
 end
 
 """
@@ -9832,7 +10360,8 @@ sc_array_t *p8est_connectivity_deflate (p8est_connectivity_t * conn, p8est_conne
 ```
 """
 function p8est_connectivity_deflate(conn, code)
-    @ccall libp4est.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t}, code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
+    @ccall libp4est.p8est_connectivity_deflate(conn::Ptr{p8est_connectivity_t},
+                                               code::p8est_connectivity_encode_t)::Ptr{sc_array_t}
 end
 
 """
@@ -9851,7 +10380,8 @@ int p8est_connectivity_save (const char *filename, p8est_connectivity_t * connec
 ```
 """
 function p8est_connectivity_save(filename, connectivity)
-    @ccall libp4est.p8est_connectivity_save(filename::Cstring, connectivity::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_save(filename::Cstring,
+                                            connectivity::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -9906,7 +10436,8 @@ p8est_connectivity_t *p8est_connectivity_load (const char *filename, size_t *byt
 ```
 """
 function p8est_connectivity_load(filename, bytes)
-    @ccall libp4est.p8est_connectivity_load(filename::Cstring, bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_load(filename::Cstring,
+                                            bytes::Ptr{Csize_t})::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -9994,7 +10525,8 @@ p8est_connectivity_t *p8est_connectivity_new_twotrees (int l_face, int r_face, i
 ```
 """
 function p8est_connectivity_new_twotrees(l_face, r_face, orientation)
-    @ccall libp4est.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint, orientation::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_twotrees(l_face::Cint, r_face::Cint,
+                                                    orientation::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -10050,7 +10582,9 @@ p8est_connectivity_t *p8est_connectivity_new_brick (int m, int n, int p, int per
 ```
 """
 function p8est_connectivity_new_brick(m, n, p, periodic_a, periodic_b, periodic_c)
-    @ccall libp4est.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint, periodic_a::Cint, periodic_b::Cint, periodic_c::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_new_brick(m::Cint, n::Cint, p::Cint,
+                                                 periodic_a::Cint, periodic_b::Cint,
+                                                 periodic_c::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -10137,7 +10671,8 @@ p8est_connectivity_t *p8est_connectivity_refine (p8est_connectivity_t * conn, in
 ```
 """
 function p8est_connectivity_refine(conn, num_per_dim)
-    @ccall libp4est.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t}, num_per_dim::Cint)::Ptr{p8est_connectivity_t}
+    @ccall libp4est.p8est_connectivity_refine(conn::Ptr{p8est_connectivity_t},
+                                              num_per_dim::Cint)::Ptr{p8est_connectivity_t}
 end
 
 """
@@ -10155,7 +10690,8 @@ void p8est_expand_face_transform (int iface, int nface, int ftransform[]);
 ```
 """
 function p8est_expand_face_transform(iface, nface, ftransform)
-    @ccall libp4est.p8est_expand_face_transform(iface::Cint, nface::Cint, ftransform::Ptr{Cint})::Cvoid
+    @ccall libp4est.p8est_expand_face_transform(iface::Cint, nface::Cint,
+                                                ftransform::Ptr{Cint})::Cvoid
 end
 
 """
@@ -10179,7 +10715,9 @@ p4est_topidx_t p8est_find_face_transform (p8est_connectivity_t * connectivity, p
 ```
 """
 function p8est_find_face_transform(connectivity, itree, iface, ftransform)
-    @ccall libp4est.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iface::Cint, ftransform::Ptr{Cint})::p4est_topidx_t
+    @ccall libp4est.p8est_find_face_transform(connectivity::Ptr{p8est_connectivity_t},
+                                              itree::p4est_topidx_t, iface::Cint,
+                                              ftransform::Ptr{Cint})::p4est_topidx_t
 end
 
 """
@@ -10198,7 +10736,9 @@ void p8est_find_edge_transform (p8est_connectivity_t * connectivity, p4est_topid
 ```
 """
 function p8est_find_edge_transform(connectivity, itree, iedge, ei)
-    @ccall libp4est.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, iedge::Cint, ei::Ptr{p8est_edge_info_t})::Cvoid
+    @ccall libp4est.p8est_find_edge_transform(connectivity::Ptr{p8est_connectivity_t},
+                                              itree::p4est_topidx_t, iedge::Cint,
+                                              ei::Ptr{p8est_edge_info_t})::Cvoid
 end
 
 """
@@ -10217,7 +10757,9 @@ void p8est_find_corner_transform (p8est_connectivity_t * connectivity, p4est_top
 ```
 """
 function p8est_find_corner_transform(connectivity, itree, icorner, ci)
-    @ccall libp4est.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t}, itree::p4est_topidx_t, icorner::Cint, ci::Ptr{p8est_corner_info_t})::Cvoid
+    @ccall libp4est.p8est_find_corner_transform(connectivity::Ptr{p8est_connectivity_t},
+                                                itree::p4est_topidx_t, icorner::Cint,
+                                                ci::Ptr{p8est_corner_info_t})::Cvoid
 end
 
 """
@@ -10267,7 +10809,9 @@ void p8est_connectivity_permute (p8est_connectivity_t * conn, sc_array_t * perm,
 ```
 """
 function p8est_connectivity_permute(conn, perm, is_current_to_new)
-    @ccall libp4est.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t}, perm::Ptr{sc_array_t}, is_current_to_new::Cint)::Cvoid
+    @ccall libp4est.p8est_connectivity_permute(conn::Ptr{p8est_connectivity_t},
+                                               perm::Ptr{sc_array_t},
+                                               is_current_to_new::Cint)::Cvoid
 end
 
 """
@@ -10287,8 +10831,13 @@ end
 void p8est_connectivity_join_faces (p8est_connectivity_t * conn, p4est_topidx_t tree_left, p4est_topidx_t tree_right, int face_left, int face_right, int orientation);
 ```
 """
-function p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right, orientation)
-    @ccall libp4est.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t}, tree_left::p4est_topidx_t, tree_right::p4est_topidx_t, face_left::Cint, face_right::Cint, orientation::Cint)::Cvoid
+function p8est_connectivity_join_faces(conn, tree_left, tree_right, face_left, face_right,
+                                       orientation)
+    @ccall libp4est.p8est_connectivity_join_faces(conn::Ptr{p8est_connectivity_t},
+                                                  tree_left::p4est_topidx_t,
+                                                  tree_right::p4est_topidx_t,
+                                                  face_left::Cint, face_right::Cint,
+                                                  orientation::Cint)::Cvoid
 end
 
 """
@@ -10305,7 +10854,8 @@ int p8est_connectivity_is_equivalent (p8est_connectivity_t * conn1, p8est_connec
 ```
 """
 function p8est_connectivity_is_equivalent(conn1, conn2)
-    @ccall libp4est.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t}, conn2::Ptr{p8est_connectivity_t})::Cint
+    @ccall libp4est.p8est_connectivity_is_equivalent(conn1::Ptr{p8est_connectivity_t},
+                                                     conn2::Ptr{p8est_connectivity_t})::Cint
 end
 
 """
@@ -10317,7 +10867,8 @@ static inline p8est_edge_transform_t * p8est_edge_array_index (sc_array_t *array
 ```
 """
 function p8est_edge_array_index(array, it)
-    @ccall libp4est.p8est_edge_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_edge_transform_t}
+    @ccall libp4est.p8est_edge_array_index(array::Ptr{sc_array_t},
+                                           it::Csize_t)::Ptr{p8est_edge_transform_t}
 end
 
 """
@@ -10329,7 +10880,8 @@ static inline p8est_corner_transform_t * p8est_corner_array_index (sc_array_t *a
 ```
 """
 function p8est_corner_array_index(array, it)
-    @ccall libp4est.p8est_corner_array_index(array::Ptr{sc_array_t}, it::Csize_t)::Ptr{p8est_corner_transform_t}
+    @ccall libp4est.p8est_corner_array_index(array::Ptr{sc_array_t},
+                                             it::Csize_t)::Ptr{p8est_corner_transform_t}
 end
 
 """
@@ -10404,8 +10956,13 @@ This code can be called two ways. The first, when `vertex`==NULL and `tree_to_ve
 int p8est_connectivity_read_inp_stream (FILE * stream, p4est_topidx_t * num_vertices, p4est_topidx_t * num_trees, double *vertices, p4est_topidx_t * tree_to_vertex);
 ```
 """
-function p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices, tree_to_vertex)
-    @ccall libp4est.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE}, num_vertices::Ptr{p4est_topidx_t}, num_trees::Ptr{p4est_topidx_t}, vertices::Ptr{Cdouble}, tree_to_vertex::Ptr{p4est_topidx_t})::Cint
+function p8est_connectivity_read_inp_stream(stream, num_vertices, num_trees, vertices,
+                                            tree_to_vertex)
+    @ccall libp4est.p8est_connectivity_read_inp_stream(stream::Ptr{Libc.FILE},
+                                                       num_vertices::Ptr{p4est_topidx_t},
+                                                       num_trees::Ptr{p4est_topidx_t},
+                                                       vertices::Ptr{Cdouble},
+                                                       tree_to_vertex::Ptr{p4est_topidx_t})::Cint
 end
 
 """
@@ -10489,7 +11046,8 @@ void t8_cmesh_new_from_p4est (t8_cmesh_t cmesh, p4est_connectivity_t *conn, sc_M
 ```
 """
 function t8_cmesh_new_from_p4est(cmesh, conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p4est(cmesh::t8_cmesh_t, conn::Ptr{p4est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_from_p4est(cmesh::t8_cmesh_t, conn::Ptr{p4est_connectivity_t},
+                                         comm::MPI_Comm, do_partition::Cint)::Cvoid
 end
 
 """
@@ -10501,7 +11059,8 @@ void t8_cmesh_new_from_p8est (t8_cmesh_t cmesh, p8est_connectivity_t *conn, sc_M
 ```
 """
 function t8_cmesh_new_from_p8est(cmesh, conn, comm, do_partition)
-    @ccall libt8.t8_cmesh_new_from_p8est(cmesh::t8_cmesh_t, conn::Ptr{p8est_connectivity_t}, comm::MPI_Comm, do_partition::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_from_p8est(cmesh::t8_cmesh_t, conn::Ptr{p8est_connectivity_t},
+                                         comm::MPI_Comm, do_partition::Cint)::Cvoid
 end
 
 """
@@ -10525,7 +11084,8 @@ void t8_cmesh_new_from_class (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI
 ```
 """
 function t8_cmesh_new_from_class(cmesh, eclass, comm)
-    @ccall libt8.t8_cmesh_new_from_class(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_from_class(cmesh::t8_cmesh_t, eclass::t8_eclass_t,
+                                         comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10537,7 +11097,9 @@ void t8_cmesh_new_hypercube (t8_cmesh_t *pcmesh, const t8_eclass_t eclass, sc_MP
 ```
 """
 function t8_cmesh_new_hypercube(pcmesh, eclass, comm, do_bcast, do_partition, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube(pcmesh::Ptr{t8_cmesh_t}, eclass::t8_eclass_t, comm::MPI_Comm, do_bcast::Cint, do_partition::Cint, periodic::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_hypercube(pcmesh::Ptr{t8_cmesh_t}, eclass::t8_eclass_t,
+                                        comm::MPI_Comm, do_bcast::Cint, do_partition::Cint,
+                                        periodic::Cint)::Cvoid
 end
 
 """
@@ -10548,8 +11110,14 @@ end
 void t8_cmesh_new_hypercube_pad (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int use_axis_aligned);
 ```
 """
-function t8_cmesh_new_hypercube_pad(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, use_axis_aligned)
-    @ccall libt8.t8_cmesh_new_hypercube_pad(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, use_axis_aligned::Cint)::Cvoid
+function t8_cmesh_new_hypercube_pad(cmesh, eclass, comm, boundary, polygons_x, polygons_y,
+                                    polygons_z, use_axis_aligned)
+    @ccall libt8.t8_cmesh_new_hypercube_pad(cmesh::t8_cmesh_t, eclass::t8_eclass_t,
+                                            comm::MPI_Comm, boundary::Ptr{Cdouble},
+                                            polygons_x::t8_locidx_t,
+                                            polygons_y::t8_locidx_t,
+                                            polygons_z::t8_locidx_t,
+                                            use_axis_aligned::Cint)::Cvoid
 end
 
 """
@@ -10560,8 +11128,17 @@ end
 void t8_cmesh_new_hypercube_pad_ext (t8_cmesh_t cmesh, const t8_eclass_t eclass, sc_MPI_Comm comm, const double *boundary, t8_locidx_t polygons_x, t8_locidx_t polygons_y, t8_locidx_t polygons_z, const int periodic_x, const int periodic_y, const int periodic_z, const int use_axis_aligned, const int set_partition, t8_gloidx_t offset);
 ```
 """
-function t8_cmesh_new_hypercube_pad_ext(cmesh, eclass, comm, boundary, polygons_x, polygons_y, polygons_z, periodic_x, periodic_y, periodic_z, use_axis_aligned, set_partition, offset)
-    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(cmesh::t8_cmesh_t, eclass::t8_eclass_t, comm::MPI_Comm, boundary::Ptr{Cdouble}, polygons_x::t8_locidx_t, polygons_y::t8_locidx_t, polygons_z::t8_locidx_t, periodic_x::Cint, periodic_y::Cint, periodic_z::Cint, use_axis_aligned::Cint, set_partition::Cint, offset::t8_gloidx_t)::Cvoid
+function t8_cmesh_new_hypercube_pad_ext(cmesh, eclass, comm, boundary, polygons_x,
+                                        polygons_y, polygons_z, periodic_x, periodic_y,
+                                        periodic_z, use_axis_aligned, set_partition, offset)
+    @ccall libt8.t8_cmesh_new_hypercube_pad_ext(cmesh::t8_cmesh_t, eclass::t8_eclass_t,
+                                                comm::MPI_Comm, boundary::Ptr{Cdouble},
+                                                polygons_x::t8_locidx_t,
+                                                polygons_y::t8_locidx_t,
+                                                polygons_z::t8_locidx_t, periodic_x::Cint,
+                                                periodic_y::Cint, periodic_z::Cint,
+                                                use_axis_aligned::Cint, set_partition::Cint,
+                                                offset::t8_gloidx_t)::Cvoid
 end
 
 """
@@ -10573,19 +11150,34 @@ void t8_cmesh_new_hypercube_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm, int peri
 ```
 """
 function t8_cmesh_new_hypercube_hybrid(cmesh, comm, periodic)
-    @ccall libt8.t8_cmesh_new_hypercube_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm, periodic::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm,
+                                               periodic::Cint)::Cvoid
 end
 
 """
-    t8_cmesh_new_2D_hypercube_hybrid(cmesh, comm)
+    t8_cmesh_new_hypercube_hybrid_ext(cmesh, comm, periodic, use_boundary_conditions)
 
 ### Prototype
 ```c
-void t8_cmesh_new_2D_hypercube_hybrid (t8_cmesh_t cmesh, sc_MPI_Comm comm);
+void t8_cmesh_new_hypercube_hybrid_ext (t8_cmesh_t cmesh, sc_MPI_Comm comm, int periodic, int use_boundary_conditions);
 ```
 """
-function t8_cmesh_new_2D_hypercube_hybrid(cmesh, comm)
-    @ccall libt8.t8_cmesh_new_2D_hypercube_hybrid(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_hypercube_hybrid_ext(cmesh, comm, periodic, use_boundary_conditions)
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid_ext(cmesh::t8_cmesh_t, comm::MPI_Comm,
+                                                   periodic::Cint,
+                                                   use_boundary_conditions::Cint)::Cvoid
+end
+
+"""
+    t8_cmesh_new_hypercube_hybrid_2D(cmesh, comm)
+
+### Prototype
+```c
+void t8_cmesh_new_hypercube_hybrid_2D (t8_cmesh_t cmesh, sc_MPI_Comm comm);
+```
+"""
+function t8_cmesh_new_hypercube_hybrid_2D(cmesh, comm)
+    @ccall libt8.t8_cmesh_new_hypercube_hybrid_2D(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10633,7 +11225,8 @@ void t8_cmesh_new_periodic_line_more_trees (t8_cmesh_t cmesh, sc_MPI_Comm comm);
 ```
 """
 function t8_cmesh_new_periodic_line_more_trees(cmesh, comm)
-    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_periodic_line_more_trees(cmesh::t8_cmesh_t,
+                                                       comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10645,7 +11238,8 @@ void t8_cmesh_new_bigmesh (t8_cmesh_t cmesh, t8_eclass_t eclass, int num_trees, 
 ```
 """
 function t8_cmesh_new_bigmesh(cmesh, eclass, num_trees, comm)
-    @ccall libt8.t8_cmesh_new_bigmesh(cmesh::t8_cmesh_t, eclass::t8_eclass_t, num_trees::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_bigmesh(cmesh::t8_cmesh_t, eclass::t8_eclass_t,
+                                      num_trees::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10669,7 +11263,8 @@ void t8_cmesh_new_prism_cake (t8_cmesh_t cmesh, sc_MPI_Comm comm, int num_of_pri
 ```
 """
 function t8_cmesh_new_prism_cake(cmesh, comm, num_of_prisms)
-    @ccall libt8.t8_cmesh_new_prism_cake(cmesh::t8_cmesh_t, comm::MPI_Comm, num_of_prisms::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_prism_cake(cmesh::t8_cmesh_t, comm::MPI_Comm,
+                                         num_of_prisms::Cint)::Cvoid
 end
 
 """
@@ -10705,7 +11300,8 @@ void t8_cmesh_new_prism_cake_funny_oriented (t8_cmesh_t cmesh, sc_MPI_Comm comm)
 ```
 """
 function t8_cmesh_new_prism_cake_funny_oriented(cmesh, comm)
-    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_prism_cake_funny_oriented(cmesh::t8_cmesh_t,
+                                                        comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10729,7 +11325,9 @@ void t8_cmesh_new_brick_2d (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num
 ```
 """
 function t8_cmesh_new_brick_2d(cmesh, num_x, num_y, x_periodic, y_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_2d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_brick_2d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t,
+                                       num_y::t8_gloidx_t, x_periodic::Cint,
+                                       y_periodic::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10740,8 +11338,12 @@ end
 void t8_cmesh_new_brick_3d (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_brick_3d(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_brick_3d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_brick_3d(cmesh, num_x, num_y, num_z, x_periodic, y_periodic,
+                               z_periodic, comm)
+    @ccall libt8.t8_cmesh_new_brick_3d(cmesh::t8_cmesh_t, num_x::t8_gloidx_t,
+                                       num_y::t8_gloidx_t, num_z::t8_gloidx_t,
+                                       x_periodic::Cint, y_periodic::Cint, z_periodic::Cint,
+                                       comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10752,8 +11354,12 @@ end
 void t8_cmesh_new_disjoint_bricks (t8_cmesh_t cmesh, t8_gloidx_t num_x, t8_gloidx_t num_y, t8_gloidx_t num_z, int x_periodic, int y_periodic, int z_periodic, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_disjoint_bricks(cmesh, num_x, num_y, num_z, x_periodic, y_periodic, z_periodic, comm)
-    @ccall libt8.t8_cmesh_new_disjoint_bricks(cmesh::t8_cmesh_t, num_x::t8_gloidx_t, num_y::t8_gloidx_t, num_z::t8_gloidx_t, x_periodic::Cint, y_periodic::Cint, z_periodic::Cint, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_disjoint_bricks(cmesh, num_x, num_y, num_z, x_periodic, y_periodic,
+                                      z_periodic, comm)
+    @ccall libt8.t8_cmesh_new_disjoint_bricks(cmesh::t8_cmesh_t, num_x::t8_gloidx_t,
+                                              num_y::t8_gloidx_t, num_z::t8_gloidx_t,
+                                              x_periodic::Cint, y_periodic::Cint,
+                                              z_periodic::Cint, comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10813,7 +11419,8 @@ void t8_cmesh_new_pyramid_cake (t8_cmesh_t cmesh, sc_MPI_Comm comm, int num_of_p
 ```
 """
 function t8_cmesh_new_pyramid_cake(cmesh, comm, num_of_pyra)
-    @ccall libt8.t8_cmesh_new_pyramid_cake(cmesh::t8_cmesh_t, comm::MPI_Comm, num_of_pyra::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_pyramid_cake(cmesh::t8_cmesh_t, comm::MPI_Comm,
+                                           num_of_pyra::Cint)::Cvoid
 end
 
 """
@@ -10825,7 +11432,8 @@ void t8_cmesh_new_long_brick_pyramid (t8_cmesh_t cmesh, sc_MPI_Comm comm, int nu
 ```
 """
 function t8_cmesh_new_long_brick_pyramid(cmesh, comm, num_cubes)
-    @ccall libt8.t8_cmesh_new_long_brick_pyramid(cmesh::t8_cmesh_t, comm::MPI_Comm, num_cubes::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_new_long_brick_pyramid(cmesh::t8_cmesh_t, comm::MPI_Comm,
+                                                 num_cubes::Cint)::Cvoid
 end
 
 """
@@ -10836,8 +11444,11 @@ end
 void t8_cmesh_new_row_of_cubes (t8_cmesh_t cmesh, t8_locidx_t num_trees, const int set_attributes, const int do_partition, sc_MPI_Comm comm, const int package_id);
 ```
 """
-function t8_cmesh_new_row_of_cubes(cmesh, num_trees, set_attributes, do_partition, comm, package_id)
-    @ccall libt8.t8_cmesh_new_row_of_cubes(cmesh::t8_cmesh_t, num_trees::t8_locidx_t, set_attributes::Cint, do_partition::Cint, comm::MPI_Comm, package_id::Cint)::Cvoid
+function t8_cmesh_new_row_of_cubes(cmesh, num_trees, set_attributes, do_partition, comm,
+                                   package_id)
+    @ccall libt8.t8_cmesh_new_row_of_cubes(cmesh::t8_cmesh_t, num_trees::t8_locidx_t,
+                                           set_attributes::Cint, do_partition::Cint,
+                                           comm::MPI_Comm, package_id::Cint)::Cvoid
 end
 
 """
@@ -10849,7 +11460,8 @@ void t8_cmesh_new_quadrangulated_disk (t8_cmesh_t cmesh, const double radius, sc
 ```
 """
 function t8_cmesh_new_quadrangulated_disk(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_disk(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_quadrangulated_disk(cmesh::t8_cmesh_t, radius::Cdouble,
+                                                  comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10861,7 +11473,9 @@ void t8_cmesh_new_triangulated_spherical_surface_octahedron (t8_cmesh_t cmesh, c
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_octahedron(cmesh::t8_cmesh_t,
+                                                                        radius::Cdouble,
+                                                                        comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10873,7 +11487,9 @@ void t8_cmesh_new_triangulated_spherical_surface_icosahedron (t8_cmesh_t cmesh, 
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_icosahedron(cmesh::t8_cmesh_t,
+                                                                         radius::Cdouble,
+                                                                         comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10885,7 +11501,9 @@ void t8_cmesh_new_triangulated_spherical_surface_cube (t8_cmesh_t cmesh, const d
 ```
 """
 function t8_cmesh_new_triangulated_spherical_surface_cube(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_triangulated_spherical_surface_cube(cmesh::t8_cmesh_t,
+                                                                  radius::Cdouble,
+                                                                  comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10897,7 +11515,9 @@ void t8_cmesh_new_quadrangulated_spherical_surface (t8_cmesh_t cmesh, const doub
 ```
 """
 function t8_cmesh_new_quadrangulated_spherical_surface(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_quadrangulated_spherical_surface(cmesh::t8_cmesh_t,
+                                                               radius::Cdouble,
+                                                               comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10908,8 +11528,15 @@ end
 void t8_cmesh_new_prismed_spherical_shell_octahedron (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh, inner_radius,
+                                                         shell_thickness, num_levels,
+                                                         num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_octahedron(cmesh::t8_cmesh_t,
+                                                                 inner_radius::Cdouble,
+                                                                 shell_thickness::Cdouble,
+                                                                 num_levels::Cint,
+                                                                 num_layers::Cint,
+                                                                 comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10920,8 +11547,15 @@ end
 void t8_cmesh_new_prismed_spherical_shell_icosahedron (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_levels, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh, inner_radius, shell_thickness, num_levels, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_levels::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh, inner_radius,
+                                                          shell_thickness, num_levels,
+                                                          num_layers, comm)
+    @ccall libt8.t8_cmesh_new_prismed_spherical_shell_icosahedron(cmesh::t8_cmesh_t,
+                                                                  inner_radius::Cdouble,
+                                                                  shell_thickness::Cdouble,
+                                                                  num_levels::Cint,
+                                                                  num_layers::Cint,
+                                                                  comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10932,8 +11566,13 @@ end
 void t8_cmesh_new_cubed_spherical_shell (t8_cmesh_t cmesh, const double inner_radius, const double shell_thickness, const int num_trees, const int num_layers, sc_MPI_Comm comm);
 ```
 """
-function t8_cmesh_new_cubed_spherical_shell(cmesh, inner_radius, shell_thickness, num_trees, num_layers, comm)
-    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(cmesh::t8_cmesh_t, inner_radius::Cdouble, shell_thickness::Cdouble, num_trees::Cint, num_layers::Cint, comm::MPI_Comm)::Cvoid
+function t8_cmesh_new_cubed_spherical_shell(cmesh, inner_radius, shell_thickness, num_trees,
+                                            num_layers, comm)
+    @ccall libt8.t8_cmesh_new_cubed_spherical_shell(cmesh::t8_cmesh_t,
+                                                    inner_radius::Cdouble,
+                                                    shell_thickness::Cdouble,
+                                                    num_trees::Cint, num_layers::Cint,
+                                                    comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10945,7 +11584,8 @@ void t8_cmesh_new_cubed_sphere (t8_cmesh_t cmesh, const double radius, sc_MPI_Co
 ```
 """
 function t8_cmesh_new_cubed_sphere(cmesh, radius, comm)
-    @ccall libt8.t8_cmesh_new_cubed_sphere(cmesh::t8_cmesh_t, radius::Cdouble, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_cmesh_new_cubed_sphere(cmesh::t8_cmesh_t, radius::Cdouble,
+                                           comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -10955,7 +11595,7 @@ Sets the face connectivity information of an un-committed cmesh based on a list 
 
 !!! warning
 
-    This routine might be too expensive for very large meshes. In this case,  consider to use a fully featured mesh generator.
+    This routine might be too expensive for very large meshes. In this case, consider to use a fully featured mesh generator.
 
 !!! note
 
@@ -10973,8 +11613,13 @@ Sets the face connectivity information of an un-committed cmesh based on a list 
 void t8_cmesh_set_join_by_vertices (t8_cmesh_t cmesh, const t8_gloidx_t ntrees, const t8_eclass_t *eclasses, const double *vertices, int **connectivity, const int do_both_directions);
 ```
 """
-function t8_cmesh_set_join_by_vertices(cmesh, ntrees, eclasses, vertices, connectivity, do_both_directions)
-    @ccall libt8.t8_cmesh_set_join_by_vertices(cmesh::t8_cmesh_t, ntrees::t8_gloidx_t, eclasses::Ptr{t8_eclass_t}, vertices::Ptr{Cdouble}, connectivity::Ptr{Ptr{Cint}}, do_both_directions::Cint)::Cvoid
+function t8_cmesh_set_join_by_vertices(cmesh, ntrees, eclasses, vertices, connectivity,
+                                       do_both_directions)
+    @ccall libt8.t8_cmesh_set_join_by_vertices(cmesh::t8_cmesh_t, ntrees::t8_gloidx_t,
+                                               eclasses::Ptr{t8_eclass_t},
+                                               vertices::Ptr{Cdouble},
+                                               connectivity::Ptr{Ptr{Cint}},
+                                               do_both_directions::Cint)::Cvoid
 end
 
 """
@@ -10992,7 +11637,7 @@ Sets the face connectivity information of an un-committed cmesh based on the cme
 
 # Arguments
 * `cmesh`:\\[in,out\\] An uncommitted cmesh. The trees eclasses and vertices do need to be set.
-* `connectivity`:\\[in,out\\] If connectivity is not NULL the variable is filled with a pointer to an allocated face connectivity array. The ownership of this array goes to the caller. This argument is mainly used for debugging and testing purposes. The dimension of *connectivity* are  [ntrees,[`T8_ECLASS_MAX_FACES`](@ref),3]. For each element and each face the following is stored: neighbor\\_tree\\_id, neighbor\\_dual\\_face\\_id, orientation
+* `connectivity`:\\[in,out\\] If connectivity is not NULL the variable is filled with a pointer to an allocated face connectivity array. The ownership of this array goes to the caller. This argument is mainly used for debugging and testing purposes. The dimension of *connectivity* are [ntrees,[`T8_ECLASS_MAX_FACES`](@ref),3]. For each element and each face the following is stored: neighbor\\_tree\\_id, neighbor\\_dual\\_face\\_id, orientation
 * `do_both_directions`:\\[in\\] Compute the connectivity from both neighboring sides. Takes much longer to compute.
 ### Prototype
 ```c
@@ -11000,7 +11645,8 @@ void t8_cmesh_set_join_by_stash (t8_cmesh_t cmesh, int **connectivity, const int
 ```
 """
 function t8_cmesh_set_join_by_stash(cmesh, connectivity, do_both_directions)
-    @ccall libt8.t8_cmesh_set_join_by_stash(cmesh::t8_cmesh_t, connectivity::Ptr{Ptr{Cint}}, do_both_directions::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_set_join_by_stash(cmesh::t8_cmesh_t, connectivity::Ptr{Ptr{Cint}},
+                                            do_both_directions::Cint)::Cvoid
 end
 
 """
@@ -11011,8 +11657,11 @@ end
 void t8_cmesh_from_msh_file (t8_cmesh_t *pcmesh, const char *fileprefix, int partition, sc_MPI_Comm comm, int dim, int master, int use_cad_geometry);
 ```
 """
-function t8_cmesh_from_msh_file(pcmesh, fileprefix, partition, comm, dim, master, use_cad_geometry)
-    @ccall libt8.t8_cmesh_from_msh_file(pcmesh::Ptr{t8_cmesh_t}, fileprefix::Cstring, partition::Cint, comm::MPI_Comm, dim::Cint, master::Cint, use_cad_geometry::Cint)::Cvoid
+function t8_cmesh_from_msh_file(pcmesh, fileprefix, partition, comm, dim, master,
+                                use_cad_geometry)
+    @ccall libt8.t8_cmesh_from_msh_file(pcmesh::Ptr{t8_cmesh_t}, fileprefix::Cstring,
+                                        partition::Cint, comm::MPI_Comm, dim::Cint,
+                                        master::Cint, use_cad_geometry::Cint)::Cvoid
 end
 
 mutable struct t8_cmesh_vertex_connectivity end
@@ -11032,8 +11681,11 @@ const t8_cmesh_vertex_connectivity_c = Ptr{t8_cmesh_vertex_connectivity}
 void t8_cmesh_set_global_vertices_of_tree (const t8_cmesh_t cmesh, const t8_gloidx_t global_tree, const t8_gloidx_t *global_tree_vertices, const int num_vertices);
 ```
 """
-function t8_cmesh_set_global_vertices_of_tree(cmesh, global_tree, global_tree_vertices, num_vertices)
-    @ccall libt8.t8_cmesh_set_global_vertices_of_tree(cmesh::Cint, global_tree::Cint, global_tree_vertices::Ptr{Cint}, num_vertices::Cint)::Cvoid
+function t8_cmesh_set_global_vertices_of_tree(cmesh, global_tree, global_tree_vertices,
+                                              num_vertices)
+    @ccall libt8.t8_cmesh_set_global_vertices_of_tree(cmesh::Cint, global_tree::Cint,
+                                                      global_tree_vertices::Ptr{Cint},
+                                                      num_vertices::Cint)::Cvoid
 end
 
 """
@@ -11069,7 +11721,8 @@ const t8_gloidx_t * t8_cmesh_get_global_vertices_of_tree (const t8_cmesh_t cmesh
 ```
 """
 function t8_cmesh_get_global_vertices_of_tree(cmesh, local_tree, num_vertices)
-    @ccall libt8.t8_cmesh_get_global_vertices_of_tree(cmesh::Cint, local_tree::Cint, num_vertices::Ptr{Cint})::Ptr{Cint}
+    @ccall libt8.t8_cmesh_get_global_vertices_of_tree(cmesh::Cint, local_tree::Cint,
+                                                      num_vertices::Ptr{Cint})::Ptr{Cint}
 end
 
 """
@@ -11081,7 +11734,8 @@ t8_gloidx_t t8_cmesh_get_global_vertex_of_tree (const t8_cmesh_t cmesh, const t8
 ```
 """
 function t8_cmesh_get_global_vertex_of_tree(cmesh, local_tree, local_tree_vertex)
-    @ccall libt8.t8_cmesh_get_global_vertex_of_tree(cmesh::Cint, local_tree::Cint, local_tree_vertex::Cint)::Cint
+    @ccall libt8.t8_cmesh_get_global_vertex_of_tree(cmesh::Cint, local_tree::Cint,
+                                                    local_tree_vertex::Cint)::Cint
 end
 
 """
@@ -11141,7 +11795,8 @@ t8_element_array_t * t8_element_array_new (const t8_scheme_c *scheme, const t8_e
 ```
 """
 function t8_element_array_new(scheme, tree_class)
-    @ccall libt8.t8_element_array_new(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Ptr{t8_element_array_t}
+    @ccall libt8.t8_element_array_new(scheme::Ptr{t8_scheme_c},
+                                      tree_class::t8_eclass_t)::Ptr{t8_element_array_t}
 end
 
 """
@@ -11161,7 +11816,9 @@ t8_element_array_t * t8_element_array_new_count (const t8_scheme_c *scheme, cons
 ```
 """
 function t8_element_array_new_count(scheme, tree_class, num_elements)
-    @ccall libt8.t8_element_array_new_count(scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, num_elements::Csize_t)::Ptr{t8_element_array_t}
+    @ccall libt8.t8_element_array_new_count(scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            num_elements::Csize_t)::Ptr{t8_element_array_t}
 end
 
 """
@@ -11179,7 +11836,9 @@ void t8_element_array_init (t8_element_array_t *element_array, const t8_scheme_c
 ```
 """
 function t8_element_array_init(element_array, scheme, tree_class)
-    @ccall libt8.t8_element_array_init(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t)::Cvoid
+    @ccall libt8.t8_element_array_init(element_array::Ptr{t8_element_array_t},
+                                       scheme::Ptr{t8_scheme_c},
+                                       tree_class::t8_eclass_t)::Cvoid
 end
 
 """
@@ -11198,7 +11857,10 @@ void t8_element_array_init_size (t8_element_array_t *element_array, const t8_sch
 ```
 """
 function t8_element_array_init_size(element_array, scheme, tree_class, num_elements)
-    @ccall libt8.t8_element_array_init_size(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, num_elements::Csize_t)::Cvoid
+    @ccall libt8.t8_element_array_init_size(element_array::Ptr{t8_element_array_t},
+                                            scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            num_elements::Csize_t)::Cvoid
 end
 
 """
@@ -11217,7 +11879,9 @@ void t8_element_array_init_view (t8_element_array_t *view, const t8_element_arra
 ```
 """
 function t8_element_array_init_view(view, array, offset, length)
-    @ccall libt8.t8_element_array_init_view(view::Ptr{t8_element_array_t}, array::Ptr{t8_element_array_t}, offset::Csize_t, length::Csize_t)::Cvoid
+    @ccall libt8.t8_element_array_init_view(view::Ptr{t8_element_array_t},
+                                            array::Ptr{t8_element_array_t}, offset::Csize_t,
+                                            length::Csize_t)::Cvoid
 end
 
 """
@@ -11237,7 +11901,11 @@ void t8_element_array_init_data (t8_element_array_t *view, const t8_element_t *b
 ```
 """
 function t8_element_array_init_data(view, base, scheme, tree_class, elem_count)
-    @ccall libt8.t8_element_array_init_data(view::Ptr{t8_element_array_t}, base::Ptr{t8_element_t}, scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, elem_count::Csize_t)::Cvoid
+    @ccall libt8.t8_element_array_init_data(view::Ptr{t8_element_array_t},
+                                            base::Ptr{t8_element_t},
+                                            scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            elem_count::Csize_t)::Cvoid
 end
 
 """
@@ -11257,7 +11925,11 @@ void t8_element_array_init_copy (t8_element_array_t *element_array, const t8_sch
 ```
 """
 function t8_element_array_init_copy(element_array, scheme, tree_class, data, num_elements)
-    @ccall libt8.t8_element_array_init_copy(element_array::Ptr{t8_element_array_t}, scheme::Ptr{t8_scheme_c}, tree_class::t8_eclass_t, data::Ptr{t8_element_t}, num_elements::Csize_t)::Cvoid
+    @ccall libt8.t8_element_array_init_copy(element_array::Ptr{t8_element_array_t},
+                                            scheme::Ptr{t8_scheme_c},
+                                            tree_class::t8_eclass_t,
+                                            data::Ptr{t8_element_t},
+                                            num_elements::Csize_t)::Cvoid
 end
 
 """
@@ -11278,7 +11950,8 @@ void t8_element_array_resize (t8_element_array_t *element_array, const size_t ne
 ```
 """
 function t8_element_array_resize(element_array, new_count)
-    @ccall libt8.t8_element_array_resize(element_array::Ptr{t8_element_array_t}, new_count::Csize_t)::Cvoid
+    @ccall libt8.t8_element_array_resize(element_array::Ptr{t8_element_array_t},
+                                         new_count::Csize_t)::Cvoid
 end
 
 """
@@ -11295,7 +11968,8 @@ void t8_element_array_copy (t8_element_array_t *dest, const t8_element_array_t *
 ```
 """
 function t8_element_array_copy(dest, src)
-    @ccall libt8.t8_element_array_copy(dest::Ptr{t8_element_array_t}, src::Ptr{t8_element_array_t})::Cvoid
+    @ccall libt8.t8_element_array_copy(dest::Ptr{t8_element_array_t},
+                                       src::Ptr{t8_element_array_t})::Cvoid
 end
 
 """
@@ -11332,7 +12006,8 @@ t8_element_t * t8_element_array_push_count (t8_element_array_t *element_array, s
 ```
 """
 function t8_element_array_push_count(element_array, count)
-    @ccall libt8.t8_element_array_push_count(element_array::Ptr{t8_element_array_t}, count::Csize_t)::Ptr{t8_element_t}
+    @ccall libt8.t8_element_array_push_count(element_array::Ptr{t8_element_array_t},
+                                             count::Csize_t)::Ptr{t8_element_t}
 end
 
 """
@@ -11351,7 +12026,8 @@ const t8_element_t * t8_element_array_index_locidx (const t8_element_array_t *el
 ```
 """
 function t8_element_array_index_locidx(element_array, index)
-    @ccall libt8.t8_element_array_index_locidx(element_array::Ptr{t8_element_array_t}, index::t8_locidx_t)::Ptr{t8_element_t}
+    @ccall libt8.t8_element_array_index_locidx(element_array::Ptr{t8_element_array_t},
+                                               index::t8_locidx_t)::Ptr{t8_element_t}
 end
 
 """
@@ -11370,7 +12046,8 @@ const t8_element_t * t8_element_array_index_int (const t8_element_array_t *eleme
 ```
 """
 function t8_element_array_index_int(element_array, index)
-    @ccall libt8.t8_element_array_index_int(element_array::Ptr{t8_element_array_t}, index::Cint)::Ptr{t8_element_t}
+    @ccall libt8.t8_element_array_index_int(element_array::Ptr{t8_element_array_t},
+                                            index::Cint)::Ptr{t8_element_t}
 end
 
 """
@@ -11389,7 +12066,8 @@ t8_element_t * t8_element_array_index_locidx_mutable (t8_element_array_t *elemen
 ```
 """
 function t8_element_array_index_locidx_mutable(element_array, index)
-    @ccall libt8.t8_element_array_index_locidx_mutable(element_array::Ptr{t8_element_array_t}, index::t8_locidx_t)::Ptr{t8_element_t}
+    @ccall libt8.t8_element_array_index_locidx_mutable(element_array::Ptr{t8_element_array_t},
+                                                       index::t8_locidx_t)::Ptr{t8_element_t}
 end
 
 """
@@ -11408,7 +12086,8 @@ t8_element_t * t8_element_array_index_int_mutable (t8_element_array_t *element_a
 ```
 """
 function t8_element_array_index_int_mutable(element_array, index)
-    @ccall libt8.t8_element_array_index_int_mutable(element_array::Ptr{t8_element_array_t}, index::Cint)::Ptr{t8_element_t}
+    @ccall libt8.t8_element_array_index_int_mutable(element_array::Ptr{t8_element_array_t},
+                                                    index::Cint)::Ptr{t8_element_t}
 end
 
 """
@@ -11570,7 +12249,7 @@ Search for an element in an array.
 
 # Arguments
 * `element_array`:\\[in\\] Array structure.
-* `element`:\\[in\\] Element to be found in *element_array*.  The element must have been created with the scheme used in *element_array*.
+* `element`:\\[in\\] Element to be found in *element_array*. The element must have been created with the scheme used in *element_array*.
 # Returns
 If *element* was found in *element_array* then the position in the array is returned. If the element is not found, -1 is returned.
 ### Prototype
@@ -11579,7 +12258,8 @@ t8_locidx_t t8_element_array_find (const t8_element_array_t *element_array, cons
 ```
 """
 function t8_element_array_find(element_array, element)
-    @ccall libt8.t8_element_array_find(element_array::Ptr{t8_element_array_t}, element::Ptr{t8_element_t})::t8_locidx_t
+    @ccall libt8.t8_element_array_find(element_array::Ptr{t8_element_array_t},
+                                       element::Ptr{t8_element_t})::t8_locidx_t
 end
 
 """
@@ -11622,102 +12302,20 @@ function t8_element_array_truncate(element_array)
     @ccall libt8.t8_element_array_truncate(element_array::Ptr{t8_element_array_t})::Cvoid
 end
 
-"""
-    t8_forest
+mutable struct t8_forest_ghost_definition end
 
-| Field                          | Note                                                                                                                                                                                                                                                                                           |
-| :----------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| rc                             | Reference counter.                                                                                                                                                                                                                                                                             |
-| set\\_partition\\_offset       | Flag indicating whether the partition range was set manually.                                                                                                                                                                                                                                  |
-| set\\_first\\_global\\_element | If set\\_partition\\_offset is true, the global ID of the first local element after partitioning.                                                                                                                                                                                              |
-| set\\_level                    | Level to use in new construction.                                                                                                                                                                                                                                                              |
-| set\\_for\\_coarsening         | Change partition to allow for one round of coarsening                                                                                                                                                                                                                                          |
-| weight\\_function              | Pointer to user defined element weight function. Nullptr for standard, element-based partitioning.                                                                                                                                                                                             |
-| cmesh                          | Coarse mesh to use.                                                                                                                                                                                                                                                                            |
-| scheme                         | Scheme for element types.                                                                                                                                                                                                                                                                      |
-| maxlevel                       | The maximum allowed refinement level for elements in this forest.                                                                                                                                                                                                                              |
-| maxlevel\\_existing            | If >= 0, the maximum occurring refinement level of a forest element.                                                                                                                                                                                                                           |
-| do\\_dup                       | Communicator shall be duped.                                                                                                                                                                                                                                                                   |
-| dimension                      | Dimension inferred from **cmesh**.                                                                                                                                                                                                                                                             |
-| incomplete\\_trees             | Flag to check whether the forest has (potential) incomplete trees. A tree is incomplete if an element has been removed from it. Once an element got removed, the flag sets to 1 (true) and stays. For a committed forest this flag is either true on all ranks or false on all ranks.          |
-| set\\_from                     | Temporarily store source forest.                                                                                                                                                                                                                                                               |
-| from\\_method                  | Method to derive from **set_from**.                                                                                                                                                                                                                                                            |
-| set\\_adapt\\_fn               | refinement and coarsen function. Called when **from_method** is set to [`T8_FOREST_FROM_ADAPT`](@ref).                                                                                                                                                                                         |
-| set\\_adapt\\_recursive        | Flag to decide whether coarsen and refine are carried out recursive                                                                                                                                                                                                                            |
-| set\\_balance                  | Flag to decide whether to forest will be balance in t8_forest_commit. See t8_forest_set_balance. If 0, no balance. If 1 balance with repartitioning, if 2 balance without repartitioning,  # See also t8\\_forest\\_balance                                                                    |
-| do\\_ghost                     | If True, a ghost layer will be created when the forest is committed.                                                                                                                                                                                                                           |
-| ghost\\_type                   | If a ghost layer will be created, the type of neighbors that count as ghost.                                                                                                                                                                                                                   |
-| ghost\\_algorithm              | Controls the algorithm used for ghost. 1 = balanced only. 2 = also unbalanced 3 = top-down search and unbalanced.                                                                                                                                                                              |
-| user\\_data                    | Pointer for arbitrary user data.  # See also [`t8_forest_set_user_data`](@ref).                                                                                                                                                                                                                |
-| user\\_function                | Pointer for arbitrary user function.  # See also [`t8_forest_set_user_function`](@ref).                                                                                                                                                                                                        |
-| t8code\\_data                  | Pointer for arbitrary data that is used internally.                                                                                                                                                                                                                                            |
-| committed                      | t8_forest_commit called?                                                                                                                                                                                                                                                                       |
-| mpisize                        | Number of MPI processes.                                                                                                                                                                                                                                                                       |
-| mpirank                        | Number of this MPI process.                                                                                                                                                                                                                                                                    |
-| first\\_local\\_tree           | The global index of the first local tree on this process. If first\\_local\\_tree is larger than last\\_local\\_tree then this processor/forest is empty. See https://github.com/DLR-AMR/t8code/wiki/Tree-indexing                                                                             |
-| last\\_local\\_tree            | The global index of the last local tree on this process. -1 if this processor is empty.                                                                                                                                                                                                        |
-| global\\_num\\_trees           | The total number of global trees.                                                                                                                                                                                                                                                              |
-| trees                          | The array of trees.                                                                                                                                                                                                                                                                            |
-| ghosts                         | If not NULL, the ghost elements.  # See also [`t8_forest_ghost`](@ref).h                                                                                                                                                                                                                       |
-| element\\_offsets              | If partitioned, for each process the global index of its first element. Since it is memory consuming, it is usually only constructed when needed and otherwise unallocated.                                                                                                                    |
-| global\\_first\\_desc          | If partitioned, for each process the linear id (at maxlevel) of its first element's first descendant. t8_element_set_linear_id. Stores 0 for empty processes. Since it is memory consuming, it is usually only constructed when needed and otherwise unallocated.                              |
-| tree\\_offsets                 | If partitioned for each process the global index of its first local tree or -(first local tree) - 1 if the first tree on that process is shared. Since this is memory consuming we only construct it when needed. This array follows the same logic as *tree_offsets* in [`t8_cmesh_t`](@ref)  |
-| local\\_num\\_leaf\\_elements  | Number of leaf elements on this processor.                                                                                                                                                                                                                                                     |
-| global\\_num\\_leaf\\_elements | Number of leaf elements on all processors.                                                                                                                                                                                                                                                     |
-| profile                        | If not NULL, runtimes and statistics about forest\\_commit are stored here.                                                                                                                                                                                                                    |
-| stats                          | The SC profiling stats of the forest.                                                                                                                                                                                                                                                          |
-| stats\\_computed               | Switch indicating whether the profiling stats have been compute (1) or not (0)                                                                                                                                                                                                                 |
-"""
-# This struct is not supposed to be read and modified directly.
-# Besides, there is a circular dependency with `t8_forest_t`
-# leading to an error output by Julia.
+"""This typedef holds virtual functions for a particular ghost definition. We need it so that we can use t8\\_ghost\\_definition\\_c pointers in .c files without them seeing the actual C++ code (and then not compiling)"""
+const t8_forest_ghost_definition_c = t8_forest_ghost_definition
+
 mutable struct t8_forest end
 
 """Opaque pointer to a forest implementation."""
 const t8_forest_t = Ptr{t8_forest}
 
-"""
-    t8_tree
-
-The t8 tree datatype
-
-| Field             | Note                                                               |
-| :---------------- | :----------------------------------------------------------------- |
-| leaf\\_elements   | locally stored leaf elements                                       |
-| eclass            | The element class of this tree                                     |
-| first\\_desc      | first local descendant                                             |
-| last\\_desc       | last local descendant                                              |
-| elements\\_offset | cumulative sum over earlier trees on this processor (locals only)  |
-"""
-struct t8_tree
-    leaf_elements::t8_element_array_t
-    eclass::t8_eclass_t
-    first_desc::Ptr{t8_element_t}
-    last_desc::Ptr{t8_element_t}
-    elements_offset::t8_locidx_t
-end
+mutable struct t8_tree end
 
 """Opaque pointer to a tree implementation."""
 const t8_tree_t = Ptr{t8_tree}
-
-"""
-    t8_ghost_type_t
-
-This type controls, which neighbors count as ghost elements. Currently, we support face-neighbors. Vertex and edge neighbors will eventually be added.
-
-| Enumerator            | Note                                                              |
-| :-------------------- | :---------------------------------------------------------------- |
-| T8\\_GHOST\\_NONE     | Do not create ghost layer.                                        |
-| T8\\_GHOST\\_FACES    | Consider all face (codimension 1) neighbors.                      |
-| T8\\_GHOST\\_EDGES    | Consider all edge (codimension 2) and face neighbors.             |
-| T8\\_GHOST\\_VERTICES | Consider all vertex (codimension 3) and edge and face neighbors.  |
-"""
-@cenum t8_ghost_type_t::UInt32 begin
-    T8_GHOST_NONE = 0
-    T8_GHOST_FACES = 1
-    T8_GHOST_EDGES = 2
-    T8_GHOST_VERTICES = 3
-end
 
 # typedef void ( * t8_generic_function_pointer ) ( void )
 """
@@ -11831,6 +12429,24 @@ function t8_forest_is_committed(forest)
 end
 
 """
+    t8_forest_has_incomplete_trees(forest)
+
+Check whether a committed forest has (potentially) incomplete trees. A tree is incomplete if an element has been removed from it.
+
+# Arguments
+* `forest`:\\[in\\] A committed forest.
+# Returns
+True if *forest* has (potentially) incomplete trees, false otherwise. The result is the same on all processes.
+### Prototype
+```c
+int t8_forest_has_incomplete_trees (const t8_forest_t forest);
+```
+"""
+function t8_forest_has_incomplete_trees(forest)
+    @ccall libt8.t8_forest_has_incomplete_trees(forest::t8_forest_t)::Cint
+end
+
+"""
     t8_forest_no_overlap(forest)
 
 Check whether the forest has local overlapping elements.
@@ -11887,7 +12503,8 @@ void t8_forest_set_cmesh (t8_forest_t forest, t8_cmesh_t cmesh, sc_MPI_Comm comm
 ```
 """
 function t8_forest_set_cmesh(forest, cmesh, comm)
-    @ccall libt8.t8_forest_set_cmesh(forest::t8_forest_t, cmesh::t8_cmesh_t, comm::MPI_Comm)::Cvoid
+    @ccall libt8.t8_forest_set_cmesh(forest::t8_forest_t, cmesh::t8_cmesh_t,
+                                     comm::MPI_Comm)::Cvoid
 end
 
 """
@@ -11950,6 +12567,24 @@ function t8_forest_set_copy(forest, from)
 end
 
 """
+    t8_forest_get_set_from(forest)
+
+Get the forest from which a not yet committed forest is derived in t8_forest_commit.
+
+# Arguments
+* `forest`:\\[in\\] An initialized, not committed forest.
+# Returns
+The source forest passed to t8_forest_set_copy, t8_forest_set_adapt, t8_forest_set_partition, or t8_forest_set_balance. NULL if none of these functions has been called with a source forest yet.
+### Prototype
+```c
+t8_forest_t t8_forest_get_set_from (const t8_forest_t forest);
+```
+"""
+function t8_forest_get_set_from(forest)
+    @ccall libt8.t8_forest_get_set_from(forest::t8_forest_t)::t8_forest_t
+end
+
+"""
     t8_forest_set_adapt(forest, set_from, adapt_fn, recursive)
 
 Set a source forest with an adapt function to be adapted on committing. By default, the forest takes ownership of the source **set_from** such that it will be destroyed on calling t8_forest_commit. To keep ownership of **set_from**, call t8_forest_ref before passing it into this function. This means that it is ILLEGAL to continue using **set_from** or dereferencing it UNLESS it is referenced directly before passing it into this function.
@@ -11973,7 +12608,8 @@ void t8_forest_set_adapt (t8_forest_t forest, const t8_forest_t set_from, t8_for
 ```
 """
 function t8_forest_set_adapt(forest, set_from, adapt_fn, recursive)
-    @ccall libt8.t8_forest_set_adapt(forest::t8_forest_t, set_from::t8_forest_t, adapt_fn::t8_forest_adapt_t, recursive::Cint)::Cvoid
+    @ccall libt8.t8_forest_set_adapt(forest::t8_forest_t, set_from::t8_forest_t,
+                                     adapt_fn::t8_forest_adapt_t, recursive::Cint)::Cvoid
 end
 
 """
@@ -12038,7 +12674,8 @@ void t8_forest_set_user_function (t8_forest_t forest, t8_generic_function_pointe
 ```
 """
 function t8_forest_set_user_function(forest, _function)
-    @ccall libt8.t8_forest_set_user_function(forest::t8_forest_t, _function::t8_generic_function_pointer)::Cvoid
+    @ccall libt8.t8_forest_set_user_function(forest::t8_forest_t,
+                                             _function::t8_generic_function_pointer)::Cvoid
 end
 
 """
@@ -12085,7 +12722,44 @@ void t8_forest_set_partition (t8_forest_t forest, const t8_forest_t set_from, in
 ```
 """
 function t8_forest_set_partition(forest, set_from, set_for_coarsening)
-    @ccall libt8.t8_forest_set_partition(forest::t8_forest_t, set_from::t8_forest_t, set_for_coarsening::Cint)::Cvoid
+    @ccall libt8.t8_forest_set_partition(forest::t8_forest_t, set_from::t8_forest_t,
+                                         set_for_coarsening::Cint)::Cvoid
+end
+
+"""
+    t8_forest_partition_is_set(forest, set_for_coarsening)
+
+Query whether a forest is set to be partitioned during commit, see t8_forest_set_partition.
+
+# Arguments
+* `forest`:\\[in\\] An initialized, not committed forest.
+* `set_for_coarsening`:\\[out\\] The *set_for_coarsening* argument of t8_forest_set_partition if the forest is set to be partitioned, false otherwise. May be NULL, if the argument is not needed.
+# Returns
+True if the forest is set to be partitioned, false otherwise.
+### Prototype
+```c
+int t8_forest_partition_is_set (const t8_forest_t forest, int *set_for_coarsening);
+```
+"""
+function t8_forest_partition_is_set(forest, set_for_coarsening)
+    @ccall libt8.t8_forest_partition_is_set(forest::t8_forest_t,
+                                            set_for_coarsening::Ptr{Cint})::Cint
+end
+
+"""
+    t8_forest_unset_partition(forest)
+
+Undo t8_forest_set_partition, such that the forest is not partitioned during commit. If the forest is set to be neither adapted nor balanced, it is copied from its source forest during commit. Nothing happens if the forest is not set to be partitioned.
+
+# Arguments
+* `forest`:\\[in,out\\] An initialized, not committed forest.
+### Prototype
+```c
+void t8_forest_unset_partition (t8_forest_t forest);
+```
+"""
+function t8_forest_unset_partition(forest)
+    @ccall libt8.t8_forest_unset_partition(forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -12108,7 +12782,8 @@ void t8_forest_set_partition_weight_function (t8_forest_t forest, t8_weight_fcn_
 ```
 """
 function t8_forest_set_partition_weight_function(forest, weight_callback)
-    @ccall libt8.t8_forest_set_partition_weight_function(forest::t8_forest_t, weight_callback::Ptr{t8_weight_fcn_t})::Cvoid
+    @ccall libt8.t8_forest_set_partition_weight_function(forest::t8_forest_t,
+                                                         weight_callback::Ptr{t8_weight_fcn_t})::Cvoid
 end
 
 """
@@ -12134,7 +12809,49 @@ void t8_forest_set_balance (t8_forest_t forest, const t8_forest_t set_from, int 
 ```
 """
 function t8_forest_set_balance(forest, set_from, no_repartition)
-    @ccall libt8.t8_forest_set_balance(forest::t8_forest_t, set_from::t8_forest_t, no_repartition::Cint)::Cvoid
+    @ccall libt8.t8_forest_set_balance(forest::t8_forest_t, set_from::t8_forest_t,
+                                       no_repartition::Cint)::Cvoid
+end
+
+"""
+    t8_forest_balance_is_set(forest, no_repartition)
+
+Query whether a forest is set to be balanced during commit, see t8_forest_set_balance.
+
+# Arguments
+* `forest`:\\[in\\] An initialized, not committed forest.
+* `no_repartition`:\\[out\\] The *no_repartition* argument of t8_forest_set_balance if the forest is set to be balanced, false otherwise. May be NULL, if the argument is not needed.
+# Returns
+True if the forest is set to be balanced, false otherwise.
+### Prototype
+```c
+int t8_forest_balance_is_set (const t8_forest_t forest, int *no_repartition);
+```
+"""
+function t8_forest_balance_is_set(forest, no_repartition)
+    @ccall libt8.t8_forest_balance_is_set(forest::t8_forest_t,
+                                          no_repartition::Ptr{Cint})::Cint
+end
+
+"""
+    t8_ghost_type_t
+
+This type controls, which neighbors count as ghost elements. Currently, we support face-neighbors. Vertex and edge neighbors will eventually be added.
+
+| Enumerator            | Note                                                              |
+| :-------------------- | :---------------------------------------------------------------- |
+| T8\\_GHOST\\_NONE     | Do not create ghost layer.                                        |
+| T8\\_GHOST\\_FACES    | Consider all face (codimension 1) neighbors.                      |
+| T8\\_GHOST\\_EDGES    | Consider all edge (codimension 2) and face neighbors.             |
+| T8\\_GHOST\\_VERTICES | Consider all vertex (codimension 3) and edge and face neighbors.  |
+| T8\\_GHOST\\_COUNT    | Number of ghost types                                             |
+"""
+@cenum t8_ghost_type_t::UInt32 begin
+    T8_GHOST_NONE = 0
+    T8_GHOST_FACES = 1
+    T8_GHOST_EDGES = 2
+    T8_GHOST_VERTICES = 3
+    T8_GHOST_COUNT = 4
 end
 
 """
@@ -12152,29 +12869,63 @@ void t8_forest_set_ghost (t8_forest_t forest, int do_ghost, t8_ghost_type_t ghos
 ```
 """
 function t8_forest_set_ghost(forest, do_ghost, ghost_type)
-    @ccall libt8.t8_forest_set_ghost(forest::t8_forest_t, do_ghost::Cint, ghost_type::t8_ghost_type_t)::Cvoid
+    @ccall libt8.t8_forest_set_ghost(forest::t8_forest_t, do_ghost::Cint,
+                                     ghost_type::t8_ghost_type_t)::Cvoid
 end
 
 """
-    t8_forest_set_ghost_ext(forest, do_ghost, ghost_type, ghost_version)
+    t8_forest_set_ghost_ext(forest, do_ghost, ghost_definition)
 
-Like t8_forest_set_ghost but with the additional options to change the ghost algorithm. This is used for debugging and timing the algorithm. An application should almost always use t8_forest_set_ghost.
+Set a specific ghost\\_definition for a forest. This is used when the application defines its own ghost\\_definition class.
 
 # Arguments
 * `forest`:\\[in\\] The forest.
-* `do_ghost`:\\[in\\] If non-zero a ghost layer will be created.
-* `ghost_type`:\\[in\\] Controls which neighbors count as ghost elements, currently only T8\\_GHOST\\_FACES is supported. This value is ignored if *do_ghost* = 0.
-* `ghost_version`:\\[in\\] If 1, the iterative ghost algorithm for balanced forests is used. If 2, the iterative algorithm for unbalanced forests. If 3, the top-down search algorithm for unbalanced forests.
-# See also
-[`t8_forest_set_ghost`](@ref)
-
+* `do_ghost`:\\[in\\] If 0 no ghost layer will be computed.
+* `ghost_definition`:\\[in\\] Pointer to an object of the class ghost\\_definition or a derived class The forest takes ownership of the ghost\\_definition. Can be nullptr if the forest already owns a definition or *do_ghost* is set to 0.
 ### Prototype
 ```c
-void t8_forest_set_ghost_ext (t8_forest_t forest, int do_ghost, t8_ghost_type_t ghost_type, int ghost_version);
+void t8_forest_set_ghost_ext (t8_forest_t forest, const int do_ghost, t8_forest_ghost_definition_c *ghost_definition);
 ```
 """
-function t8_forest_set_ghost_ext(forest, do_ghost, ghost_type, ghost_version)
-    @ccall libt8.t8_forest_set_ghost_ext(forest::t8_forest_t, do_ghost::Cint, ghost_type::t8_ghost_type_t, ghost_version::Cint)::Cvoid
+function t8_forest_set_ghost_ext(forest, do_ghost, ghost_definition)
+    @ccall libt8.t8_forest_set_ghost_ext(forest::t8_forest_t, do_ghost::Cint,
+                                         ghost_definition::Ptr{t8_forest_ghost_definition_c})::Cvoid
+end
+
+"""
+    t8_forest_ghost_is_set(forest)
+
+Query whether a ghost layer is set to be created during commit, see t8_forest_set_ghost and t8_forest_set_ghost_ext.
+
+# Arguments
+* `forest`:\\[in\\] An initialized, not committed forest.
+# Returns
+True if a ghost layer is set to be created, false otherwise.
+### Prototype
+```c
+int t8_forest_ghost_is_set (const t8_forest_t forest);
+```
+"""
+function t8_forest_ghost_is_set(forest)
+    @ccall libt8.t8_forest_ghost_is_set(forest::t8_forest_t)::Cint
+end
+
+"""
+    t8_forest_get_ghost_definition(forest)
+
+Get the ghost definition of a forest, see t8_forest_set_ghost_ext. The forest keeps the ownership of the ghost definition.
+
+# Arguments
+* `forest`:\\[in\\] An initialized or committed forest.
+# Returns
+The ghost definition of the forest. NULL if the forest has no ghost definition.
+### Prototype
+```c
+t8_forest_ghost_definition_c * t8_forest_get_ghost_definition (const t8_forest_t forest);
+```
+"""
+function t8_forest_get_ghost_definition(forest)
+    @ccall libt8.t8_forest_get_ghost_definition(forest::t8_forest_t)::Ptr{t8_forest_ghost_definition_c}
 end
 
 """
@@ -12316,7 +13067,8 @@ t8_eclass_t t8_forest_get_eclass (const t8_forest_t forest, const t8_locidx_t lt
 ```
 """
 function t8_forest_get_eclass(forest, ltreeid)
-    @ccall libt8.t8_forest_get_eclass(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_eclass_t
+    @ccall libt8.t8_forest_get_eclass(forest::t8_forest_t,
+                                      ltreeid::t8_locidx_t)::t8_eclass_t
 end
 
 """
@@ -12357,7 +13109,8 @@ t8_locidx_t t8_forest_get_local_id (const t8_forest_t forest, const t8_gloidx_t 
 ```
 """
 function t8_forest_get_local_id(forest, gtreeid)
-    @ccall libt8.t8_forest_get_local_id(forest::t8_forest_t, gtreeid::t8_gloidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_get_local_id(forest::t8_forest_t,
+                                        gtreeid::t8_gloidx_t)::t8_locidx_t
 end
 
 """
@@ -12379,7 +13132,8 @@ t8_locidx_t t8_forest_get_local_or_ghost_id (const t8_forest_t forest, const t8_
 ```
 """
 function t8_forest_get_local_or_ghost_id(forest, gtreeid)
-    @ccall libt8.t8_forest_get_local_or_ghost_id(forest::t8_forest_t, gtreeid::t8_gloidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_get_local_or_ghost_id(forest::t8_forest_t,
+                                                 gtreeid::t8_gloidx_t)::t8_locidx_t
 end
 
 """
@@ -12405,7 +13159,8 @@ t8_locidx_t t8_forest_ltreeid_to_cmesh_ltreeid (t8_forest_t forest, t8_locidx_t 
 ```
 """
 function t8_forest_ltreeid_to_cmesh_ltreeid(forest, ltreeid)
-    @ccall libt8.t8_forest_ltreeid_to_cmesh_ltreeid(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_ltreeid_to_cmesh_ltreeid(forest::t8_forest_t,
+                                                    ltreeid::t8_locidx_t)::t8_locidx_t
 end
 
 """
@@ -12431,7 +13186,8 @@ t8_locidx_t t8_forest_cmesh_ltreeid_to_ltreeid (t8_forest_t forest, t8_locidx_t 
 ```
 """
 function t8_forest_cmesh_ltreeid_to_ltreeid(forest, lctreeid)
-    @ccall libt8.t8_forest_cmesh_ltreeid_to_ltreeid(forest::t8_forest_t, lctreeid::t8_locidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_cmesh_ltreeid_to_ltreeid(forest::t8_forest_t,
+                                                    lctreeid::t8_locidx_t)::t8_locidx_t
 end
 
 """
@@ -12450,7 +13206,8 @@ t8_ctree_t t8_forest_get_coarse_tree (t8_forest_t forest, t8_locidx_t ltreeid);
 ```
 """
 function t8_forest_get_coarse_tree(forest, ltreeid)
-    @ccall libt8.t8_forest_get_coarse_tree(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_ctree_t
+    @ccall libt8.t8_forest_get_coarse_tree(forest::t8_forest_t,
+                                           ltreeid::t8_locidx_t)::t8_ctree_t
 end
 
 """
@@ -12478,7 +13235,8 @@ int t8_forest_element_is_leaf (const t8_forest_t forest, const t8_element_t *ele
 ```
 """
 function t8_forest_element_is_leaf(forest, element, local_tree)
-    @ccall libt8.t8_forest_element_is_leaf(forest::t8_forest_t, element::Ptr{t8_element_t}, local_tree::t8_locidx_t)::Cint
+    @ccall libt8.t8_forest_element_is_leaf(forest::t8_forest_t, element::Ptr{t8_element_t},
+                                           local_tree::t8_locidx_t)::Cint
 end
 
 """
@@ -12503,7 +13261,10 @@ int t8_forest_element_is_leaf_or_ghost (const t8_forest_t forest, const t8_eleme
 ```
 """
 function t8_forest_element_is_leaf_or_ghost(forest, element, local_tree, check_ghost)
-    @ccall libt8.t8_forest_element_is_leaf_or_ghost(forest::t8_forest_t, element::Ptr{t8_element_t}, local_tree::t8_locidx_t, check_ghost::Cint)::Cint
+    @ccall libt8.t8_forest_element_is_leaf_or_ghost(forest::t8_forest_t,
+                                                    element::Ptr{t8_element_t},
+                                                    local_tree::t8_locidx_t,
+                                                    check_ghost::Cint)::Cint
 end
 
 """
@@ -12527,7 +13288,9 @@ int t8_forest_leaf_face_orientation (t8_forest_t forest, const t8_locidx_t ltree
 ```
 """
 function t8_forest_leaf_face_orientation(forest, ltreeid, scheme, leaf, face)
-    @ccall libt8.t8_forest_leaf_face_orientation(forest::t8_forest_t, ltreeid::t8_locidx_t, scheme::Ptr{t8_scheme_c}, leaf::Ptr{t8_element_t}, face::Cint)::Cint
+    @ccall libt8.t8_forest_leaf_face_orientation(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                 scheme::Ptr{t8_scheme_c},
+                                                 leaf::Ptr{t8_element_t}, face::Cint)::Cint
 end
 
 """
@@ -12568,8 +13331,16 @@ if (num\\_neighbors > 0) { [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@
 void t8_forest_leaf_face_neighbors (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *leaf, const t8_element_t **pneighbor_leaves[], const int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass);
 ```
 """
-function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass)
-    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t})::Cvoid
+function t8_forest_leaf_face_neighbors(forest, ltreeid, leaf, pneighbor_leaves, face,
+                                       dual_faces, num_neighbors, pelement_indices,
+                                       pneigh_eclass)
+    @ccall libt8.t8_forest_leaf_face_neighbors(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                               leaf::Ptr{t8_element_t},
+                                               pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}},
+                                               face::Cint, dual_faces::Ptr{Ptr{Cint}},
+                                               num_neighbors::Ptr{Cint},
+                                               pelement_indices::Ptr{Ptr{t8_locidx_t}},
+                                               pneigh_eclass::Ptr{t8_eclass_t})::Cvoid
 end
 
 """
@@ -12608,8 +13379,20 @@ if (num\\_neighbors > 0) { [`T8_FREE`](@ref) (pneighbor\\_leaves); [`T8_FREE`](@
 void t8_forest_leaf_face_neighbors_ext (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *leaf_or_ghost, const t8_element_t **pneighbor_leaves[], const int face, int *dual_faces[], int *num_neighbors, t8_locidx_t **pelement_indices, t8_eclass_t *pneigh_eclass, t8_gloidx_t *gneigh_tree, int *orientation);
 ```
 """
-function t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf_or_ghost, pneighbor_leaves, face, dual_faces, num_neighbors, pelement_indices, pneigh_eclass, gneigh_tree, orientation)
-    @ccall libt8.t8_forest_leaf_face_neighbors_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf_or_ghost::Ptr{t8_element_t}, pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}}, face::Cint, dual_faces::Ptr{Ptr{Cint}}, num_neighbors::Ptr{Cint}, pelement_indices::Ptr{Ptr{t8_locidx_t}}, pneigh_eclass::Ptr{t8_eclass_t}, gneigh_tree::Ptr{t8_gloidx_t}, orientation::Ptr{Cint})::Cvoid
+function t8_forest_leaf_face_neighbors_ext(forest, ltreeid, leaf_or_ghost, pneighbor_leaves,
+                                           face, dual_faces, num_neighbors,
+                                           pelement_indices, pneigh_eclass, gneigh_tree,
+                                           orientation)
+    @ccall libt8.t8_forest_leaf_face_neighbors_ext(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t,
+                                                   leaf_or_ghost::Ptr{t8_element_t},
+                                                   pneighbor_leaves::Ptr{Ptr{Ptr{t8_element_t}}},
+                                                   face::Cint, dual_faces::Ptr{Ptr{Cint}},
+                                                   num_neighbors::Ptr{Cint},
+                                                   pelement_indices::Ptr{Ptr{t8_locidx_t}},
+                                                   pneigh_eclass::Ptr{t8_eclass_t},
+                                                   gneigh_tree::Ptr{t8_gloidx_t},
+                                                   orientation::Ptr{Cint})::Cvoid
 end
 
 """
@@ -12634,8 +13417,13 @@ The index of the face neighbor leaf (local element or ghost).
 t8_locidx_t t8_forest_same_level_leaf_face_neighbor_index (const t8_forest_t forest, const t8_locidx_t element_index, const int face_index, const t8_gloidx_t global_treeid, int *dual_face);
 ```
 """
-function t8_forest_same_level_leaf_face_neighbor_index(forest, element_index, face_index, global_treeid, dual_face)
-    @ccall libt8.t8_forest_same_level_leaf_face_neighbor_index(forest::t8_forest_t, element_index::t8_locidx_t, face_index::Cint, global_treeid::t8_gloidx_t, dual_face::Ptr{Cint})::t8_locidx_t
+function t8_forest_same_level_leaf_face_neighbor_index(forest, element_index, face_index,
+                                                       global_treeid, dual_face)
+    @ccall libt8.t8_forest_same_level_leaf_face_neighbor_index(forest::t8_forest_t,
+                                                               element_index::t8_locidx_t,
+                                                               face_index::Cint,
+                                                               global_treeid::t8_gloidx_t,
+                                                               dual_face::Ptr{Cint})::t8_locidx_t
 end
 
 """
@@ -12647,7 +13435,7 @@ Compute the subface index for a coarser neighbor
 
 !!! note
 
-    This function is designed to be called after t8_forest_leaf_face_neighbors_ext to complement its output. It is primarily intended for balanced forests, but can be used on any committed forest as long as the preconditions  hold (i.e. the forest must be ''locally balanced'').
+    This function is designed to be called after t8_forest_leaf_face_neighbors_ext to complement its output. It is primarily intended for balanced forests, but can be used on any committed forest as long as the preconditions hold (i.e. the forest must be ''locally balanced'').
 
 # Arguments
 * `forest`:\\[in\\] The forest. Must be committed.
@@ -12664,8 +13452,13 @@ The index of the subface of *neighbor_face* which corresponds to *face*.
 int t8_forest_leaf_neighbor_subface (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *leaf, int face, t8_eclass_t neighbor_tree_class, const t8_element_t *neighbor_leaf, int neighbor_face);
 ```
 """
-function t8_forest_leaf_neighbor_subface(forest, ltreeid, leaf, face, neighbor_tree_class, neighbor_leaf, neighbor_face)
-    @ccall libt8.t8_forest_leaf_neighbor_subface(forest::t8_forest_t, ltreeid::t8_locidx_t, leaf::Ptr{t8_element_t}, face::Cint, neighbor_tree_class::t8_eclass_t, neighbor_leaf::Ptr{t8_element_t}, neighbor_face::Cint)::Cint
+function t8_forest_leaf_neighbor_subface(forest, ltreeid, leaf, face, neighbor_tree_class,
+                                         neighbor_leaf, neighbor_face)
+    @ccall libt8.t8_forest_leaf_neighbor_subface(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                 leaf::Ptr{t8_element_t}, face::Cint,
+                                                 neighbor_tree_class::t8_eclass_t,
+                                                 neighbor_leaf::Ptr{t8_element_t},
+                                                 neighbor_face::Cint)::Cint
 end
 
 """
@@ -12686,7 +13479,8 @@ void t8_forest_ghost_exchange_data (t8_forest_t forest, sc_array_t *element_data
 ```
 """
 function t8_forest_ghost_exchange_data(forest, element_data)
-    @ccall libt8.t8_forest_ghost_exchange_data(forest::t8_forest_t, element_data::Ptr{sc_array_t})::Cvoid
+    @ccall libt8.t8_forest_ghost_exchange_data(forest::t8_forest_t,
+                                               element_data::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -12712,7 +13506,8 @@ void t8_forest_partition_cmesh (t8_forest_t forest, sc_MPI_Comm comm, int set_pr
 ```
 """
 function t8_forest_partition_cmesh(forest, comm, set_profiling)
-    @ccall libt8.t8_forest_partition_cmesh(forest::t8_forest_t, comm::MPI_Comm, set_profiling::Cint)::Cvoid
+    @ccall libt8.t8_forest_partition_cmesh(forest::t8_forest_t, comm::MPI_Comm,
+                                           set_profiling::Cint)::Cvoid
 end
 
 """
@@ -12725,6 +13520,42 @@ sc_MPI_Comm t8_forest_get_mpicomm (const t8_forest_t forest);
 """
 function t8_forest_get_mpicomm(forest)
     @ccall libt8.t8_forest_get_mpicomm(forest::t8_forest_t)::MPI_Comm
+end
+
+"""
+    t8_forest_get_mpirank(forest)
+
+Return the rank of this process in the mpi communicator of a forest.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+# Returns
+The rank of this process in the communicator of *forest*. *forest* must be committed before calling this function.
+### Prototype
+```c
+int t8_forest_get_mpirank (const t8_forest_t forest);
+```
+"""
+function t8_forest_get_mpirank(forest)
+    @ccall libt8.t8_forest_get_mpirank(forest::t8_forest_t)::Cint
+end
+
+"""
+    t8_forest_get_mpisize(forest)
+
+Return the number of processes in the mpi communicator of a forest.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+# Returns
+The number of processes in the communicator of *forest*. *forest* must be committed before calling this function.
+### Prototype
+```c
+int t8_forest_get_mpisize (const t8_forest_t forest);
+```
+"""
+function t8_forest_get_mpisize(forest)
+    @ccall libt8.t8_forest_get_mpisize(forest::t8_forest_t)::Cint
 end
 
 """
@@ -12818,7 +13649,8 @@ t8_gloidx_t t8_forest_global_tree_id (const t8_forest_t forest, const t8_locidx_
 ```
 """
 function t8_forest_global_tree_id(forest, ltreeid)
-    @ccall libt8.t8_forest_global_tree_id(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_gloidx_t
+    @ccall libt8.t8_forest_global_tree_id(forest::t8_forest_t,
+                                          ltreeid::t8_locidx_t)::t8_gloidx_t
 end
 
 """
@@ -12856,7 +13688,8 @@ double * t8_forest_get_tree_vertices (t8_forest_t forest, t8_locidx_t ltreeid);
 ```
 """
 function t8_forest_get_tree_vertices(forest, ltreeid)
-    @ccall libt8.t8_forest_get_tree_vertices(forest::t8_forest_t, ltreeid::t8_locidx_t)::Ptr{Cdouble}
+    @ccall libt8.t8_forest_get_tree_vertices(forest::t8_forest_t,
+                                             ltreeid::t8_locidx_t)::Ptr{Cdouble}
 end
 
 """
@@ -12875,7 +13708,8 @@ t8_element_array_t * t8_forest_tree_get_leaf_elements (const t8_forest_t forest,
 ```
 """
 function t8_forest_tree_get_leaf_elements(forest, ltree_id)
-    @ccall libt8.t8_forest_tree_get_leaf_elements(forest::t8_forest_t, ltree_id::t8_locidx_t)::Ptr{t8_element_array_t}
+    @ccall libt8.t8_forest_tree_get_leaf_elements(forest::t8_forest_t,
+                                                  ltree_id::t8_locidx_t)::Ptr{t8_element_array_t}
 end
 
 """
@@ -12912,7 +13746,7 @@ Return a leaf element of the forest.
 # Returns
 A pointer to the leaf element. NULL if this element does not exist. Ghost elements are not considered as local.
 # See also
-t8\\_forest\\_ghost\\_get\\_leaf\\_element to access ghost leaf elements.
+[`t8_forest_ghost_get_leaf_element`](@ref) to access ghost leaf elements.
 
 ### Prototype
 ```c
@@ -12920,7 +13754,8 @@ t8_element_t * t8_forest_get_leaf_element (t8_forest_t forest, t8_locidx_t lelem
 ```
 """
 function t8_forest_get_leaf_element(forest, lelement_id, ltreeid)
-    @ccall libt8.t8_forest_get_leaf_element(forest::t8_forest_t, lelement_id::t8_locidx_t, ltreeid::Ptr{t8_locidx_t})::Ptr{t8_element_t}
+    @ccall libt8.t8_forest_get_leaf_element(forest::t8_forest_t, lelement_id::t8_locidx_t,
+                                            ltreeid::Ptr{t8_locidx_t})::Ptr{t8_element_t}
 end
 
 """
@@ -12947,7 +13782,9 @@ const t8_element_t * t8_forest_get_leaf_element_in_tree (t8_forest_t forest, t8_
 ```
 """
 function t8_forest_get_leaf_element_in_tree(forest, ltreeid, leid_in_tree)
-    @ccall libt8.t8_forest_get_leaf_element_in_tree(forest::t8_forest_t, ltreeid::t8_locidx_t, leid_in_tree::t8_locidx_t)::Ptr{t8_element_t}
+    @ccall libt8.t8_forest_get_leaf_element_in_tree(forest::t8_forest_t,
+                                                    ltreeid::t8_locidx_t,
+                                                    leid_in_tree::t8_locidx_t)::Ptr{t8_element_t}
 end
 
 """
@@ -12966,7 +13803,8 @@ t8_locidx_t t8_forest_get_tree_num_leaf_elements (t8_forest_t forest, t8_locidx_
 ```
 """
 function t8_forest_get_tree_num_leaf_elements(forest, ltreeid)
-    @ccall libt8.t8_forest_get_tree_num_leaf_elements(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_get_tree_num_leaf_elements(forest::t8_forest_t,
+                                                      ltreeid::t8_locidx_t)::t8_locidx_t
 end
 
 """
@@ -12989,7 +13827,8 @@ t8_locidx_t t8_forest_get_tree_element_offset (const t8_forest_t forest, const t
 ```
 """
 function t8_forest_get_tree_element_offset(forest, ltreeid)
-    @ccall libt8.t8_forest_get_tree_element_offset(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_locidx_t
+    @ccall libt8.t8_forest_get_tree_element_offset(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t)::t8_locidx_t
 end
 
 """
@@ -13026,7 +13865,8 @@ t8_eclass_t t8_forest_get_tree_class (const t8_forest_t forest, const t8_locidx_
 ```
 """
 function t8_forest_get_tree_class(forest, ltreeid)
-    @ccall libt8.t8_forest_get_tree_class(forest::t8_forest_t, ltreeid::t8_locidx_t)::t8_eclass_t
+    @ccall libt8.t8_forest_get_tree_class(forest::t8_forest_t,
+                                          ltreeid::t8_locidx_t)::t8_eclass_t
 end
 
 """
@@ -13086,7 +13926,10 @@ t8_eclass_t t8_forest_element_neighbor_eclass (const t8_forest_t forest, const t
 ```
 """
 function t8_forest_element_neighbor_eclass(forest, ltreeid, elem, face)
-    @ccall libt8.t8_forest_element_neighbor_eclass(forest::t8_forest_t, ltreeid::t8_locidx_t, elem::Ptr{t8_element_t}, face::Cint)::t8_eclass_t
+    @ccall libt8.t8_forest_element_neighbor_eclass(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t,
+                                                   elem::Ptr{t8_element_t},
+                                                   face::Cint)::t8_eclass_t
 end
 
 """
@@ -13109,8 +13952,13 @@ The global tree-id of the tree in which *neigh* is in. -1 if there exists no nei
 t8_gloidx_t t8_forest_element_face_neighbor (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *elem, t8_element_t *neigh, const t8_eclass_t neigh_eclass, int face, int *neigh_face);
 ```
 """
-function t8_forest_element_face_neighbor(forest, ltreeid, elem, neigh, neigh_eclass, face, neigh_face)
-    @ccall libt8.t8_forest_element_face_neighbor(forest::t8_forest_t, ltreeid::t8_locidx_t, elem::Ptr{t8_element_t}, neigh::Ptr{t8_element_t}, neigh_eclass::t8_eclass_t, face::Cint, neigh_face::Ptr{Cint})::t8_gloidx_t
+function t8_forest_element_face_neighbor(forest, ltreeid, elem, neigh, neigh_eclass, face,
+                                         neigh_face)
+    @ccall libt8.t8_forest_element_face_neighbor(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                 elem::Ptr{t8_element_t},
+                                                 neigh::Ptr{t8_element_t},
+                                                 neigh_eclass::t8_eclass_t, face::Cint,
+                                                 neigh_face::Ptr{Cint})::t8_gloidx_t
 end
 
 """
@@ -13151,8 +13999,13 @@ Query whether a batch of points lies inside an element. For bilinearly interpola
 void t8_forest_element_points_inside (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double *points, int num_points, int *is_inside, const double tolerance);
 ```
 """
-function t8_forest_element_points_inside(forest, ltreeid, element, points, num_points, is_inside, tolerance)
-    @ccall libt8.t8_forest_element_points_inside(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, points::Ptr{Cdouble}, num_points::Cint, is_inside::Ptr{Cint}, tolerance::Cdouble)::Cvoid
+function t8_forest_element_points_inside(forest, ltreeid, element, points, num_points,
+                                         is_inside, tolerance)
+    @ccall libt8.t8_forest_element_points_inside(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                 element::Ptr{t8_element_t},
+                                                 points::Ptr{Cdouble}, num_points::Cint,
+                                                 is_inside::Ptr{Cint},
+                                                 tolerance::Cdouble)::Cvoid
 end
 
 """
@@ -13184,7 +14037,9 @@ int t8_forest_element_find_owner (t8_forest_t forest, t8_gloidx_t gtreeid, t8_el
 ```
 """
 function t8_forest_element_find_owner(forest, gtreeid, element, eclass)
-    @ccall libt8.t8_forest_element_find_owner(forest::t8_forest_t, gtreeid::t8_gloidx_t, element::Ptr{t8_element_t}, eclass::t8_eclass_t)::Cint
+    @ccall libt8.t8_forest_element_find_owner(forest::t8_forest_t, gtreeid::t8_gloidx_t,
+                                              element::Ptr{t8_element_t},
+                                              eclass::t8_eclass_t)::Cint
 end
 
 """
@@ -13196,7 +14051,9 @@ t8_forest_t t8_forest_new_uniform (t8_cmesh_t cmesh, const t8_scheme_c *scheme, 
 ```
 """
 function t8_forest_new_uniform(cmesh, scheme, level, do_face_ghost, comm)
-    @ccall libt8.t8_forest_new_uniform(cmesh::t8_cmesh_t, scheme::Ptr{t8_scheme_c}, level::Cint, do_face_ghost::Cint, comm::MPI_Comm)::t8_forest_t
+    @ccall libt8.t8_forest_new_uniform(cmesh::t8_cmesh_t, scheme::Ptr{t8_scheme_c},
+                                       level::Cint, do_face_ghost::Cint,
+                                       comm::MPI_Comm)::t8_forest_t
 end
 
 """
@@ -13222,7 +14079,9 @@ t8_forest_t t8_forest_new_adapt (t8_forest_t forest_from, t8_forest_adapt_t adap
 ```
 """
 function t8_forest_new_adapt(forest_from, adapt_fn, recursive, do_face_ghost, user_data)
-    @ccall libt8.t8_forest_new_adapt(forest_from::t8_forest_t, adapt_fn::t8_forest_adapt_t, recursive::Cint, do_face_ghost::Cint, user_data::Ptr{Cvoid})::t8_forest_t
+    @ccall libt8.t8_forest_new_adapt(forest_from::t8_forest_t, adapt_fn::t8_forest_adapt_t,
+                                     recursive::Cint, do_face_ghost::Cint,
+                                     user_data::Ptr{Cvoid})::t8_forest_t
 end
 
 """
@@ -13302,8 +14161,9 @@ end
 
 # automatic type deduction for variadic arguments may not be what you want, please use with caution
 @generated function sc_keyvalue_newf(dummy, va_list...)
-        :(@ccall(libsc.sc_keyvalue_newf(dummy::Cint; $(to_c_type_pairs(va_list)...))::Ptr{sc_keyvalue_t}))
-    end
+    :(@ccall(libsc.sc_keyvalue_newf(dummy::Cint;
+                                    $(to_c_type_pairs(va_list)...))::Ptr{sc_keyvalue_t}))
+end
 
 """
     sc_keyvalue_destroy(kv)
@@ -13337,7 +14197,8 @@ sc_keyvalue_entry_type_t sc_keyvalue_exists (sc_keyvalue_t * kv, const char *key
 ```
 """
 function sc_keyvalue_exists(kv, key)
-    @ccall libsc.sc_keyvalue_exists(kv::Ptr{sc_keyvalue_t}, key::Cstring)::sc_keyvalue_entry_type_t
+    @ccall libsc.sc_keyvalue_exists(kv::Ptr{sc_keyvalue_t},
+                                    key::Cstring)::sc_keyvalue_entry_type_t
 end
 
 """
@@ -13356,7 +14217,8 @@ sc_keyvalue_entry_type_t sc_keyvalue_unset (sc_keyvalue_t * kv, const char *key)
 ```
 """
 function sc_keyvalue_unset(kv, key)
-    @ccall libsc.sc_keyvalue_unset(kv::Ptr{sc_keyvalue_t}, key::Cstring)::sc_keyvalue_entry_type_t
+    @ccall libsc.sc_keyvalue_unset(kv::Ptr{sc_keyvalue_t},
+                                   key::Cstring)::sc_keyvalue_entry_type_t
 end
 
 """
@@ -13376,7 +14238,8 @@ int sc_keyvalue_get_int (sc_keyvalue_t * kv, const char *key, int dvalue);
 ```
 """
 function sc_keyvalue_get_int(kv, key, dvalue)
-    @ccall libsc.sc_keyvalue_get_int(kv::Ptr{sc_keyvalue_t}, key::Cstring, dvalue::Cint)::Cint
+    @ccall libsc.sc_keyvalue_get_int(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                     dvalue::Cint)::Cint
 end
 
 """
@@ -13396,7 +14259,8 @@ double sc_keyvalue_get_double (sc_keyvalue_t * kv, const char *key, double dvalu
 ```
 """
 function sc_keyvalue_get_double(kv, key, dvalue)
-    @ccall libsc.sc_keyvalue_get_double(kv::Ptr{sc_keyvalue_t}, key::Cstring, dvalue::Cdouble)::Cdouble
+    @ccall libsc.sc_keyvalue_get_double(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                        dvalue::Cdouble)::Cdouble
 end
 
 """
@@ -13416,7 +14280,8 @@ const char *sc_keyvalue_get_string (sc_keyvalue_t * kv, const char *key, const c
 ```
 """
 function sc_keyvalue_get_string(kv, key, dvalue)
-    @ccall libsc.sc_keyvalue_get_string(kv::Ptr{sc_keyvalue_t}, key::Cstring, dvalue::Cstring)::Cstring
+    @ccall libsc.sc_keyvalue_get_string(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                        dvalue::Cstring)::Cstring
 end
 
 """
@@ -13436,7 +14301,8 @@ void *sc_keyvalue_get_pointer (sc_keyvalue_t * kv, const char *key, void *dvalue
 ```
 """
 function sc_keyvalue_get_pointer(kv, key, dvalue)
-    @ccall libsc.sc_keyvalue_get_pointer(kv::Ptr{sc_keyvalue_t}, key::Cstring, dvalue::Ptr{Cvoid})::Ptr{Cvoid}
+    @ccall libsc.sc_keyvalue_get_pointer(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                         dvalue::Ptr{Cvoid})::Ptr{Cvoid}
 end
 
 """
@@ -13456,7 +14322,8 @@ int sc_keyvalue_get_int_check (sc_keyvalue_t * kv, const char *key, int *status)
 ```
 """
 function sc_keyvalue_get_int_check(kv, key, status)
-    @ccall libsc.sc_keyvalue_get_int_check(kv::Ptr{sc_keyvalue_t}, key::Cstring, status::Ptr{Cint})::Cint
+    @ccall libsc.sc_keyvalue_get_int_check(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                           status::Ptr{Cint})::Cint
 end
 
 """
@@ -13474,7 +14341,8 @@ void sc_keyvalue_set_int (sc_keyvalue_t * kv, const char *key, int newvalue);
 ```
 """
 function sc_keyvalue_set_int(kv, key, newvalue)
-    @ccall libsc.sc_keyvalue_set_int(kv::Ptr{sc_keyvalue_t}, key::Cstring, newvalue::Cint)::Cvoid
+    @ccall libsc.sc_keyvalue_set_int(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                     newvalue::Cint)::Cvoid
 end
 
 """
@@ -13492,7 +14360,8 @@ void sc_keyvalue_set_double (sc_keyvalue_t * kv, const char *key, double newvalu
 ```
 """
 function sc_keyvalue_set_double(kv, key, newvalue)
-    @ccall libsc.sc_keyvalue_set_double(kv::Ptr{sc_keyvalue_t}, key::Cstring, newvalue::Cdouble)::Cvoid
+    @ccall libsc.sc_keyvalue_set_double(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                        newvalue::Cdouble)::Cvoid
 end
 
 """
@@ -13510,7 +14379,8 @@ void sc_keyvalue_set_string (sc_keyvalue_t * kv, const char *key, const char *ne
 ```
 """
 function sc_keyvalue_set_string(kv, key, newvalue)
-    @ccall libsc.sc_keyvalue_set_string(kv::Ptr{sc_keyvalue_t}, key::Cstring, newvalue::Cstring)::Cvoid
+    @ccall libsc.sc_keyvalue_set_string(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                        newvalue::Cstring)::Cvoid
 end
 
 """
@@ -13528,7 +14398,8 @@ void sc_keyvalue_set_pointer (sc_keyvalue_t * kv, const char *key, void *newvalu
 ```
 """
 function sc_keyvalue_set_pointer(kv, key, newvalue)
-    @ccall libsc.sc_keyvalue_set_pointer(kv::Ptr{sc_keyvalue_t}, key::Cstring, newvalue::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_keyvalue_set_pointer(kv::Ptr{sc_keyvalue_t}, key::Cstring,
+                                         newvalue::Ptr{Cvoid})::Cvoid
 end
 
 # typedef int ( * sc_keyvalue_foreach_t ) ( const char * key , const sc_keyvalue_entry_type_t type , void * entry , const void * u )
@@ -13560,7 +14431,8 @@ void sc_keyvalue_foreach (sc_keyvalue_t * kv, sc_keyvalue_foreach_t fn, void *us
 ```
 """
 function sc_keyvalue_foreach(kv, fn, user_data)
-    @ccall libsc.sc_keyvalue_foreach(kv::Ptr{sc_keyvalue_t}, fn::sc_keyvalue_foreach_t, user_data::Ptr{Cvoid})::Cvoid
+    @ccall libsc.sc_keyvalue_foreach(kv::Ptr{sc_keyvalue_t}, fn::sc_keyvalue_foreach_t,
+                                     user_data::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -13628,7 +14500,8 @@ void sc_stats_set1 (sc_statinfo_t * stats, double value, const char *variable);
 ```
 """
 function sc_stats_set1(stats, value, variable)
-    @ccall libsc.sc_stats_set1(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring)::Cvoid
+    @ccall libsc.sc_stats_set1(stats::Ptr{sc_statinfo_t}, value::Cdouble,
+                               variable::Cstring)::Cvoid
 end
 
 """
@@ -13649,7 +14522,9 @@ void sc_stats_set1_ext (sc_statinfo_t * stats, double value, const char *variabl
 ```
 """
 function sc_stats_set1_ext(stats, value, variable, copy_variable, stats_group, stats_prio)
-    @ccall libsc.sc_stats_set1_ext(stats::Ptr{sc_statinfo_t}, value::Cdouble, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_set1_ext(stats::Ptr{sc_statinfo_t}, value::Cdouble,
+                                   variable::Cstring, copy_variable::Cint,
+                                   stats_group::Cint, stats_prio::Cint)::Cvoid
 end
 
 """
@@ -13686,7 +14561,9 @@ void sc_stats_init_ext (sc_statinfo_t * stats, const char *variable, int copy_va
 ```
 """
 function sc_stats_init_ext(stats, variable, copy_variable, stats_group, stats_prio)
-    @ccall libsc.sc_stats_init_ext(stats::Ptr{sc_statinfo_t}, variable::Cstring, copy_variable::Cint, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_init_ext(stats::Ptr{sc_statinfo_t}, variable::Cstring,
+                                   copy_variable::Cint, stats_group::Cint,
+                                   stats_prio::Cint)::Cvoid
 end
 
 """
@@ -13721,7 +14598,8 @@ void sc_stats_set_group_prio (sc_statinfo_t * stats, int stats_group, int stats_
 ```
 """
 function sc_stats_set_group_prio(stats, stats_group, stats_prio)
-    @ccall libsc.sc_stats_set_group_prio(stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint)::Cvoid
+    @ccall libsc.sc_stats_set_group_prio(stats::Ptr{sc_statinfo_t}, stats_group::Cint,
+                                         stats_prio::Cint)::Cvoid
 end
 
 """
@@ -13750,7 +14628,8 @@ void sc_stats_compute (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute(mpicomm, nvars, stats)
-    @ccall libsc.sc_stats_compute(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libsc.sc_stats_compute(mpicomm::MPI_Comm, nvars::Cint,
+                                  stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -13762,7 +14641,8 @@ void sc_stats_compute1 (sc_MPI_Comm mpicomm, int nvars, sc_statinfo_t * stats);
 ```
 """
 function sc_stats_compute1(mpicomm, nvars, stats)
-    @ccall libsc.sc_stats_compute1(mpicomm::MPI_Comm, nvars::Cint, stats::Ptr{sc_statinfo_t})::Cvoid
+    @ccall libsc.sc_stats_compute1(mpicomm::MPI_Comm, nvars::Cint,
+                                   stats::Ptr{sc_statinfo_t})::Cvoid
 end
 
 """
@@ -13783,7 +14663,8 @@ void sc_stats_print (int package_id, int log_priority, int nvars, sc_statinfo_t 
 ```
 """
 function sc_stats_print(package_id, log_priority, nvars, stats, full, summary)
-    @ccall libsc.sc_stats_print(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, full::Cint, summary::Cint)::Cvoid
+    @ccall libsc.sc_stats_print(package_id::Cint, log_priority::Cint, nvars::Cint,
+                                stats::Ptr{sc_statinfo_t}, full::Cint, summary::Cint)::Cvoid
 end
 
 """
@@ -13805,8 +14686,11 @@ Print measured statistics, filter by group and/or priority. This function uses t
 void sc_stats_print_ext (int package_id, int log_priority, int nvars, sc_statinfo_t * stats, int stats_group, int stats_prio, int full, int summary);
 ```
 """
-function sc_stats_print_ext(package_id, log_priority, nvars, stats, stats_group, stats_prio, full, summary)
-    @ccall libsc.sc_stats_print_ext(package_id::Cint, log_priority::Cint, nvars::Cint, stats::Ptr{sc_statinfo_t}, stats_group::Cint, stats_prio::Cint, full::Cint, summary::Cint)::Cvoid
+function sc_stats_print_ext(package_id, log_priority, nvars, stats, stats_group, stats_prio,
+                            full, summary)
+    @ccall libsc.sc_stats_print_ext(package_id::Cint, log_priority::Cint, nvars::Cint,
+                                    stats::Ptr{sc_statinfo_t}, stats_group::Cint,
+                                    stats_prio::Cint, full::Cint, summary::Cint)::Cvoid
 end
 
 """
@@ -13890,7 +14774,8 @@ void sc_statistics_set (sc_statistics_t * stats, const char *name, double value)
 ```
 """
 function sc_statistics_set(stats, name, value)
-    @ccall libsc.sc_statistics_set(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
+    @ccall libsc.sc_statistics_set(stats::Ptr{sc_statistics_t}, name::Cstring,
+                                   value::Cdouble)::Cvoid
 end
 
 """
@@ -13904,7 +14789,8 @@ void sc_statistics_accumulate (sc_statistics_t * stats, const char *name, double
 ```
 """
 function sc_statistics_accumulate(stats, name, value)
-    @ccall libsc.sc_statistics_accumulate(stats::Ptr{sc_statistics_t}, name::Cstring, value::Cdouble)::Cvoid
+    @ccall libsc.sc_statistics_accumulate(stats::Ptr{sc_statistics_t}, name::Cstring,
+                                          value::Cdouble)::Cvoid
 end
 
 """
@@ -13932,7 +14818,8 @@ void sc_statistics_print (sc_statistics_t * stats, int package_id, int log_prior
 ```
 """
 function sc_statistics_print(stats, package_id, log_priority, full, summary)
-    @ccall libsc.sc_statistics_print(stats::Ptr{sc_statistics_t}, package_id::Cint, log_priority::Cint, full::Cint, summary::Cint)::Cvoid
+    @ccall libsc.sc_statistics_print(stats::Ptr{sc_statistics_t}, package_id::Cint,
+                                     log_priority::Cint, full::Cint, summary::Cint)::Cvoid
 end
 
 """
@@ -13970,7 +14857,10 @@ void t8_forest_element_coordinate (t8_forest_t forest, t8_locidx_t ltree_id, con
 ```
 """
 function t8_forest_element_coordinate(forest, ltree_id, element, corner_number, coordinates)
-    @ccall libt8.t8_forest_element_coordinate(forest::t8_forest_t, ltree_id::t8_locidx_t, element::Ptr{t8_element_t}, corner_number::Cint, coordinates::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_coordinate(forest::t8_forest_t, ltree_id::t8_locidx_t,
+                                              element::Ptr{t8_element_t},
+                                              corner_number::Cint,
+                                              coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -13991,8 +14881,15 @@ Compute the coordinates of a point inside an element inside a tree. The point is
 void t8_forest_element_from_ref_coords_ext (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double *ref_coords, const size_t num_coords, double *coords_out, const double *stretch_factors);
 ```
 """
-function t8_forest_element_from_ref_coords_ext(forest, ltreeid, element, ref_coords, num_coords, coords_out, stretch_factors)
-    @ccall libt8.t8_forest_element_from_ref_coords_ext(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble}, stretch_factors::Ptr{Cdouble})::Cvoid
+function t8_forest_element_from_ref_coords_ext(forest, ltreeid, element, ref_coords,
+                                               num_coords, coords_out, stretch_factors)
+    @ccall libt8.t8_forest_element_from_ref_coords_ext(forest::t8_forest_t,
+                                                       ltreeid::t8_locidx_t,
+                                                       element::Ptr{t8_element_t},
+                                                       ref_coords::Ptr{Cdouble},
+                                                       num_coords::Csize_t,
+                                                       coords_out::Ptr{Cdouble},
+                                                       stretch_factors::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -14012,8 +14909,14 @@ Compute the coordinates of a point inside an element inside a tree. The point is
 void t8_forest_element_from_ref_coords (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const double *ref_coords, const size_t num_coords, double *coords_out);
 ```
 """
-function t8_forest_element_from_ref_coords(forest, ltreeid, element, ref_coords, num_coords, coords_out)
-    @ccall libt8.t8_forest_element_from_ref_coords(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, coords_out::Ptr{Cdouble})::Cvoid
+function t8_forest_element_from_ref_coords(forest, ltreeid, element, ref_coords, num_coords,
+                                           coords_out)
+    @ccall libt8.t8_forest_element_from_ref_coords(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t,
+                                                   element::Ptr{t8_element_t},
+                                                   ref_coords::Ptr{Cdouble},
+                                                   num_coords::Csize_t,
+                                                   coords_out::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -14032,7 +14935,9 @@ void t8_forest_element_centroid (t8_forest_t forest, t8_locidx_t ltreeid, const 
 ```
 """
 function t8_forest_element_centroid(forest, ltreeid, element, coordinates)
-    @ccall libt8.t8_forest_element_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                            element::Ptr{t8_element_t},
+                                            coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -14055,7 +14960,10 @@ void t8_forest_element_linear_centroid (const t8_forest_t forest, const t8_locid
 ```
 """
 function t8_forest_element_linear_centroid(forest, ltreeid, element, coordinates)
-    @ccall libt8.t8_forest_element_linear_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, coordinates::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_linear_centroid(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t,
+                                                   element::Ptr{t8_element_t},
+                                                   coordinates::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -14079,7 +14987,8 @@ double t8_forest_element_diam (t8_forest_t forest, t8_locidx_t ltreeid, const t8
 ```
 """
 function t8_forest_element_diam(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_diam(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+    @ccall libt8.t8_forest_element_diam(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                        element::Ptr{t8_element_t})::Cdouble
 end
 
 """
@@ -14103,7 +15012,8 @@ double t8_forest_element_volume (t8_forest_t forest, t8_locidx_t ltreeid, const 
 ```
 """
 function t8_forest_element_volume(forest, ltreeid, element)
-    @ccall libt8.t8_forest_element_volume(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t})::Cdouble
+    @ccall libt8.t8_forest_element_volume(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                          element::Ptr{t8_element_t})::Cdouble
 end
 
 """
@@ -14124,7 +15034,9 @@ double t8_forest_element_face_area (t8_forest_t forest, t8_locidx_t ltreeid, con
 ```
 """
 function t8_forest_element_face_area(forest, ltreeid, element, face)
-    @ccall libt8.t8_forest_element_face_area(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint)::Cdouble
+    @ccall libt8.t8_forest_element_face_area(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                             element::Ptr{t8_element_t},
+                                             face::Cint)::Cdouble
 end
 
 """
@@ -14144,7 +15056,9 @@ void t8_forest_element_face_centroid (t8_forest_t forest, t8_locidx_t ltreeid, c
 ```
 """
 function t8_forest_element_face_centroid(forest, ltreeid, element, face, centroid)
-    @ccall libt8.t8_forest_element_face_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, centroid::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_face_centroid(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                 element::Ptr{t8_element_t}, face::Cint,
+                                                 centroid::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -14164,7 +15078,31 @@ void t8_forest_element_face_normal (t8_forest_t forest, t8_locidx_t ltreeid, con
 ```
 """
 function t8_forest_element_face_normal(forest, ltreeid, element, face, normal)
-    @ccall libt8.t8_forest_element_face_normal(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, normal::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_forest_element_face_normal(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                               element::Ptr{t8_element_t}, face::Cint,
+                                               normal::Ptr{Cdouble})::Cvoid
+end
+
+"""
+    t8_forest_leaf_is_boundary(forest, local_tree, leaf, face)
+
+Compute whether a given face of a given leaf in a forest lies at the domain boundary. This includes inner boundaries if the forest has deleted elements.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+* `local_tree`:\\[in\\] A local tree of *forest*.
+* `leaf`:\\[in\\] A leaf element of *local_tree* in *forest*.
+* `face`:\\[in\\] The face number of a face of *leaf* to check.
+# Returns
+True (non-zero) if face *face* of *leaf* lies at the domain boundary.
+### Prototype
+```c
+int t8_forest_leaf_is_boundary (const t8_forest_t forest, const t8_locidx_t local_tree, const t8_element_t *leaf, const int face);
+```
+"""
+function t8_forest_leaf_is_boundary(forest, local_tree, leaf, face)
+    @ccall libt8.t8_forest_leaf_is_boundary(forest::t8_forest_t, local_tree::t8_locidx_t,
+                                            leaf::Ptr{t8_element_t}, face::Cint)::Cint
 end
 
 """
@@ -14374,7 +15312,8 @@ double t8_forest_profile_get_partition_time (t8_forest_t forest, int *procs_sent
 ```
 """
 function t8_forest_profile_get_partition_time(forest, procs_sent)
-    @ccall libt8.t8_forest_profile_get_partition_time(forest::t8_forest_t, procs_sent::Ptr{Cint})::Cdouble
+    @ccall libt8.t8_forest_profile_get_partition_time(forest::t8_forest_t,
+                                                      procs_sent::Ptr{Cint})::Cdouble
 end
 
 """
@@ -14396,7 +15335,8 @@ double t8_forest_profile_get_balance_time (t8_forest_t forest, int *balance_roun
 ```
 """
 function t8_forest_profile_get_balance_time(forest, balance_rounds)
-    @ccall libt8.t8_forest_profile_get_balance_time(forest::t8_forest_t, balance_rounds::Ptr{Cint})::Cdouble
+    @ccall libt8.t8_forest_profile_get_balance_time(forest::t8_forest_t,
+                                                    balance_rounds::Ptr{Cint})::Cdouble
 end
 
 """
@@ -14418,7 +15358,8 @@ double t8_forest_profile_get_ghost_time (t8_forest_t forest, t8_locidx_t *ghosts
 ```
 """
 function t8_forest_profile_get_ghost_time(forest, ghosts_sent)
-    @ccall libt8.t8_forest_profile_get_ghost_time(forest::t8_forest_t, ghosts_sent::Ptr{t8_locidx_t})::Cdouble
+    @ccall libt8.t8_forest_profile_get_ghost_time(forest::t8_forest_t,
+                                                  ghosts_sent::Ptr{t8_locidx_t})::Cdouble
 end
 
 """
@@ -14532,7 +15473,7 @@ A data field for VTK output. This struct is used to store data that is written t
 """
 struct t8_vtk_data_field_t
     type::t8_vtk_data_type_t
-    description::NTuple{8192, Cchar}
+    description::NTuple{1024, Cchar}
     data::Ptr{Cdouble}
 end
 
@@ -14546,8 +15487,11 @@ Writes the pvtu header file that links to the processor local files. It is used 
 int t8_write_pvtu (const char *filename, int num_procs, int write_tree, int write_rank, int write_level, int write_id, int num_data, t8_vtk_data_field_t *data);
 ```
 """
-function t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id, num_data, data)
-    @ccall libt8.t8_write_pvtu(filename::Cstring, num_procs::Cint, write_tree::Cint, write_rank::Cint, write_level::Cint, write_id::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_write_pvtu(filename, num_procs, write_tree, write_rank, write_level, write_id,
+                       num_data, data)
+    @ccall libt8.t8_write_pvtu(filename::Cstring, num_procs::Cint, write_tree::Cint,
+                               write_rank::Cint, write_level::Cint, write_id::Cint,
+                               num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
 end
 
 """
@@ -14584,15 +15528,22 @@ Write the forest in a parallel vtu format. Extended version. See
 # Returns
 True if successful, false if not (process local). See also
 # See also
-[`t8_forest_write_vtk`](@ref) for the standard version of this function. Writes one master .pvtu file and each process writes in its own .vtu file. If linked and not otherwise specified, the VTK API is used. If the VTK library is not linked, an ASCII file is written. This may change in accordance with *write_ghosts*, *write_curved* and  *do_not_use_API*, because the export of ghosts is not yet available with  the VTK API and the export of curved elements is not available with the inbuilt function to write ASCII files. The function will for example still use the VTK API to satisfy *write_curved*, even if *do_not_use_API*  is set to true. Forest must be committed when calling this function. This function is collective and must be called on each process., [`t8_forest_write_vtk`](@ref) .
+[`t8_forest_write_vtk`](@ref) for the standard version of this function. Writes one master .pvtu file and each process writes in its own .vtu file. If linked and not otherwise specified, the VTK API is used. If the VTK library is not linked, an ASCII file is written. This may change in accordance with *write_ghosts*, *write_curved* and *do_not_use_API*, because the export of ghosts is not yet available with the VTK API and the export of curved elements is not available with the inbuilt function to write ASCII files. The function will for example still use the VTK API to satisfy *write_curved*, even if *do_not_use_API* is set to true. Forest must be committed when calling this function. This function is collective and must be called on each process., [`t8_forest_write_vtk`](@ref) .
 
 ### Prototype
 ```c
 int t8_forest_write_vtk_ext (t8_forest_t forest, const char *fileprefix, const int write_treeid, const int write_mpirank, const int write_level, const int write_element_id, const int write_ghosts, const int write_curved, int do_not_use_API, const int num_data, t8_vtk_data_field_t *data);
 ```
 """
-function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, write_curved, do_not_use_API, num_data, data)
-    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, write_curved::Cint, do_not_use_API::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_forest_write_vtk_ext(forest, fileprefix, write_treeid, write_mpirank,
+                                 write_level, write_element_id, write_ghosts, write_curved,
+                                 do_not_use_API, num_data, data)
+    @ccall libt8.t8_forest_write_vtk_ext(forest::t8_forest_t, fileprefix::Cstring,
+                                         write_treeid::Cint, write_mpirank::Cint,
+                                         write_level::Cint, write_element_id::Cint,
+                                         write_ghosts::Cint, write_curved::Cint,
+                                         do_not_use_API::Cint, num_data::Cint,
+                                         data::Ptr{t8_vtk_data_field_t})::Cint
 end
 
 """
@@ -14617,6 +15568,492 @@ function t8_forest_write_vtk(forest, fileprefix)
     @ccall libt8.t8_forest_write_vtk(forest::t8_forest_t, fileprefix::Cstring)::Cint
 end
 
+"""
+    t8_forest_get_boundary_conditions(forest, ltreeid, element, boundary_conditions, length)
+
+Retrieves the boundary conditions of a forest element. C version of this function.
+
+# Arguments
+* `forest`:\\[in\\] The forest the element lives in.
+* `ltreeid`:\\[in\\] The local id of the forest tree.
+* `element`:\\[in\\] The element.
+* `boundary_conditions`:\\[out\\] The boundary conditions of the element. String will be nullptr if the elements face is internal; if it does not touch the trees face, since only the tree faces carry boundary conditions. All inner element faces have neighbors anyways.
+* `length`:\\[out\\] The length of *boundary_conditions*.
+### Prototype
+```c
+void t8_forest_get_boundary_conditions (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, const char *boundary_conditions[T8_ECLASS_MAX_FACES], size_t *length);
+```
+"""
+function t8_forest_get_boundary_conditions(forest, ltreeid, element, boundary_conditions,
+                                           length)
+    @ccall libt8.t8_forest_get_boundary_conditions(forest::t8_forest_t,
+                                                   ltreeid::t8_locidx_t,
+                                                   element::Ptr{t8_element_t},
+                                                   boundary_conditions::Ptr{Cstring},
+                                                   length::Ptr{Csize_t})::Cvoid
+end
+
+"""
+    t8_forest_get_boundary_condition(forest, ltreeid, element, face, boundary_condition)
+
+Retrieves the boundary condition of a face of a forest element. Retrieving all boundary conditions at once via t8_forest_get_boundary_conditions() will be faster. C version of this function.
+
+# Arguments
+* `forest`:\\[in\\] The forest the element lives in.
+* `ltreeid`:\\[in\\] The local id of the forest tree.
+* `element`:\\[in\\] The element.
+* `face`:\\[in\\] The face id of the element.
+* `boundary_condition`:\\[out\\] The boundary condition of the element. Will be nullptr if the elements face is internal; if it does not touch the trees face, since only the tree faces carry boundary conditions. All inner element faces have neighbors anyways.
+### Prototype
+```c
+void t8_forest_get_boundary_condition (t8_forest_t forest, t8_locidx_t ltreeid, const t8_element_t *element, int face, const char **boundary_condition);
+```
+"""
+function t8_forest_get_boundary_condition(forest, ltreeid, element, face,
+                                          boundary_condition)
+    @ccall libt8.t8_forest_get_boundary_condition(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                                  element::Ptr{t8_element_t}, face::Cint,
+                                                  boundary_condition::Ptr{Cstring})::Cvoid
+end
+
+"""
+    t8_forest_adapt(forest)
+
+Adapt a forest.
+
+# Arguments
+* `forest`:\\[in,out\\] The forest to be adapted
+### Prototype
+```c
+void t8_forest_adapt (t8_forest_t forest);
+```
+"""
+function t8_forest_adapt(forest)
+    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_balance(forest, repartition)
+
+Balance the forest.
+
+This function adjust the forest such that it satisfies a 2:1 balance condition: The levels of neighboring elements may differ by at most one. Such a balanced forest simplifies many algorithms, making balancing an important procedure for both developers and external users.
+
+# Arguments
+* `forest`:\\[in,out\\] The forest to be balanced.
+* `repartition`:\\[in\\] Switch deciding whether the forest is repartitioned after balancing.
+### Prototype
+```c
+void t8_forest_balance (t8_forest_t forest, int repartition);
+```
+"""
+function t8_forest_balance(forest, repartition)
+    @ccall libt8.t8_forest_balance(forest::t8_forest_t, repartition::Cint)::Cvoid
+end
+
+"""
+    t8_forest_is_balanced(forest)
+
+Check whether the local elements of a forest are balanced.
+
+# Arguments
+* `forest`:\\[in,out\\] The forest to be checked.
+# Returns
+1 if the local elements are balanced, 0 otherwise.
+### Prototype
+```c
+int t8_forest_is_balanced (t8_forest_t forest);
+```
+"""
+function t8_forest_is_balanced(forest)
+    @ccall libt8.t8_forest_is_balanced(forest::t8_forest_t)::Cint
+end
+
+mutable struct t8_forest_ghost end
+
+"""Opaque pointer to the ghost elements of a forest."""
+const t8_forest_ghost_t = Ptr{t8_forest_ghost}
+
+"""
+    t8_ghost_remote_tree_t
+
+A local tree of this process, restricted to those leaf elements that are ghosts on the remote process *mpirank*. There is one such struct per (local tree, remote process) pair. They are stored, sorted by local tree id, in the *remote_trees* array of the corresponding t8_ghost_remote_t. Will be sent to the remote process during t8_forest_ghost_definition::communicate_ghost_elements.
+
+| Field             | Note                                                                     |
+| :---------------- | :----------------------------------------------------------------------- |
+| global\\_id       | The global id of the (local) tree.                                       |
+| mpirank           | The rank of the remote process that has these elements as ghosts.        |
+| elements          | Copies of the leaf elements that are ghosts on *mpirank*, in SFC order.  |
+| element\\_indices | The tree-local index (t8_locidx_t) of each entry in *elements*.          |
+| eclass            | The element class of the tree.                                           |
+"""
+struct t8_ghost_remote_tree_t
+    global_id::t8_gloidx_t
+    mpirank::Cint
+    elements::t8_element_array_t
+    element_indices::sc_array_t
+    eclass::t8_eclass_t
+end
+
+"""
+    t8_ghost_remote_t
+
+All local leaf elements of this process that are ghosts on the remote process *remote_rank*. There is one such struct per remote process. They are stored in the *remote_ghosts* hash array of the ghost structure, hashed by *remote_rank*; the ranks themselves are listed in *remote_processes*. Will be sent to the remote process during t8_forest_ghost_definition::communicate_ghost_elements.
+
+| Field          | Note                                                                                                      |
+| :------------- | :-------------------------------------------------------------------------------------------------------- |
+| remote\\_rank  | The rank of the remote process that has these elements as ghosts.                                         |
+| num\\_elements | The total number of elements over all entries in *remote_trees*.                                          |
+| remote\\_trees | The t8_ghost_remote_tree_t of each local tree that has ghosts on *remote_rank*, sorted by local tree id.  |
+"""
+struct t8_ghost_remote_t
+    remote_rank::Cint
+    num_elements::t8_locidx_t
+    remote_trees::sc_array_t
+end
+
+"""
+    t8_forest_ghost_num_trees(forest)
+
+Return the number of trees in a ghost.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+# Returns
+The number of trees in the forest's ghost (or 0 if ghost structure does not exist).
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_num_trees (const t8_forest_t forest);
+```
+"""
+function t8_forest_ghost_num_trees(forest)
+    @ccall libt8.t8_forest_ghost_num_trees(forest::t8_forest_t)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
+
+Return the element offset of a ghost tree.
+
+!!! note
+
+    forest must be committed before calling this function.
+
+# Arguments
+* `forest`:\\[in\\] The forest with constructed ghost layer.
+* `lghost_tree`:\\[in\\] A local ghost id of a ghost tree.
+# Returns
+The element offset of this ghost tree within the set of local ghost elements.
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_get_tree_element_offset (t8_forest_t forest, t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_ghost_get_tree_element_offset(forest, lghost_tree)
+    @ccall libt8.t8_forest_ghost_get_tree_element_offset(forest::t8_forest_t,
+                                                         lghost_tree::t8_locidx_t)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_tree_num_leaf_elements(forest, lghost_tree)
+
+Given an index in the ghost\\_tree array, return this tree's number of leaf elements
+
+# Arguments
+* `forest`:\\[in\\] The *forest*. Ghost layer must exist.
+* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree.
+# Returns
+The number of ghost leaf elements of the tree. *forest* must be committed before calling this function.
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_tree_num_leaf_elements (t8_forest_t forest, t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_ghost_tree_num_leaf_elements(forest, lghost_tree)
+    @ccall libt8.t8_forest_ghost_tree_num_leaf_elements(forest::t8_forest_t,
+                                                        lghost_tree::t8_locidx_t)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_get_tree_leaf_elements(forest, lghost_tree)
+
+Get a pointer to the ghost leaf element array of a ghost tree.
+
+# Arguments
+* `forest`:\\[in\\] The forest. Ghost layer must exist.
+* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree. 0 <= *lghost_tree* < num\\_ghost\\_trees
+# Returns
+A pointer to the array of ghost leaf elements of the tree. *forest* must be committed before calling this function.
+### Prototype
+```c
+t8_element_array_t * t8_forest_ghost_get_tree_leaf_elements (const t8_forest_t forest, const t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_ghost_get_tree_leaf_elements(forest, lghost_tree)
+    @ccall libt8.t8_forest_ghost_get_tree_leaf_elements(forest::t8_forest_t,
+                                                        lghost_tree::t8_locidx_t)::Ptr{t8_element_array_t}
+end
+
+"""
+    t8_forest_ghost_get_ghost_treeid(forest, gtreeid)
+
+Given a global tree compute the ghost local tree id of it.
+
+# Arguments
+* `forest`:\\[in\\] The forest. Ghost layer must exist.
+* `gtreeid`:\\[in\\] A global tree in *forest*.
+# Returns
+If *gtreeid* is also a ghost tree, the index in the ghost->ghost\\_trees array of the tree. Otherwise a negative number. *forest* must be committed before calling this function.
+# See also
+https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
+
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_get_ghost_treeid (t8_forest_t forest, t8_gloidx_t gtreeid);
+```
+"""
+function t8_forest_ghost_get_ghost_treeid(forest, gtreeid)
+    @ccall libt8.t8_forest_ghost_get_ghost_treeid(forest::t8_forest_t,
+                                                  gtreeid::t8_gloidx_t)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_get_tree_class(forest, lghost_tree)
+
+Given an index in the ghost\\_tree array, return this tree's element class.
+
+# Arguments
+* `forest`:\\[in\\] A committed forest.
+* `lghost_tree`:\\[in\\] The tree's local index in the ghost\\_tree array.
+# Returns
+The element class of the given tree.
+### Prototype
+```c
+t8_eclass_t t8_forest_ghost_get_tree_class (const t8_forest_t forest, const t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_ghost_get_tree_class(forest, lghost_tree)
+    @ccall libt8.t8_forest_ghost_get_tree_class(forest::t8_forest_t,
+                                                lghost_tree::t8_locidx_t)::t8_eclass_t
+end
+
+"""
+    t8_forest_ghost_get_global_treeid(forest, lghost_tree)
+
+Given a local ghost tree compute the global tree id of it.
+
+# Arguments
+* `forest`:\\[in\\] The forest. Ghost layer must exist.
+* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree. (0 <= *lghost_tree* < num\\_ghost\\_trees)
+# Returns
+The global id of the local ghost tree *lghost_tree*. *forest* must be committed before calling this function.
+# See also
+https://github.com/DLR-AMR/t8code/wiki/Tree-indexing for more details about tree indexing.
+
+### Prototype
+```c
+t8_gloidx_t t8_forest_ghost_get_global_treeid (const t8_forest_t forest, const t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_ghost_get_global_treeid(forest, lghost_tree)
+    @ccall libt8.t8_forest_ghost_get_global_treeid(forest::t8_forest_t,
+                                                   lghost_tree::t8_locidx_t)::t8_gloidx_t
+end
+
+"""
+    t8_forest_ghost_get_leaf_element(forest, lghost_tree, lelement)
+
+Given an index into the ghost\\_trees array and for that tree an element index, return the corresponding element.
+
+# Arguments
+* `forest`:\\[in\\] The *forest*. Ghost layer must exist.
+* `lghost_tree`:\\[in\\] The ghost tree id of a ghost tree.
+* `lelement`:\\[in\\] The local id of the ghost leaf element considered.
+# Returns
+A pointer to the ghost leaf element. *forest* must be committed before calling this function.
+### Prototype
+```c
+t8_element_t * t8_forest_ghost_get_leaf_element (t8_forest_t forest, t8_locidx_t lghost_tree, t8_locidx_t lelement);
+```
+"""
+function t8_forest_ghost_get_leaf_element(forest, lghost_tree, lelement)
+    @ccall libt8.t8_forest_ghost_get_leaf_element(forest::t8_forest_t,
+                                                  lghost_tree::t8_locidx_t,
+                                                  lelement::t8_locidx_t)::Ptr{t8_element_t}
+end
+
+"""
+    t8_forest_element_is_ghost(forest, element, lghost_tree)
+
+Query whether a given element is a ghost of a certain tree in a forest.
+
+!!! note
+
+    *forest* must be committed before calling this function.
+
+# Arguments
+* `forest`:\\[in\\] The forest.
+* `element`:\\[in\\] An element of a ghost tree in *forest*.
+* `lghost_tree`:\\[in\\] A local ghost tree id of *forest*. (0 <= *lghost_tree* < num\\_ghost\\_trees)
+# Returns
+True (non-zero) if and only if *element* is a ghost in *lghost_tree* of *forest*.
+### Prototype
+```c
+int t8_forest_element_is_ghost (const t8_forest_t forest, const t8_element_t *element, const t8_locidx_t lghost_tree);
+```
+"""
+function t8_forest_element_is_ghost(forest, element, lghost_tree)
+    @ccall libt8.t8_forest_element_is_ghost(forest::t8_forest_t, element::Ptr{t8_element_t},
+                                            lghost_tree::t8_locidx_t)::Cint
+end
+
+"""
+    t8_forest_ghost_remote_first_tree(forest, remote)
+
+Return the first local ghost tree of a remote rank.
+
+# Arguments
+* `forest`:\\[in\\] A forest with constructed ghost layer.
+* `remote`:\\[in\\] A remote rank of the ghost layer in *forest*.
+# Returns
+The ghost tree id of the first ghost tree that stores ghost elements of *remote*.
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_remote_first_tree (t8_forest_t forest, int remote);
+```
+"""
+function t8_forest_ghost_remote_first_tree(forest, remote)
+    @ccall libt8.t8_forest_ghost_remote_first_tree(forest::t8_forest_t,
+                                                   remote::Cint)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_remote_first_elem(forest, remote)
+
+Return the local index of the first ghost element that belongs to a given remote rank.
+
+# Arguments
+* `forest`:\\[in\\] A forest with constructed ghost layer.
+* `remote`:\\[in\\] A remote rank of the ghost layer in *forest*.
+# Returns
+The index i in the ghost elements of the first element of rank *remote*
+### Prototype
+```c
+t8_locidx_t t8_forest_ghost_remote_first_elem (t8_forest_t forest, int remote);
+```
+"""
+function t8_forest_ghost_remote_first_elem(forest, remote)
+    @ccall libt8.t8_forest_ghost_remote_first_elem(forest::t8_forest_t,
+                                                   remote::Cint)::t8_locidx_t
+end
+
+"""
+    t8_forest_ghost_ref(ghost)
+
+Increase the reference count of a ghost structure.
+
+# Arguments
+* `ghost`:\\[in,out\\] On input, this ghost structure must exist with positive reference count.
+### Prototype
+```c
+void t8_forest_ghost_ref (t8_forest_ghost_t ghost);
+```
+"""
+function t8_forest_ghost_ref(ghost)
+    @ccall libt8.t8_forest_ghost_ref(ghost::t8_forest_ghost_t)::Cvoid
+end
+
+"""
+    t8_forest_ghost_unref(pghost)
+
+Decrease the reference count of a ghost structure. If the counter reaches zero, the ghost structure is destroyed. See also t8_forest_ghost_destroy, which is to be preferred when it is known that the last reference to a cmesh is deleted.
+
+# Arguments
+* `pghost`:\\[in,out\\] On input, the ghost structure pointed to must exist with positive reference count. If the reference count reaches zero, the ghost structure is destroyed and this pointer is set to NULL. Otherwise, the pointer is not changed.
+### Prototype
+```c
+void t8_forest_ghost_unref (t8_forest_ghost_t *pghost);
+```
+"""
+function t8_forest_ghost_unref(pghost)
+    @ccall libt8.t8_forest_ghost_unref(pghost::Ptr{t8_forest_ghost_t})::Cvoid
+end
+
+"""
+    t8_forest_ghost_destroy(pghost)
+
+Verify that a ghost structure has only one reference left and destroy it. This function is preferred over t8_forest_ghost_unref when it is known that the last reference is to be deleted.
+
+# Arguments
+* `pghost`:\\[in,out\\] This ghost structure must have a reference count of one. It can be in any state (committed or not). Then it effectively calls t8_forest_ghost_unref.
+### Prototype
+```c
+void t8_forest_ghost_destroy (t8_forest_ghost_t *pghost);
+```
+"""
+function t8_forest_ghost_destroy(pghost)
+    @ccall libt8.t8_forest_ghost_destroy(pghost::Ptr{t8_forest_ghost_t})::Cvoid
+end
+
+"""
+    t8_forest_ghost_create(forest)
+
+Create one layer of ghost elements for a forest. This function is collective. Every process gets a ghost structure, which is empty on processes without local elements.
+
+# Arguments
+* `forest`:\\[in,out\\] The forest. *forest* must be committed before calling this function.
+# See also
+[`t8_forest_set_ghost`](@ref)
+
+### Prototype
+```c
+void t8_forest_ghost_create (t8_forest_t forest);
+```
+"""
+function t8_forest_ghost_create(forest)
+    @ccall libt8.t8_forest_ghost_create(forest::t8_forest_t)::Cvoid
+end
+
+"""
+    t8_forest_ghost_get_remote(forest, remote)
+
+Return the remote struct of a given remote rank.
+
+# Arguments
+* `forest`:\\[in\\] A forest with constructed ghost layer.
+* `remote`:\\[in\\] A remote rank of the ghost layer in *forest*.
+# Returns
+The t8_ghost_remote_t of *remote*.
+### Prototype
+```c
+t8_ghost_remote_t * t8_forest_ghost_get_remote (t8_forest_t forest, int remote);
+```
+"""
+function t8_forest_ghost_get_remote(forest, remote)
+    @ccall libt8.t8_forest_ghost_get_remote(forest::t8_forest_t,
+                                            remote::Cint)::Ptr{t8_ghost_remote_t}
+end
+
+"""
+    t8_forest_ghost_get_remotes(forest, num_remotes)
+
+Return the array of remote ranks.
+
+# Arguments
+* `forest`:\\[in\\] A forest with constructed ghost layer.
+* `num_remotes`:\\[in,out\\] On output the number of remote ranks is stored here.
+# Returns
+The array of remote ranks in ascending order.
+### Prototype
+```c
+int * t8_forest_ghost_get_remotes (t8_forest_t forest, int *num_remotes);
+```
+"""
+function t8_forest_ghost_get_remotes(forest, num_remotes)
+    @ccall libt8.t8_forest_ghost_get_remotes(forest::t8_forest_t,
+                                             num_remotes::Ptr{Cint})::Ptr{Cint}
+end
+
 # typedef int ( * t8_forest_iterate_face_fn ) ( const t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int face , const int is_leaf , const t8_element_array_t * leaf_elements , const t8_locidx_t tree_leaf_index , void * user_data )
 """
 Callback function used in
@@ -14639,14 +16076,14 @@ const t8_forest_iterate_face_fn = Ptr{Cvoid}
 
 # typedef int ( * t8_forest_search_fn ) ( t8_forest_t forest , const t8_locidx_t ltreeid , const t8_element_t * element , const int is_leaf , const t8_element_array_t * leaf_elements , const t8_locidx_t tree_leaf_index )
 """
-A call-back function used by t8_forest_search describing a search-criterion. Is called on an element and the  search criterion should be checked on that element. Return true if the search criterion is met, false otherwise.
+A call-back function used by t8_forest_search describing a search-criterion. Is called on an element and the search criterion should be checked on that element. Return true if the search criterion is met, false otherwise.
 
 # Arguments
 * `forest`:\\[in\\] the forest
 * `ltreeid`:\\[in\\] the local tree id of the current tree
 * `element`:\\[in\\] the element for which the search criterion is checked.
 * `is_leaf`:\\[in\\] true if and only if *element* is a leaf element
-* `leaf_elements`:\\[in\\] the leaf elements in *forest* that are descendants of *element* (or the element  itself if *is_leaf* is true)
+* `leaf_elements`:\\[in\\] the leaf elements in *forest* that are descendants of *element* (or the element itself if *is_leaf* is true)
 * `tree_leaf_index`:\\[in\\] the local index of the first leaf in *leaf_elements*
 # Returns
 non-zero if the search criterion is met, zero otherwise.
@@ -14662,12 +16099,12 @@ A call-back function used by t8_forest_search for queries. Is called on an eleme
 * `ltreeid`:\\[in\\] the local tree id of the current tree
 * `element`:\\[in\\] the element for which the queries are executed
 * `is_leaf`:\\[in\\] true if and only if *element* is a leaf element
-* `leaf_elements`:\\[in\\] the leaf elements in *forest* that are descendants of *element* (or the element  itself if *is_leaf* is true)
+* `leaf_elements`:\\[in\\] the leaf elements in *forest* that are descendants of *element* (or the element itself if *is_leaf* is true)
 * `tree_leaf_index`:\\[in\\] the local index of the first leaf in *leaf_elements*
 * `queries`:\\[in\\] An array of queries that are checked by the function
 * `query_indices`:\\[in\\] An array of size\\_t entries, where each entry is an index of a query in *queries*.
-* `query_matches`:\\[in,out\\] An array of length *num_active_queries*.  If the element is not a leave must be set to true or false at the i-th index for  each query, specifying whether the element 'matches' the query of the i-th query  index or not. When the element is a leaf we can return before all entries are set.
-* `num_active_queries`:\\[in\\] The number of currently active queries (equals the number of entries of  *query_matches* and entries of *query_indices*).
+* `query_matches`:\\[in,out\\] An array of length *num_active_queries*. If the element is not a leave must be set to true or false at the i-th index for each query, specifying whether the element 'matches' the query of the i-th query index or not. When the element is a leaf we can return before all entries are set.
+* `num_active_queries`:\\[in\\] The number of currently active queries (equals the number of entries of *query_matches* and entries of *query_indices*).
 """
 const t8_forest_query_fn = Ptr{Cvoid}
 
@@ -14711,14 +16148,16 @@ Split an array of elements according to the children of a given element E. In ot
 # Arguments
 * `element`:\\[in\\] An element.
 * `leaf_elements`:\\[in\\] An array of leaf elements of *element*. Thus, all elements must be descendants. Sorted by linear index.
-* `offsets`:\\[in,out\\] On input an allocated array of *num_children_of_E* + 1 entries.  On output entry i indicates the position in *leaf_elements* where the descandents of the i-th child of E start.
+* `offsets`:\\[in,out\\] On input an allocated array of *num_children_of_E* + 1 entries. On output entry i indicates the position in *leaf_elements* where the descandents of the i-th child of E start.
 ### Prototype
 ```c
 void t8_forest_split_array (const t8_element_t *element, const t8_element_array_t *leaf_elements, size_t *offsets);
 ```
 """
 function t8_forest_split_array(element, leaf_elements, offsets)
-    @ccall libt8.t8_forest_split_array(element::Ptr{t8_element_t}, leaf_elements::Ptr{t8_element_array_t}, offsets::Ptr{Csize_t})::Cvoid
+    @ccall libt8.t8_forest_split_array(element::Ptr{t8_element_t},
+                                       leaf_elements::Ptr{t8_element_array_t},
+                                       offsets::Ptr{Csize_t})::Cvoid
 end
 
 """
@@ -14744,8 +16183,14 @@ Iterate over all leaves of an element that touch a given face of the element. Ca
 void t8_forest_iterate_faces (const t8_forest_t forest, const t8_locidx_t ltreeid, const t8_element_t *element, const int face, const t8_element_array_t *const leaf_elements, const t8_locidx_t tree_lindex_of_first_leaf, const t8_forest_iterate_face_fn callback, void *user_data);
 ```
 """
-function t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements, tree_lindex_of_first_leaf, callback, user_data)
-    @ccall libt8.t8_forest_iterate_faces(forest::t8_forest_t, ltreeid::t8_locidx_t, element::Ptr{t8_element_t}, face::Cint, leaf_elements::Ptr{t8_element_array_t}, tree_lindex_of_first_leaf::t8_locidx_t, callback::t8_forest_iterate_face_fn, user_data::Ptr{Cvoid})::Cvoid
+function t8_forest_iterate_faces(forest, ltreeid, element, face, leaf_elements,
+                                 tree_lindex_of_first_leaf, callback, user_data)
+    @ccall libt8.t8_forest_iterate_faces(forest::t8_forest_t, ltreeid::t8_locidx_t,
+                                         element::Ptr{t8_element_t}, face::Cint,
+                                         leaf_elements::Ptr{t8_element_array_t},
+                                         tree_lindex_of_first_leaf::t8_locidx_t,
+                                         callback::t8_forest_iterate_face_fn,
+                                         user_data::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -14764,7 +16209,9 @@ void t8_forest_search (t8_forest_t forest, t8_forest_search_fn search_fn, t8_for
 ```
 """
 function t8_forest_search(forest, search_fn, query_fn, queries)
-    @ccall libt8.t8_forest_search(forest::t8_forest_t, search_fn::t8_forest_search_fn, query_fn::t8_forest_query_fn, queries::Ptr{sc_array_t})::Cvoid
+    @ccall libt8.t8_forest_search(forest::t8_forest_t, search_fn::t8_forest_search_fn,
+                                  query_fn::t8_forest_query_fn,
+                                  queries::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -14786,7 +16233,8 @@ void t8_forest_iterate_replace (t8_forest_t forest_new, t8_forest_t forest_old, 
 ```
 """
 function t8_forest_iterate_replace(forest_new, forest_old, replace_fn)
-    @ccall libt8.t8_forest_iterate_replace(forest_new::t8_forest_t, forest_old::t8_forest_t, replace_fn::t8_forest_replace_t)::Cvoid
+    @ccall libt8.t8_forest_iterate_replace(forest_new::t8_forest_t, forest_old::t8_forest_t,
+                                           replace_fn::t8_forest_replace_t)::Cvoid
 end
 
 """
@@ -14805,7 +16253,10 @@ void t8_forest_search_partition (const t8_forest_t forest, t8_forest_partition_s
 ```
 """
 function t8_forest_search_partition(forest, search_fn, query_fn, queries)
-    @ccall libt8.t8_forest_search_partition(forest::t8_forest_t, search_fn::t8_forest_partition_search_fn, query_fn::t8_forest_partition_query_fn, queries::Ptr{sc_array_t})::Cvoid
+    @ccall libt8.t8_forest_search_partition(forest::t8_forest_t,
+                                            search_fn::t8_forest_partition_search_fn,
+                                            query_fn::t8_forest_partition_query_fn,
+                                            queries::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -14842,7 +16293,8 @@ t8_forest_t t8_forest_new_gather (const t8_forest_t forest_from, const int gathe
 ```
 """
 function t8_forest_new_gather(forest_from, gather_rank)
-    @ccall libt8.t8_forest_new_gather(forest_from::t8_forest_t, gather_rank::Cint)::t8_forest_t
+    @ccall libt8.t8_forest_new_gather(forest_from::t8_forest_t,
+                                      gather_rank::Cint)::t8_forest_t
 end
 
 """
@@ -14861,7 +16313,8 @@ void t8_forest_set_partition_offset (t8_forest_t forest, const t8_gloidx_t first
 ```
 """
 function t8_forest_set_partition_offset(forest, first_global_element)
-    @ccall libt8.t8_forest_set_partition_offset(forest::t8_forest_t, first_global_element::t8_gloidx_t)::Cvoid
+    @ccall libt8.t8_forest_set_partition_offset(forest::t8_forest_t,
+                                                first_global_element::t8_gloidx_t)::Cvoid
 end
 
 """
@@ -14896,7 +16349,8 @@ int t8_forest_partition_next_nonempty_rank (t8_forest_t forest, int rank);
 ```
 """
 function t8_forest_partition_next_nonempty_rank(forest, rank)
-    @ccall libt8.t8_forest_partition_next_nonempty_rank(forest::t8_forest_t, rank::Cint)::Cint
+    @ccall libt8.t8_forest_partition_next_nonempty_rank(forest::t8_forest_t,
+                                                        rank::Cint)::Cint
 end
 
 """
@@ -14951,7 +16405,9 @@ void t8_forest_partition_data (t8_forest_t forest_from, t8_forest_t forest_to, c
 ```
 """
 function t8_forest_partition_data(forest_from, forest_to, data_in, data_out)
-    @ccall libt8.t8_forest_partition_data(forest_from::t8_forest_t, forest_to::t8_forest_t, data_in::Ptr{sc_array_t}, data_out::Ptr{sc_array_t})::Cvoid
+    @ccall libt8.t8_forest_partition_data(forest_from::t8_forest_t, forest_to::t8_forest_t,
+                                          data_in::Ptr{sc_array_t},
+                                          data_out::Ptr{sc_array_t})::Cvoid
 end
 
 """
@@ -15057,7 +16513,9 @@ void t8_forest_init_search (t8_forest_search_c_wrapper search, t8_search_element
 ```
 """
 function t8_forest_init_search(search, element_callback, forest)
-    @ccall libt8.t8_forest_init_search(search::t8_forest_search_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, forest::t8_forest_t)::Cvoid
+    @ccall libt8.t8_forest_init_search(search::t8_forest_search_c_wrapper,
+                                       element_callback::t8_search_element_callback_c_wrapper,
+                                       forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15069,7 +16527,8 @@ void t8_forest_search_update_forest (t8_forest_search_c_wrapper search, const t8
 ```
 """
 function t8_forest_search_update_forest(search, forest)
-    @ccall libt8.t8_forest_search_update_forest(search::t8_forest_search_c_wrapper, forest::t8_forest_t)::Cvoid
+    @ccall libt8.t8_forest_search_update_forest(search::t8_forest_search_c_wrapper,
+                                                forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15086,7 +16545,8 @@ void t8_forest_search_update_user_data (t8_forest_search_c_wrapper search, void 
 ```
 """
 function t8_forest_search_update_user_data(search, udata)
-    @ccall libt8.t8_forest_search_update_user_data(search::t8_forest_search_c_wrapper, udata::Ptr{Cvoid})::Cvoid
+    @ccall libt8.t8_forest_search_update_user_data(search::t8_forest_search_c_wrapper,
+                                                   udata::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -15134,8 +16594,14 @@ const t8_forest_search_with_queries_c_wrapper = Ptr{t8_forest_search_with_querie
 void t8_forest_init_search_with_queries (t8_forest_search_with_queries_c_wrapper search_with_queries, t8_search_element_callback_c_wrapper element_callback, t8_search_queries_callback_c_wrapper queries_callback, void **queries, const size_t num_queries, const t8_forest_t forest);
 ```
 """
-function t8_forest_init_search_with_queries(search_with_queries, element_callback, queries_callback, queries, num_queries, forest)
-    @ccall libt8.t8_forest_init_search_with_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::t8_forest_t)::Cvoid
+function t8_forest_init_search_with_queries(search_with_queries, element_callback,
+                                            queries_callback, queries, num_queries, forest)
+    @ccall libt8.t8_forest_init_search_with_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper,
+                                                    element_callback::t8_search_element_callback_c_wrapper,
+                                                    queries_callback::t8_search_queries_callback_c_wrapper,
+                                                    queries::Ptr{Ptr{Cvoid}},
+                                                    num_queries::Csize_t,
+                                                    forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15147,7 +16613,8 @@ void t8_forest_search_with_queries_update_forest (t8_forest_search_with_queries_
 ```
 """
 function t8_forest_search_with_queries_update_forest(search_with_queries, forest)
-    @ccall libt8.t8_forest_search_with_queries_update_forest(search_with_queries::t8_forest_search_with_queries_c_wrapper, forest::t8_forest_t)::Cvoid
+    @ccall libt8.t8_forest_search_with_queries_update_forest(search_with_queries::t8_forest_search_with_queries_c_wrapper,
+                                                             forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15164,7 +16631,8 @@ void t8_forest_search_with_queries_update_user_data (t8_forest_search_with_queri
 ```
 """
 function t8_forest_search_with_queries_update_user_data(search_with_queries, udata)
-    @ccall libt8.t8_forest_search_with_queries_update_user_data(search_with_queries::t8_forest_search_with_queries_c_wrapper, udata::Ptr{Cvoid})::Cvoid
+    @ccall libt8.t8_forest_search_with_queries_update_user_data(search_with_queries::t8_forest_search_with_queries_c_wrapper,
+                                                                udata::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -15181,8 +16649,11 @@ Update the queries in the search with queries context
 void t8_forest_search_with_queries_update_queries (t8_forest_search_with_queries_c_wrapper search_with_queries, void **queries, const size_t num_queries);
 ```
 """
-function t8_forest_search_with_queries_update_queries(search_with_queries, queries, num_queries)
-    @ccall libt8.t8_forest_search_with_queries_update_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t)::Cvoid
+function t8_forest_search_with_queries_update_queries(search_with_queries, queries,
+                                                      num_queries)
+    @ccall libt8.t8_forest_search_with_queries_update_queries(search_with_queries::t8_forest_search_with_queries_c_wrapper,
+                                                              queries::Ptr{Ptr{Cvoid}},
+                                                              num_queries::Csize_t)::Cvoid
 end
 
 """
@@ -15230,8 +16701,15 @@ const t8_forest_search_with_batched_queries_c_wrapper = Ptr{t8_forest_search_wit
 void t8_forest_init_search_with_batched_queries (t8_forest_search_with_batched_queries_c_wrapper search_with_queries, t8_search_element_callback_c_wrapper element_callback, t8_search_batched_queries_callback_c_wrapper queries_callback, void **queries, const size_t num_queries, const t8_forest_t forest);
 ```
 """
-function t8_forest_init_search_with_batched_queries(search_with_queries, element_callback, queries_callback, queries, num_queries, forest)
-    @ccall libt8.t8_forest_init_search_with_batched_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, element_callback::t8_search_element_callback_c_wrapper, queries_callback::t8_search_batched_queries_callback_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t, forest::t8_forest_t)::Cvoid
+function t8_forest_init_search_with_batched_queries(search_with_queries, element_callback,
+                                                    queries_callback, queries, num_queries,
+                                                    forest)
+    @ccall libt8.t8_forest_init_search_with_batched_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper,
+                                                            element_callback::t8_search_element_callback_c_wrapper,
+                                                            queries_callback::t8_search_batched_queries_callback_c_wrapper,
+                                                            queries::Ptr{Ptr{Cvoid}},
+                                                            num_queries::Csize_t,
+                                                            forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15243,7 +16721,8 @@ void t8_forest_search_with_batched_queries_update_forest ( t8_forest_search_with
 ```
 """
 function t8_forest_search_with_batched_queries_update_forest(search_with_queries, forest)
-    @ccall libt8.t8_forest_search_with_batched_queries_update_forest(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, forest::t8_forest_t)::Cvoid
+    @ccall libt8.t8_forest_search_with_batched_queries_update_forest(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper,
+                                                                     forest::t8_forest_t)::Cvoid
 end
 
 """
@@ -15260,7 +16739,8 @@ void t8_forest_search_with_batched_queries_update_user_data ( t8_forest_search_w
 ```
 """
 function t8_forest_search_with_batched_queries_update_user_data(search_with_queries, udata)
-    @ccall libt8.t8_forest_search_with_batched_queries_update_user_data(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, udata::Ptr{Cvoid})::Cvoid
+    @ccall libt8.t8_forest_search_with_batched_queries_update_user_data(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper,
+                                                                        udata::Ptr{Cvoid})::Cvoid
 end
 
 """
@@ -15277,8 +16757,11 @@ Update the queries in the search with batched queries context
 void t8_forest_search_with_batched_queries_update_queries ( t8_forest_search_with_batched_queries_c_wrapper search_with_queries, void **queries, const size_t num_queries);
 ```
 """
-function t8_forest_search_with_batched_queries_update_queries(search_with_queries, queries, num_queries)
-    @ccall libt8.t8_forest_search_with_batched_queries_update_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper, queries::Ptr{Ptr{Cvoid}}, num_queries::Csize_t)::Cvoid
+function t8_forest_search_with_batched_queries_update_queries(search_with_queries, queries,
+                                                              num_queries)
+    @ccall libt8.t8_forest_search_with_batched_queries_update_queries(search_with_queries::t8_forest_search_with_batched_queries_c_wrapper,
+                                                                      queries::Ptr{Ptr{Cvoid}},
+                                                                      num_queries::Csize_t)::Cvoid
 end
 
 """
@@ -15357,8 +16840,13 @@ end
 void t8_geom_compute_linear_geometry (t8_eclass_t tree_class, const double *tree_vertices, const double *ref_coords, const size_t num_coords, double *out_coords);
 ```
 """
-function t8_geom_compute_linear_geometry(tree_class, tree_vertices, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_geom_compute_linear_geometry(tree_class::Cint, tree_vertices::Ptr{Cdouble}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+function t8_geom_compute_linear_geometry(tree_class, tree_vertices, ref_coords, num_coords,
+                                         out_coords)
+    @ccall libt8.t8_geom_compute_linear_geometry(tree_class::Cint,
+                                                 tree_vertices::Ptr{Cdouble},
+                                                 ref_coords::Ptr{Cdouble},
+                                                 num_coords::Csize_t,
+                                                 out_coords::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15369,8 +16857,13 @@ end
 void t8_geom_compute_linear_axis_aligned_geometry (t8_eclass_t tree_class, const double *tree_vertices, const double *ref_coords, const size_t num_coords, double *out_coords);
 ```
 """
-function t8_geom_compute_linear_axis_aligned_geometry(tree_class, tree_vertices, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_geom_compute_linear_axis_aligned_geometry(tree_class::Cint, tree_vertices::Ptr{Cdouble}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
+function t8_geom_compute_linear_axis_aligned_geometry(tree_class, tree_vertices, ref_coords,
+                                                      num_coords, out_coords)
+    @ccall libt8.t8_geom_compute_linear_axis_aligned_geometry(tree_class::Cint,
+                                                              tree_vertices::Ptr{Cdouble},
+                                                              ref_coords::Ptr{Cdouble},
+                                                              num_coords::Csize_t,
+                                                              out_coords::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15389,8 +16882,13 @@ Interpolates linearly between 2, bilinearly between 4 or trilineraly between 8 p
 void t8_geom_linear_interpolation (const double *coefficients, const double *corner_values, int corner_value_dim, int interpolation_dim, double *evaluated_function);
 ```
 """
-function t8_geom_linear_interpolation(coefficients, corner_values, corner_value_dim, interpolation_dim, evaluated_function)
-    @ccall libt8.t8_geom_linear_interpolation(coefficients::Ptr{Cdouble}, corner_values::Ptr{Cdouble}, corner_value_dim::Cint, interpolation_dim::Cint, evaluated_function::Ptr{Cdouble})::Cvoid
+function t8_geom_linear_interpolation(coefficients, corner_values, corner_value_dim,
+                                      interpolation_dim, evaluated_function)
+    @ccall libt8.t8_geom_linear_interpolation(coefficients::Ptr{Cdouble},
+                                              corner_values::Ptr{Cdouble},
+                                              corner_value_dim::Cint,
+                                              interpolation_dim::Cint,
+                                              evaluated_function::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15409,8 +16907,13 @@ Triangular interpolation between 3 points (triangle) or 4 points (tetrahedron) u
 void t8_geom_triangular_interpolation (const double *coefficients, const double *corner_values, int corner_value_dim, int interpolation_dim, double *evaluated_function);
 ```
 """
-function t8_geom_triangular_interpolation(coefficients, corner_values, corner_value_dim, interpolation_dim, evaluated_function)
-    @ccall libt8.t8_geom_triangular_interpolation(coefficients::Ptr{Cdouble}, corner_values::Ptr{Cdouble}, corner_value_dim::Cint, interpolation_dim::Cint, evaluated_function::Ptr{Cdouble})::Cvoid
+function t8_geom_triangular_interpolation(coefficients, corner_values, corner_value_dim,
+                                          interpolation_dim, evaluated_function)
+    @ccall libt8.t8_geom_triangular_interpolation(coefficients::Ptr{Cdouble},
+                                                  corner_values::Ptr{Cdouble},
+                                                  corner_value_dim::Cint,
+                                                  interpolation_dim::Cint,
+                                                  evaluated_function::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15421,8 +16924,11 @@ end
 void t8_geom_get_face_vertices (t8_eclass_t tree_class, const double *tree_vertices, int face_index, int dim, double *face_vertices);
 ```
 """
-function t8_geom_get_face_vertices(tree_class, tree_vertices, face_index, dim, face_vertices)
-    @ccall libt8.t8_geom_get_face_vertices(tree_class::Cint, tree_vertices::Ptr{Cdouble}, face_index::Cint, dim::Cint, face_vertices::Ptr{Cdouble})::Cvoid
+function t8_geom_get_face_vertices(tree_class, tree_vertices, face_index, dim,
+                                   face_vertices)
+    @ccall libt8.t8_geom_get_face_vertices(tree_class::Cint, tree_vertices::Ptr{Cdouble},
+                                           face_index::Cint, dim::Cint,
+                                           face_vertices::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15433,8 +16939,11 @@ end
 void t8_geom_get_edge_vertices (t8_eclass_t tree_class, const double *tree_vertices, int edge_index, int dim, double *edge_vertices);
 ```
 """
-function t8_geom_get_edge_vertices(tree_class, tree_vertices, edge_index, dim, edge_vertices)
-    @ccall libt8.t8_geom_get_edge_vertices(tree_class::Cint, tree_vertices::Ptr{Cdouble}, edge_index::Cint, dim::Cint, edge_vertices::Ptr{Cdouble})::Cvoid
+function t8_geom_get_edge_vertices(tree_class, tree_vertices, edge_index, dim,
+                                   edge_vertices)
+    @ccall libt8.t8_geom_get_edge_vertices(tree_class::Cint, tree_vertices::Ptr{Cdouble},
+                                           edge_index::Cint, dim::Cint,
+                                           edge_vertices::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15452,7 +16961,8 @@ void t8_geom_get_ref_intersection (int edge_index, const double *ref_coords, dou
 ```
 """
 function t8_geom_get_ref_intersection(edge_index, ref_coords, ref_intersection)
-    @ccall libt8.t8_geom_get_ref_intersection(edge_index::Cint, ref_coords::Ptr{Cdouble}, ref_intersection::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_geom_get_ref_intersection(edge_index::Cint, ref_coords::Ptr{Cdouble},
+                                              ref_intersection::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15470,8 +16980,12 @@ Calculates the scaling factor for edge displacement along a triangular tree face
 double t8_geom_get_triangle_scaling_factor (int edge_index, const double *tree_vertices, const double *glob_intersection, const double *glob_ref_point);
 ```
 """
-function t8_geom_get_triangle_scaling_factor(edge_index, tree_vertices, glob_intersection, glob_ref_point)
-    @ccall libt8.t8_geom_get_triangle_scaling_factor(edge_index::Cint, tree_vertices::Ptr{Cdouble}, glob_intersection::Ptr{Cdouble}, glob_ref_point::Ptr{Cdouble})::Cdouble
+function t8_geom_get_triangle_scaling_factor(edge_index, tree_vertices, glob_intersection,
+                                             glob_ref_point)
+    @ccall libt8.t8_geom_get_triangle_scaling_factor(edge_index::Cint,
+                                                     tree_vertices::Ptr{Cdouble},
+                                                     glob_intersection::Ptr{Cdouble},
+                                                     glob_ref_point::Ptr{Cdouble})::Cdouble
 end
 
 """
@@ -15491,7 +17005,9 @@ double t8_geom_get_scaling_factor_of_edge_on_face_tet (int edge_index, int face_
 ```
 """
 function t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index, face_index, ref_coords)
-    @ccall libt8.t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index::Cint, face_index::Cint, ref_coords::Ptr{Cdouble})::Cdouble
+    @ccall libt8.t8_geom_get_scaling_factor_of_edge_on_face_tet(edge_index::Cint,
+                                                                face_index::Cint,
+                                                                ref_coords::Ptr{Cdouble})::Cdouble
 end
 
 """
@@ -15509,7 +17025,9 @@ void t8_geom_get_tet_face_intersection (const int face_index, const double *ref_
 ```
 """
 function t8_geom_get_tet_face_intersection(face_index, ref_coords, face_intersection)
-    @ccall libt8.t8_geom_get_tet_face_intersection(face_index::Cint, ref_coords::Ptr{Cdouble}, face_intersection::Ptr{Cdouble})::Cvoid
+    @ccall libt8.t8_geom_get_tet_face_intersection(face_index::Cint,
+                                                   ref_coords::Ptr{Cdouble},
+                                                   face_intersection::Ptr{Cdouble})::Cvoid
 end
 
 """
@@ -15528,8 +17046,11 @@ The scaling factor of the edge displacement on the face at the point of the refe
 double t8_geom_get_scaling_factor_of_edge_on_face_prism (int edge_index, int face_index, const double *ref_coords);
 ```
 """
-function t8_geom_get_scaling_factor_of_edge_on_face_prism(edge_index, face_index, ref_coords)
-    @ccall libt8.t8_geom_get_scaling_factor_of_edge_on_face_prism(edge_index::Cint, face_index::Cint, ref_coords::Ptr{Cdouble})::Cdouble
+function t8_geom_get_scaling_factor_of_edge_on_face_prism(edge_index, face_index,
+                                                          ref_coords)
+    @ccall libt8.t8_geom_get_scaling_factor_of_edge_on_face_prism(edge_index::Cint,
+                                                                  face_index::Cint,
+                                                                  ref_coords::Ptr{Cdouble})::Cdouble
 end
 
 """
@@ -15548,7 +17069,8 @@ double t8_geom_get_scaling_factor_face_through_volume_prism (const int face, con
 ```
 """
 function t8_geom_get_scaling_factor_face_through_volume_prism(face, ref_coords)
-    @ccall libt8.t8_geom_get_scaling_factor_face_through_volume_prism(face::Cint, ref_coords::Ptr{Cdouble})::Cdouble
+    @ccall libt8.t8_geom_get_scaling_factor_face_through_volume_prism(face::Cint,
+                                                                      ref_coords::Ptr{Cdouble})::Cdouble
 end
 
 """
@@ -15568,7 +17090,8 @@ int t8_vertex_point_inside (const double vertex_coords[3], const double point[3]
 ```
 """
 function t8_vertex_point_inside(vertex_coords, point, tolerance)
-    @ccall libt8.t8_vertex_point_inside(vertex_coords::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+    @ccall libt8.t8_vertex_point_inside(vertex_coords::Ptr{Cdouble}, point::Ptr{Cdouble},
+                                        tolerance::Cdouble)::Cint
 end
 
 """
@@ -15589,7 +17112,8 @@ int t8_line_point_inside (const double *p_0, const double *vec, const double *po
 ```
 """
 function t8_line_point_inside(p_0, vec, point, tolerance)
-    @ccall libt8.t8_line_point_inside(p_0::Ptr{Cdouble}, vec::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+    @ccall libt8.t8_line_point_inside(p_0::Ptr{Cdouble}, vec::Ptr{Cdouble},
+                                      point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
 end
 
 """
@@ -15611,7 +17135,9 @@ int t8_triangle_point_inside (const double p_0[3], const double v[3], const doub
 ```
 """
 function t8_triangle_point_inside(p_0, v, w, point, tolerance)
-    @ccall libt8.t8_triangle_point_inside(p_0::Ptr{Cdouble}, v::Ptr{Cdouble}, w::Ptr{Cdouble}, point::Ptr{Cdouble}, tolerance::Cdouble)::Cint
+    @ccall libt8.t8_triangle_point_inside(p_0::Ptr{Cdouble}, v::Ptr{Cdouble},
+                                          w::Ptr{Cdouble}, point::Ptr{Cdouble},
+                                          tolerance::Cdouble)::Cint
 end
 
 """
@@ -15631,7 +17157,8 @@ int t8_plane_point_inside (const double point_on_face[3], const double face_norm
 ```
 """
 function t8_plane_point_inside(point_on_face, face_normal, point)
-    @ccall libt8.t8_plane_point_inside(point_on_face::Ptr{Cdouble}, face_normal::Ptr{Cdouble}, point::Ptr{Cdouble})::Cint
+    @ccall libt8.t8_plane_point_inside(point_on_face::Ptr{Cdouble},
+                                       face_normal::Ptr{Cdouble}, point::Ptr{Cdouble})::Cint
 end
 
 # typedef void ( * t8_geom_analytic_fn ) ( t8_cmesh_t cmesh , t8_gloidx_t gtreeid , const double * ref_coords , const size_t num_coords , double * out_coords , const void * tree_data , const void * user_data )
@@ -15779,8 +17306,14 @@ A pointer to an allocated geometry struct.
 t8_geometry_c * t8_geometry_analytic_new (const char *name, t8_geom_analytic_fn analytical, t8_geom_analytic_jacobian_fn jacobian, t8_geom_load_tree_data_fn load_tree_data, t8_geom_tree_negative_volume_fn tree_negative_volume, t8_geom_tree_compatible_fn tree_compatible, const void *user_data);
 ```
 """
-function t8_geometry_analytic_new(name, analytical, jacobian, load_tree_data, tree_negative_volume, tree_compatible, user_data)
-    @ccall libt8.t8_geometry_analytic_new(name::Cstring, analytical::t8_geom_analytic_fn, jacobian::t8_geom_analytic_jacobian_fn, load_tree_data::t8_geom_load_tree_data_fn, tree_negative_volume::t8_geom_tree_negative_volume_fn, tree_compatible::t8_geom_tree_compatible_fn, user_data::Ptr{Cvoid})::Ptr{t8_geometry_c}
+function t8_geometry_analytic_new(name, analytical, jacobian, load_tree_data,
+                                  tree_negative_volume, tree_compatible, user_data)
+    @ccall libt8.t8_geometry_analytic_new(name::Cstring, analytical::t8_geom_analytic_fn,
+                                          jacobian::t8_geom_analytic_jacobian_fn,
+                                          load_tree_data::t8_geom_load_tree_data_fn,
+                                          tree_negative_volume::t8_geom_tree_negative_volume_fn,
+                                          tree_compatible::t8_geom_tree_compatible_fn,
+                                          user_data::Ptr{Cvoid})::Ptr{t8_geometry_c}
 end
 
 """
@@ -15798,7 +17331,8 @@ void t8_geom_load_tree_data_vertices (t8_cmesh_t cmesh, t8_gloidx_t gtreeid, con
 ```
 """
 function t8_geom_load_tree_data_vertices(cmesh, gtreeid, user_data)
-    @ccall libt8.t8_geom_load_tree_data_vertices(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t, user_data::Ptr{Ptr{Cvoid}})::Cvoid
+    @ccall libt8.t8_geom_load_tree_data_vertices(cmesh::t8_cmesh_t, gtreeid::t8_gloidx_t,
+                                                 user_data::Ptr{Ptr{Cvoid}})::Cvoid
 end
 
 """
@@ -15935,7 +17469,9 @@ void t8_cmesh_set_tree_vertices (t8_cmesh_t cmesh, const t8_gloidx_t gtree_id, c
 ```
 """
 function t8_cmesh_set_tree_vertices(cmesh, gtree_id, vertices, num_vertices)
-    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t, vertices::Ptr{Cdouble}, num_vertices::Cint)::Cvoid
+    @ccall libt8.t8_cmesh_set_tree_vertices(cmesh::t8_cmesh_t, gtree_id::t8_gloidx_t,
+                                            vertices::Ptr{Cdouble},
+                                            num_vertices::Cint)::Cvoid
 end
 
 # no prototype is found for this function at t8_geometry_lagrange.h:47:1, please use with caution
@@ -16181,7 +17717,8 @@ static ssize_t getdelim (char **lineptr, size_t *n, int delimiter, FILE *stream)
 ```
 """
 function getdelim(lineptr, n, delimiter, stream)
-    @ccall libt8.getdelim(lineptr::Ptr{Cstring}, n::Ptr{Cint}, delimiter::Cint, stream::Ptr{Cint})::Cint
+    @ccall libt8.getdelim(lineptr::Ptr{Cstring}, n::Ptr{Cint}, delimiter::Cint,
+                          stream::Ptr{Cint})::Cint
 end
 
 """
@@ -16233,7 +17770,8 @@ int t8_eclass_scheme_is_default (const t8_scheme_c *scheme, const t8_eclass_t ec
 ```
 """
 function t8_eclass_scheme_is_default(scheme, eclass)
-    @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{t8_scheme_c}, eclass::t8_eclass_t)::Cint
+    @ccall libt8.t8_eclass_scheme_is_default(scheme::Ptr{t8_scheme_c},
+                                             eclass::t8_eclass_t)::Cint
 end
 
 """Type of an integer coordinate for a node of a hex element."""
@@ -16261,37 +17799,6 @@ end
 """The data container describing a refined element in a refined tree for the hex element class."""
 const t8_dhex_t = t8_dhex
 
-"""
-    t8_dhex_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-
-Convert points in the reference space of a hex element to points in the reference space of the tree (level 0) embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-```c++
- [0,1]^3 
-```
-
-)
-
-# Arguments
-* `elem`:\\[in\\] Input hex.
-* `ref_coords`:\\[in\\] The reference coordinates in the hex (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `out_coords`:\\[out\\] An array of *num_coords* x 3 x double that will be filled with the reference coordinates of the points on the hex.
-### Prototype
-```c
-void t8_dhex_compute_reference_coords (const t8_dhex_t *elem, const double *ref_coords, const size_t num_coords, double *out_coords);
-```
-"""
-function t8_dhex_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_dhex_compute_reference_coords(elem::Ptr{t8_dhex_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
 """Type of an integer coordinate for a node of a line element."""
 const t8_dline_coord_t = Int32
 
@@ -16312,545 +17819,6 @@ end
 
 """The data container describing a refined element in a refined tree for the line element class."""
 const t8_dline_t = t8_dline
-
-"""
-    t8_dvertex
-
-The data container describing a refined element in a refined tree for the vertex element class.
-
-| Field | Note                                                                  |
-| :---- | :-------------------------------------------------------------------- |
-| level | The refinement level of the element relative to the root at level 0.  |
-"""
-struct t8_dvertex
-    level::UInt8
-end
-
-"""The data container describing a refined element in a refined tree for the vertex element class."""
-const t8_dvertex_t = t8_dvertex
-
-"""
-    t8_dline_get_level(line)
-
-Compute the level of a line.
-
-# Arguments
-* `line`:\\[in\\] Line whose level is computed.
-# Returns
-The level of *line*.
-### Prototype
-```c
-int t8_dline_get_level (const t8_dline_t *line);
-```
-"""
-function t8_dline_get_level(line)
-    @ccall libt8.t8_dline_get_level(line::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_copy(line, dest)
-
-Copy all values from one line to another.
-
-# Arguments
-* `line`:\\[in\\] The line to be copied.
-* `dest`:\\[in,out\\] Existing line whose data will be filled with the data of *line*.
-### Prototype
-```c
-void t8_dline_copy (const t8_dline_t *line, t8_dline_t *dest);
-```
-"""
-function t8_dline_copy(line, dest)
-    @ccall libt8.t8_dline_copy(line::Ptr{t8_dline_t}, dest::Ptr{t8_dline_t})::Cvoid
-end
-
-"""
-    t8_dline_compare(line1, line2)
-
-Compare two elements. returns negative if line1 < line2, zero if line1 equals line2 and positive if line1 > line2. If line2 is a copy of line1 then the elements are equal.
-
-### Prototype
-```c
-int t8_dline_compare (const t8_dline_t *line1, const t8_dline_t *line2);
-```
-"""
-function t8_dline_compare(line1, line2)
-    @ccall libt8.t8_dline_compare(line1::Ptr{t8_dline_t}, line2::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_equal(line1, line2)
-
-Check if two elements are equal.
-
-# Arguments
-* `line1`:\\[in\\] The first element.
-* `line2`:\\[in\\] The second element.
-# Returns
-1 if the elements are equal, 0 if they are not equal
-### Prototype
-```c
-int t8_dline_equal (const t8_dline_t *line1, const t8_dline_t *line2);
-```
-"""
-function t8_dline_equal(line1, line2)
-    @ccall libt8.t8_dline_equal(line1::Ptr{t8_dline_t}, line2::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_parent(line, parent)
-
-Compute the parent of a line.
-
-# Arguments
-* `line`:\\[in\\] The input line.
-* `parent`:\\[in,out\\] Existing line whose data will be filled with the parent data of *line*.
-### Prototype
-```c
-void t8_dline_parent (const t8_dline_t *line, t8_dline_t *parent);
-```
-"""
-function t8_dline_parent(line, parent)
-    @ccall libt8.t8_dline_parent(line::Ptr{t8_dline_t}, parent::Ptr{t8_dline_t})::Cvoid
-end
-
-"""
-    t8_dline_ancestor(line, level, ancestor)
-
-Compute the ancestor of a line at a given level.
-
-!!! note
-
-    The line *ancestor* may point to the same line as *line*.
-
-# Arguments
-* `line`:\\[in\\] Input line.
-* `level`:\\[in\\] A smaller level than *line*.
-* `ancestor`:\\[in,out\\] Existing line whose data will be filled with the data of *line*'s ancestor on level *level*.
-### Prototype
-```c
-void t8_dline_ancestor (const t8_dline_t *line, int level, t8_dline_t *ancestor);
-```
-"""
-function t8_dline_ancestor(line, level, ancestor)
-    @ccall libt8.t8_dline_ancestor(line::Ptr{t8_dline_t}, level::Cint, ancestor::Ptr{t8_dline_t})::Cvoid
-end
-
-"""
-    t8_dline_child(line, childid, child)
-
-Compute the childid-th child in Morton order of a line.
-
-# Arguments
-* `line`:\\[in\\] Input Line.
-* `childid`:\\[in\\] The id of the child, 0 or 1, in Morton order.
-* `child`:\\[in,out\\] Existing Line whose data will be filled with the date of l's childid-th child.
-### Prototype
-```c
-void t8_dline_child (const t8_dline_t *line, int childid, t8_dline_t *child);
-```
-"""
-function t8_dline_child(line, childid, child)
-    @ccall libt8.t8_dline_child(line::Ptr{t8_dline_t}, childid::Cint, child::Ptr{t8_dline_t})::Cvoid
-end
-
-"""
-    t8_dline_face_neighbour(line, neigh, face, dual_face)
-
-Compute the face neighbor of a line.
-
-!!! note
-
-    *line* may point to the same line as *neigh*.
-
-# Arguments
-* `line`:\\[in\\] Input line.
-* `neigh`:\\[in,out\\] Existing line whose data will be filled.
-* `face`:\\[in\\] The face across which to generate the neighbor.
-* `dual_face`:\\[out\\] If not NULL, the face number as seen from *neigh* is stored.
-### Prototype
-```c
-void t8_dline_face_neighbour (const t8_dline_t *line, t8_dline_t *neigh, int face, int *dual_face);
-```
-"""
-function t8_dline_face_neighbour(line, neigh, face, dual_face)
-    @ccall libt8.t8_dline_face_neighbour(line::Ptr{t8_dline_t}, neigh::Ptr{t8_dline_t}, face::Cint, dual_face::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dline_nearest_common_ancestor(line1, line2, nca)
-
-Computes the nearest common ancestor of two lines in the same tree.
-
-!!! note
-
-    *line1*, *line2*, *nca* may point to the same line.
-
-# Arguments
-* `line1`:\\[in\\] First input line.
-* `line2`:\\[in\\] Second input line.
-* `nca`:\\[in,out\\] Existing line whose data will be filled.
-### Prototype
-```c
-void t8_dline_nearest_common_ancestor (const t8_dline_t *line1, const t8_dline_t *line2, t8_dline_t *nca);
-```
-"""
-function t8_dline_nearest_common_ancestor(line1, line2, nca)
-    @ccall libt8.t8_dline_nearest_common_ancestor(line1::Ptr{t8_dline_t}, line2::Ptr{t8_dline_t}, nca::Ptr{t8_dline_t})::Cvoid
-end
-
-"""
-    t8_dline_ancestor_id(line, level)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `line`:\\[in\\] line to be considered.
-* `level`:\\[in\\] level to be considered.
-# Returns
-Returns its child id 0 or 1.
-### Prototype
-```c
-int t8_dline_ancestor_id (const t8_dline_t *line, int level);
-```
-"""
-function t8_dline_ancestor_id(line, level)
-    @ccall libt8.t8_dline_ancestor_id(line::Ptr{t8_dline_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dline_face_parent_face(line, face)
-
-Given a face of a line return the face number of the parent of the line that matches the line's face. Or return -1 if no face of the parent matches the face.
-
-# Arguments
-* `line`:\\[in\\] The line.
-* `face`:\\[in\\] The number of the face.
-# Returns
-If *face* of *line* is also a face of *line*'s parent, the face number of this face. Otherwise -1.
-### Prototype
-```c
-int t8_dline_face_parent_face (const t8_dline_t *line, int face);
-```
-"""
-function t8_dline_face_parent_face(line, face)
-    @ccall libt8.t8_dline_face_parent_face(line::Ptr{t8_dline_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dline_child_id(line)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `line`:\\[in\\] line to be considered.
-# Returns
-Returns its child id in 0,1
-### Prototype
-```c
-int t8_dline_child_id (const t8_dline_t *line);
-```
-"""
-function t8_dline_child_id(line)
-    @ccall libt8.t8_dline_child_id(line::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_childrenpv(line, c)
-
-Compute the 2 children of a line, array version.
-
-# Arguments
-* `line`:\\[in\\] Input line.
-* `c`:\\[in,out\\] Pointers to the 2 computed children in Morton order. t may point to the same quadrant as c[0].
-### Prototype
-```c
-void t8_dline_childrenpv (const t8_dline_t *line, t8_dline_t *c[T8_DLINE_CHILDREN]);
-```
-"""
-function t8_dline_childrenpv(line, c)
-    @ccall libt8.t8_dline_childrenpv(line::Ptr{t8_dline_t}, c::Ptr{Ptr{t8_dline_t}})::Cvoid
-end
-
-"""
-    t8_dline_is_familypv(f)
-
-Check whether a collection of two lines is a family in Morton order.
-
-# Arguments
-* `f`:\\[in\\] An array of two lines.
-# Returns
-Nonzero if *f* is a family of lines.
-### Prototype
-```c
-int t8_dline_is_familypv (const t8_dline_t *f[]);
-```
-"""
-function t8_dline_is_familypv(f)
-    @ccall libt8.t8_dline_is_familypv(f::Ptr{Ptr{t8_dline_t}})::Cint
-end
-
-"""
-    t8_dline_is_root_boundary(line, face)
-
-Compute whether a given line shares a given face with its root tree.
-
-# Arguments
-* `line`:\\[in\\] The input line.
-* `face`:\\[in\\] A face of *line*.
-# Returns
-True if *face* is a subface of the line's root element.
-### Prototype
-```c
-int t8_dline_is_root_boundary (const t8_dline_t *line, int face);
-```
-"""
-function t8_dline_is_root_boundary(line, face)
-    @ccall libt8.t8_dline_is_root_boundary(line::Ptr{t8_dline_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dline_is_inside_root(line)
-
-Test if a line lies inside of the root line, that is the line of level 0, anchor node (0,0)
-
-# Arguments
-* `line`:\\[in\\] Input line.
-# Returns
-true If *line* lies inside of the root line.
-### Prototype
-```c
-int t8_dline_is_inside_root (const t8_dline_t *line);
-```
-"""
-function t8_dline_is_inside_root(line)
-    @ccall libt8.t8_dline_is_inside_root(line::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_init_linear_id(line, level, id)
-
-Initialize a line as the line with a given global id in a uniform refinement of a given level. *
-
-# Arguments
-* `line`:\\[in,out\\] Existing line whose data will be filled.
-* `id`:\\[in\\] Index to be considered.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dline_init_linear_id (t8_dline_t *line, int level, t8_linearidx_t id);
-```
-"""
-function t8_dline_init_linear_id(line, level, id)
-    @ccall libt8.t8_dline_init_linear_id(line::Ptr{t8_dline_t}, level::Cint, id::t8_linearidx_t)::Cvoid
-end
-
-"""
-    t8_dline_successor(line, succ, level)
-
-Computes the successor of a line in a uniform grid of level *level*.
-
-# Arguments
-* `line`:\\[in\\] line whose id will be computed.
-* `succ`:\\[in,out\\] Existing line whose data will be filled with the data of *line*'s successor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dline_successor (const t8_dline_t *line, t8_dline_t *succ, int level);
-```
-"""
-function t8_dline_successor(line, succ, level)
-    @ccall libt8.t8_dline_successor(line::Ptr{t8_dline_t}, succ::Ptr{t8_dline_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dline_transform_face(line1, line2, orientation)
-
-Suppose we have two trees that share a common face f. Given a Line e that is a subface of f in one of the trees and given the orientation of the tree connection, construct the face Line of the respective tree neighbor that logically coincides with e but lies in the coordinate system of the neighbor tree.
-
-# Arguments
-* `line1`:\\[in\\] The face element.
-* `line2`:\\[in,out\\] On return the face element *line1* with respect to the coordinate system of the other tree.
-* `orientation`:\\[in\\] The orientation of the tree-tree connection. 0 if vertex 0 of face 0 coincides with vertex 0 of face 1. 1 if vertex 0 of face 0 coincides with vertex 1 of face 1.
-### Prototype
-```c
-void t8_dline_transform_face (const t8_dline_t *line1, t8_dline_t *line2, int orientation);
-```
-"""
-function t8_dline_transform_face(line1, line2, orientation)
-    @ccall libt8.t8_dline_transform_face(line1::Ptr{t8_dline_t}, line2::Ptr{t8_dline_t}, orientation::Cint)::Cvoid
-end
-
-"""
-    t8_dline_extrude_face(face, root_face, line)
-
-Given a vertex at the boundary of a line at a root tree boundary, construct the line from it.
-
-# Arguments
-* `face`:\\[in\\] The face element (vertex).
-* `root_face`:\\[in\\] The index of the face of the tree.
-* `line`:\\[out\\] The line that has *face* as face element at face *root_face*
-# Returns
-The face number pf *line* that coincides with *face*, thus *root_face* is returned.
-### Prototype
-```c
-int t8_dline_extrude_face (const t8_dvertex_t *face, int root_face, t8_dline_t *line);
-```
-"""
-function t8_dline_extrude_face(face, root_face, line)
-    @ccall libt8.t8_dline_extrude_face(face::Ptr{t8_dvertex_t}, root_face::Cint, line::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_first_descendant(line, desc, level)
-
-Compute the first descendant of a line at a given level. This is the descendant of the line in a uniform level refinement that has the smallest id.
-
-# Arguments
-* `line`:\\[in\\] Line whose descendant is computed.
-* `desc`:\\[out\\] Existing line whose data will be filled with the data of *line*'s first descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *line*'s refinement level.
-### Prototype
-```c
-void t8_dline_first_descendant (const t8_dline_t *line, t8_dline_t *desc, int level);
-```
-"""
-function t8_dline_first_descendant(line, desc, level)
-    @ccall libt8.t8_dline_first_descendant(line::Ptr{t8_dline_t}, desc::Ptr{t8_dline_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dline_last_descendant(line, desc, level)
-
-Compute the last descendant of a line at a given level. This is the descendant of the line in a uniform level refinement that has the largest id.
-
-# Arguments
-* `line`:\\[in\\] Line whose descendant is computed.
-* `desc`:\\[out\\] Existing line whose data will be filled with the data of *line*'s last descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *line*'s refinement level.
-### Prototype
-```c
-void t8_dline_last_descendant (const t8_dline_t *line, t8_dline_t *desc, int level);
-```
-"""
-function t8_dline_last_descendant(line, desc, level)
-    @ccall libt8.t8_dline_last_descendant(line::Ptr{t8_dline_t}, desc::Ptr{t8_dline_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dline_vertex_integer_coords(line, vertex, coords)
-
-Compute the first or second vertex of a line.
-
-# Arguments
-* `line`:\\[in\\] Line whose vertex is computed.
-* `vertex`:\\[in\\] The number of the vertex of *line*
-* `coords`:\\[out\\] The coordinates of the computed vertex
-### Prototype
-```c
-void t8_dline_vertex_integer_coords (const t8_dline_t *line, const int vertex, int coords[]);
-```
-"""
-function t8_dline_vertex_integer_coords(line, vertex, coords)
-    @ccall libt8.t8_dline_vertex_integer_coords(line::Ptr{t8_dline_t}, vertex::Cint, coords::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dline_vertex_ref_coords(line, vertex, coordinates)
-
-Compute the coordinates of a vertex of a line when the  tree (level 0 line) is embedded in [0,1]^1.
-
-# Arguments
-* `line`:\\[in\\] Input line.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coordinates`:\\[out\\] An array of 1 double that will be filled with the reference coordinates of the vertex.
-### Prototype
-```c
-void t8_dline_vertex_ref_coords (const t8_dline_t *line, const int vertex, double coordinates[1]);
-```
-"""
-function t8_dline_vertex_ref_coords(line, vertex, coordinates)
-    @ccall libt8.t8_dline_vertex_ref_coords(line::Ptr{t8_dline_t}, vertex::Cint, coordinates::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dline_compute_reference_coords(line, ref_coords, num_coords, skip_coords, out_coords)
-
-Convert points in the reference space of a line element to points in the reference space of the tree (level 0) embedded in [0,1]^1.
-
-```c++
- [0,1]^1 
-```
-
-)
-
-# Arguments
-* `line`:\\[in\\] Input line.
-* `ref_coords`:\\[in\\] The reference coordinates in the line (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `skip_coords`:\\[in\\] Only used for batch computation of prisms. In all other cases 0. Skip coordinates in the *ref_coords* and *out_coords* array.
-* `out_coords`:\\[out\\] An array of *num_coords* x 1 x double that will be filled with the reference coordinates of the points on the line.
-### Prototype
-```c
-void t8_dline_compute_reference_coords (const t8_dline_t *line, const double *ref_coords, const size_t num_coords, const size_t skip_coords, double *out_coords);
-```
-"""
-function t8_dline_compute_reference_coords(line, ref_coords, num_coords, skip_coords, out_coords)
-    @ccall libt8.t8_dline_compute_reference_coords(line::Ptr{t8_dline_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, skip_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dline_linear_id(line, level)
-
-Computes the linear position of a line in an uniform grid.
-
-# Arguments
-* `line`:\\[in\\] Pointer to a line element whose id will be computed.
-* `level`:\\[in\\] Refinement level of the line element.
-# Returns
-Returns the linear position of this line on a grid.
-### Prototype
-```c
-t8_linearidx_t t8_dline_linear_id (const t8_dline_t *line, int level);
-```
-"""
-function t8_dline_linear_id(line, level)
-    @ccall libt8.t8_dline_linear_id(line::Ptr{t8_dline_t}, level::Cint)::t8_linearidx_t
-end
-
-"""
-    t8_dline_is_valid(line)
-
-Query whether all entries of a line are in valid ranges.
-
-# Arguments
-* `line`:\\[in\\] line to be considered.
-# Returns
-True, if *line* is a valid line and it is safe to call any function in this file on *line*. False otherwise.
-### Prototype
-```c
-int t8_dline_is_valid (const t8_dline_t *line);
-```
-"""
-function t8_dline_is_valid(line)
-    @ccall libt8.t8_dline_is_valid(line::Ptr{t8_dline_t})::Cint
-end
-
-"""
-    t8_dline_init(line)
-
-Set default values for a line, such that it passes t8_dline_is_valid.
-
-# Arguments
-* `line`:\\[in\\] line to be initialized
-### Prototype
-```c
-void t8_dline_init (t8_dline_t *line);
-```
-"""
-function t8_dline_init(line)
-    @ccall libt8.t8_dline_init(line::Ptr{t8_dline_t})::Cvoid
-end
 
 """Type for the (integer) type of a triangular element."""
 const t8_dtri_type_t = Int8
@@ -16901,636 +17869,6 @@ end
 """The data container describing a refined element in a refined tree for the prism element class."""
 const t8_dprism_t = t8_dprism
 
-"""
-    t8_dprism_get_level(p)
-
-Compute the level of a prism.
-
-# Arguments
-* `p`:\\[in\\] Line whose prism is computed.
-# Returns
-The level of *p*.
-### Prototype
-```c
-int t8_dprism_get_level (const t8_dprism_t *p);
-```
-"""
-function t8_dprism_get_level(p)
-    @ccall libt8.t8_dprism_get_level(p::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_copy(p, dest)
-
-Copy all values from one prism to another.
-
-# Arguments
-* `p`:\\[in\\] The prism to be copied.
-* `dest`:\\[in,out\\] Existing prism whose data will be filled with the data of *p*.
-### Prototype
-```c
-void t8_dprism_copy (const t8_dprism_t *p, t8_dprism_t *dest);
-```
-"""
-function t8_dprism_copy(p, dest)
-    @ccall libt8.t8_dprism_copy(p::Ptr{t8_dprism_t}, dest::Ptr{t8_dprism_t})::Cvoid
-end
-
-"""
-    t8_dprism_compare(p1, p2)
-
-Compare two elements. returns negative if p1 < p2, zero if p1 equals p2 and positive if p1 > p2. If p2 is a copy of p1 then the elements are equal.
-
-### Prototype
-```c
-int t8_dprism_compare (const t8_dprism_t *p1, const t8_dprism_t *p2);
-```
-"""
-function t8_dprism_compare(p1, p2)
-    @ccall libt8.t8_dprism_compare(p1::Ptr{t8_dprism_t}, p2::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_equal(elem1, elem2)
-
-Check if two elements are equal.
-
-# Arguments
-* `elem1`:\\[in\\] The first element.
-* `elem2`:\\[in\\] The second element.
-# Returns
-1 if the elements are equal, 0 if they are not equal
-### Prototype
-```c
-int t8_dprism_equal (const t8_dprism_t *elem1, const t8_dprism_t *elem2);
-```
-"""
-function t8_dprism_equal(elem1, elem2)
-    @ccall libt8.t8_dprism_equal(elem1::Ptr{t8_dprism_t}, elem2::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_init_linear_id(p, level, id)
-
-Initialize a prism as the prism with a given global id in a uniform refinement of a given level. *
-
-# Arguments
-* `p`:\\[in,out\\] Existing prism whose data will be filled.
-* `id`:\\[in\\] Index to be considered.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dprism_init_linear_id (t8_dprism_t *p, int level, t8_linearidx_t id);
-```
-"""
-function t8_dprism_init_linear_id(p, level, id)
-    @ccall libt8.t8_dprism_init_linear_id(p::Ptr{t8_dprism_t}, level::Cint, id::t8_linearidx_t)::Cvoid
-end
-
-"""
-    t8_dprism_successor(p, succ, level)
-
-Computes the successor of a prism in a uniform grid of level *level*.
-
-# Arguments
-* `p`:\\[in\\] prism whose id will be computed.
-* `succ`:\\[in,out\\] Existing prism whose data will be filled with the data of *l*'s successor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dprism_successor (const t8_dprism_t *p, t8_dprism_t *succ, int level);
-```
-"""
-function t8_dprism_successor(p, succ, level)
-    @ccall libt8.t8_dprism_successor(p::Ptr{t8_dprism_t}, succ::Ptr{t8_dprism_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dprism_parent(p, parent)
-
-Compute the parent of a prism.
-
-!!! note
-
-    *p* may point to the same prism as *parent*.
-
-# Arguments
-* `p`:\\[in\\] Input prism.
-* `parent`:\\[in,out\\] Existing prism whose data will be filled with the data of p's parent.
-### Prototype
-```c
-void t8_dprism_parent (const t8_dprism_t *p, t8_dprism_t *parent);
-```
-"""
-function t8_dprism_parent(p, parent)
-    @ccall libt8.t8_dprism_parent(p::Ptr{t8_dprism_t}, parent::Ptr{t8_dprism_t})::Cvoid
-end
-
-"""
-    t8_dprism_first_descendant(p, desc, level)
-
-Compute the first descendant of a prism at a given level. This is the descendant of the prism in a uniform level refinement that has the smallest id.
-
-# Arguments
-* `p`:\\[in\\] Prism whose descendant is computed.
-* `desc`:\\[out\\] Existing prism whose data will be filled with the data of *p*'s first descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dprism_first_descendant (const t8_dprism_t *p, t8_dprism_t *desc, int level);
-```
-"""
-function t8_dprism_first_descendant(p, desc, level)
-    @ccall libt8.t8_dprism_first_descendant(p::Ptr{t8_dprism_t}, desc::Ptr{t8_dprism_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dprism_child_id(p)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `p`:\\[in\\] prism to be considered.
-# Returns
-Returns its child id in 0 - 7
-### Prototype
-```c
-int t8_dprism_child_id (const t8_dprism_t *p);
-```
-"""
-function t8_dprism_child_id(p)
-    @ccall libt8.t8_dprism_child_id(p::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_is_familypv(fam)
-
-Check whether a collection of eight prism is a family in Morton order.
-
-# Arguments
-* `fam`:\\[in\\] An array of eight prism.
-# Returns
-Nonzero if *fam* is a family of prism.
-### Prototype
-```c
-int t8_dprism_is_familypv (t8_dprism_t **fam);
-```
-"""
-function t8_dprism_is_familypv(fam)
-    @ccall libt8.t8_dprism_is_familypv(fam::Ptr{Ptr{t8_dprism_t}})::Cint
-end
-
-"""
-    t8_dprism_nearest_common_ancestor(p1, p2, r)
-
-Computes the nearest common ancestor of two prisms in the same tree.
-
-!!! note
-
-    *t1*, *t2*, *r* may point to the same tetrahedron.
-
-# Arguments
-* `p1`:\\[in\\] First input tetrahedron.
-* `p2`:\\[in\\] Second input tetrahedron.
-* `r`:\\[in,out\\] Existing tetrahedron whose data will be filled.
-### Prototype
-```c
-void t8_dprism_nearest_common_ancestor (const t8_dprism_t *p1, const t8_dprism_t *p2, t8_dprism_t *r);
-```
-"""
-function t8_dprism_nearest_common_ancestor(p1, p2, r)
-    @ccall libt8.t8_dprism_nearest_common_ancestor(p1::Ptr{t8_dprism_t}, p2::Ptr{t8_dprism_t}, r::Ptr{t8_dprism_t})::Cvoid
-end
-
-"""
-    t8_dprism_boundary_face(p, face, boundary)
-
-Constructs the boundary element of a prism at a given face
-
-# Arguments
-* `p`:\\[in\\] The input prism.
-* `face`:\\[in\\] A face of *p*
-* `boundary`:\\[in,out\\] The boundary element at *face* of *p*
-### Prototype
-```c
-void t8_dprism_boundary_face (const t8_dprism_t *p, int face, t8_element_t *boundary);
-```
-"""
-function t8_dprism_boundary_face(p, face, boundary)
-    @ccall libt8.t8_dprism_boundary_face(p::Ptr{t8_dprism_t}, face::Cint, boundary::Ptr{t8_element_t})::Cvoid
-end
-
-"""
-    t8_dprism_is_root_boundary(p, face)
-
-Compute whether a given prism shares a given face with its root tree.
-
-# Arguments
-* `p`:\\[in\\] The input prism.
-* `face`:\\[in\\] A face of *p*.
-# Returns
-True if *face* is a subface of the prisms's root element.
-### Prototype
-```c
-int t8_dprism_is_root_boundary (const t8_dprism_t *p, int face);
-```
-"""
-function t8_dprism_is_root_boundary(p, face)
-    @ccall libt8.t8_dprism_is_root_boundary(p::Ptr{t8_dprism_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dprism_is_inside_root(p)
-
-Test if a prism lies inside of the root prism, that is the prism of level 0, anchor node (0,0) and type 0.
-
-# Arguments
-* `p`:\\[in\\] Input prism.
-# Returns
-true If *p* lies inside of the root prism.
-### Prototype
-```c
-int t8_dprism_is_inside_root (t8_dprism_t *p);
-```
-"""
-function t8_dprism_is_inside_root(p)
-    @ccall libt8.t8_dprism_is_inside_root(p::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_child(p, childid, child)
-
-Compute the childid-th child in Morton order of a prism.
-
-# Arguments
-* `p`:\\[in\\] Input prism.
-* `childid`:\\[in\\] The id of the child, in 0 - 7, in Morton order.
-* `child`:\\[in,out\\] Existing prism whose data will be filled with the date of p's childid-th child.
-### Prototype
-```c
-void t8_dprism_child (const t8_dprism_t *p, int childid, t8_dprism_t *child);
-```
-"""
-function t8_dprism_child(p, childid, child)
-    @ccall libt8.t8_dprism_child(p::Ptr{t8_dprism_t}, childid::Cint, child::Ptr{t8_dprism_t})::Cvoid
-end
-
-"""
-    t8_dprism_face_shape(face)
-
-Return the shape of a face.
-
-# Arguments
-* `face`:\\[in\\] A face id for *p*.
-# Returns
-The shape of *face*.
-### Prototype
-```c
-t8_element_shape_t t8_dprism_face_shape (int face);
-```
-"""
-function t8_dprism_face_shape(face)
-    @ccall libt8.t8_dprism_face_shape(face::Cint)::t8_element_shape_t
-end
-
-"""
-    t8_dprism_num_face_children(face)
-
-Compute the number of children at a given face.
-
-# Arguments
-* `face`:\\[in\\] The face number
-# Returns
-Number of Children at *face*
-### Prototype
-```c
-int t8_dprism_num_face_children (int face);
-```
-"""
-function t8_dprism_num_face_children(face)
-    @ccall libt8.t8_dprism_num_face_children(face::Cint)::Cint
-end
-
-"""
-    t8_dprism_face_neighbour(p, face, neigh)
-
-Compute the face neighbor of a prism.
-
-!!! note
-
-    *p* may point to the same prism as *n*.
-
-# Arguments
-* `p`:\\[in\\] Input prism.
-* `face`:\\[in\\] The face across which to generate the neighbor.
-* `neigh`:\\[in,out\\] Existing prism whose data will be filled.
-# Returns
-The face number of *neigh* of the respective face.
-### Prototype
-```c
-int t8_dprism_face_neighbour (const t8_dprism_t *p, int face, t8_dprism_t *neigh);
-```
-"""
-function t8_dprism_face_neighbour(p, face, neigh)
-    @ccall libt8.t8_dprism_face_neighbour(p::Ptr{t8_dprism_t}, face::Cint, neigh::Ptr{t8_dprism_t})::Cint
-end
-
-"""
-    t8_dprism_get_face_corner(face, corner)
-
-Return the corner number of a prism corresponding to a given face corner.
-
-# Arguments
-* `face`:\\[in\\] The face number.
-* `corner`:\\[in\\] A corner of *face*
-# Returns
-The corner index of *p* corresponding to the *corner*-th corner of *face*.
-### Prototype
-```c
-int t8_dprism_get_face_corner (int face, int corner);
-```
-"""
-function t8_dprism_get_face_corner(face, corner)
-    @ccall libt8.t8_dprism_get_face_corner(face::Cint, corner::Cint)::Cint
-end
-
-"""
-    t8_dprism_childrenpv(p, length, c)
-
-Compute the children of a prism, array version.
-
-# Arguments
-* `p`:\\[in\\] Pointers to prism element the children should be computed for.
-* `length`:\\[in\\] Number of children.
-* `c`:\\[in,out\\] Pointers to the computed children in Morton order.
-### Prototype
-```c
-void t8_dprism_childrenpv (const t8_dprism_t *p, int length, t8_dprism_t *c[]);
-```
-"""
-function t8_dprism_childrenpv(p, length, c)
-    @ccall libt8.t8_dprism_childrenpv(p::Ptr{t8_dprism_t}, length::Cint, c::Ptr{Ptr{t8_dprism_t}})::Cvoid
-end
-
-"""
-    t8_dprism_ancestor_id(p, level)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `p`:\\[in\\] prism to be considered.
-* `level`:\\[in\\] level to be considered.
-# Returns
-Returns its child id in 0..7
-### Prototype
-```c
-int t8_dprism_ancestor_id (t8_dprism_t *p, int level);
-```
-"""
-function t8_dprism_ancestor_id(p, level)
-    @ccall libt8.t8_dprism_ancestor_id(p::Ptr{t8_dprism_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dprism_children_at_face(p, face, children, num_children, child_indices)
-
-Given a prism and a face of the prism, compute all children of the prism that touch the face.
-
-# Arguments
-* `p`:\\[in\\] The prism.
-* `face`:\\[in\\] A face of *p*.
-* `children`:\\[in,out\\] Allocated prism, in which the children of *p* that share a face with *face* are stored. They will be stored in order of their child\\_id.
-* `num_children`:\\[in\\] The number of prisms in *children*. Must match the number of children that touch *face*.
-* `child_indices`:\\[in,out\\] The indices of the children in *children*. Only filled if this is null previously.
-### Prototype
-```c
-void t8_dprism_children_at_face (const t8_dprism_t *p, int face, t8_dprism_t **children, int num_children, int *child_indices);
-```
-"""
-function t8_dprism_children_at_face(p, face, children, num_children, child_indices)
-    @ccall libt8.t8_dprism_children_at_face(p::Ptr{t8_dprism_t}, face::Cint, children::Ptr{Ptr{t8_dprism_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dprism_face_child_face(face)
-
-Given a face of a prism and a child number of a child of that face, return the face number of the child of the  prism that matches the child face.
-
-# Arguments
-* `face`:\\[in\\] The number of the face.
-# Returns
-The face number of the face of a child of *p* that coincides with *face_child*.
-### Prototype
-```c
-int t8_dprism_face_child_face (int face);
-```
-"""
-function t8_dprism_face_child_face(face)
-    @ccall libt8.t8_dprism_face_child_face(face::Cint)::Cint
-end
-
-"""
-    t8_dprism_face_parent_face(prism, face)
-
-Given a face of a prism return the face number of the parent of the prism that matches the prism's face.  Or return -1 if no face of the parent matches the face.
-
-# Arguments
-* `prism`:\\[in\\] The prism.
-* `face`:\\[in\\] Then number of the face.
-# Returns
-If *face* of *prism* is also a face of *prism*'s parent, the face number of this face.  Otherwise -1.
-### Prototype
-```c
-int t8_dprism_face_parent_face (const t8_dprism_t *prism, int face);
-```
-"""
-function t8_dprism_face_parent_face(prism, face)
-    @ccall libt8.t8_dprism_face_parent_face(prism::Ptr{t8_dprism_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dprism_tree_face(face)
-
-Given a prism and a face of this prism. If the face lies on the tree boundary, return the face number of the tree  face. If not the return value is arbitrary.
-
-# Arguments
-* `face`:\\[in\\] The index of a face of *elem*.
-# Returns
-The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary integer if *is* not at a tree boundary.
-### Prototype
-```c
-int t8_dprism_tree_face (int face);
-```
-"""
-function t8_dprism_tree_face(face)
-    @ccall libt8.t8_dprism_tree_face(face::Cint)::Cint
-end
-
-"""
-    t8_dprism_extrude_face(face, elem, root_face)
-
-Given a boundary face inside a root tree's face construct the element inside the root tree that has the given face  as a face.
-
-# Arguments
-* `face`:\\[in\\] A face element.
-* `elem`:\\[in,out\\] An allocated element. The entries will be filled with the data of the element that has *face* as a face and lies within the root tree.
-* `root_face`:\\[in\\] The index of the face of the root tree in which *face* lies.
-### Prototype
-```c
-void t8_dprism_extrude_face (const t8_element_t *face, t8_element_t *elem, const int root_face);
-```
-"""
-function t8_dprism_extrude_face(face, elem, root_face)
-    @ccall libt8.t8_dprism_extrude_face(face::Ptr{t8_element_t}, elem::Ptr{t8_element_t}, root_face::Cint)::Cvoid
-end
-
-"""
-    t8_dprism_last_descendant(p, s, level)
-
-Compute the last descendant of a prism at a given level. This is the descendant of the prism in a uniform level  refinement that has the largest id.
-
-# Arguments
-* `p`:\\[in\\] Prism whose descendant is computed.
-* `s`:\\[out\\] Existing prism whose data will be filled with the data of *p*'s last descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dprism_last_descendant (const t8_dprism_t *p, t8_dprism_t *s, int level);
-```
-"""
-function t8_dprism_last_descendant(p, s, level)
-    @ccall libt8.t8_dprism_last_descendant(p::Ptr{t8_dprism_t}, s::Ptr{t8_dprism_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dprism_corner_descendant(p, s, corner, level)
-
-Compute the descendant of a prism in a given corner.
-
-# Arguments
-* `p`:\\[in\\] Prism whose descendant is computed.
-* `s`:\\[out\\] Existing prism whose data will be filled with the data of p's descendant in *corner*.
-* `corner`:\\[in\\] The corner in which the descendant should lie.
-* `level`:\\[in\\] The refinement level of the descendant. Must be greater or equal to *p*'s level.
-### Prototype
-```c
-void t8_dprism_corner_descendant (const t8_dprism_t *p, t8_dprism_t *s, int corner, int level);
-```
-"""
-function t8_dprism_corner_descendant(p, s, corner, level)
-    @ccall libt8.t8_dprism_corner_descendant(p::Ptr{t8_dprism_t}, s::Ptr{t8_dprism_t}, corner::Cint, level::Cint)::Cvoid
-end
-
-"""
-    t8_dprism_vertex_integer_coords(elem, vertex, coords)
-
-Compute the coordinates of a vertex of a prism.
-
-# Arguments
-* `elem`:\\[in\\] Input prism.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coords`:\\[out\\] An array of 3 [`t8_dprism_coord_t`](@ref) that will be filled with the coordinates of the vertex.
-### Prototype
-```c
-void t8_dprism_vertex_integer_coords (const t8_dprism_t *elem, int vertex, int coords[3]);
-```
-"""
-function t8_dprism_vertex_integer_coords(elem, vertex, coords)
-    @ccall libt8.t8_dprism_vertex_integer_coords(elem::Ptr{t8_dprism_t}, vertex::Cint, coords::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dprism_vertex_ref_coords(elem, vertex, coords)
-
-Compute the reference coordinates of a vertex of a prism when the  tree (level 0) is embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-# Arguments
-* `elem`:\\[in\\] Input prism.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coords`:\\[out\\] An array of 3 double that will be filled with the reference coordinates of the vertex.
-### Prototype
-```c
-void t8_dprism_vertex_ref_coords (const t8_dprism_t *elem, int vertex, double coords[3]);
-```
-"""
-function t8_dprism_vertex_ref_coords(elem, vertex, coords)
-    @ccall libt8.t8_dprism_vertex_ref_coords(elem::Ptr{t8_dprism_t}, vertex::Cint, coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dprism_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-
-Convert points in the reference space of a prism element to points in the reference space of the tree (level 0) embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-```c++
- [0,1]^3 
-```
-
-)
-
-# Arguments
-* `elem`:\\[in\\] Pointer to the prism element.
-* `ref_coords`:\\[in\\] The reference coordinates in the prism (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `out_coords`:\\[out\\] An array of *num_coords* x 3 x double that will be filled with the reference coordinates of the points on the prism.
-### Prototype
-```c
-void t8_dprism_compute_reference_coords (const t8_dprism_t *elem, const double *ref_coords, const size_t num_coords, double *out_coords);
-```
-"""
-function t8_dprism_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_dprism_compute_reference_coords(elem::Ptr{t8_dprism_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dprism_linear_id(p, level)
-
-Computes the linear position of a prism in an uniform grid.
-
-# Arguments
-* `p`:\\[in\\] Prism whose id will be computed.
-* `level`:\\[in\\] Refinement level of the prism.
-# Returns
-Returns the linear position of this prism on a grid.
-### Prototype
-```c
-t8_linearidx_t t8_dprism_linear_id (const t8_dprism_t *p, int level);
-```
-"""
-function t8_dprism_linear_id(p, level)
-    @ccall libt8.t8_dprism_linear_id(p::Ptr{t8_dprism_t}, level::Cint)::t8_linearidx_t
-end
-
-"""
-    t8_dprism_is_valid(p)
-
-Query whether all entries of a prism are in valid ranges. A prism is valid if and only if its triangle and  line member are valid.
-
-# Arguments
-* `p`:\\[in\\] prism to be considered.
-# Returns
-True, if *p* is a valid prism and it is safe to call any function in this file on *p*. False otherwise.
-### Prototype
-```c
-int t8_dprism_is_valid (const t8_dprism_t *p);
-```
-"""
-function t8_dprism_is_valid(p)
-    @ccall libt8.t8_dprism_is_valid(p::Ptr{t8_dprism_t})::Cint
-end
-
 """The type of a tetrahedron designates its position relative to the surrounding cube."""
 const t8_dtet_type_t = Int8
 
@@ -17570,7 +17908,7 @@ const t8_dpyramid_type_t = Int8
 """
     t8_dpyramid
 
-This data type stores a pyramid.  The coordinates, the level and the type of a pyramid are stored in the tet-struct *pyramid*. Level, at which the shape switches from tet, to pyra. -1 if not computed for a pyramid with the shape of a tet undefined, if the pyramid has the shape of a pyramid.
+This data type stores a pyramid. The coordinates, the level and the type of a pyramid are stored in the tet-struct *pyramid*. Level, at which the shape switches from tet, to pyra. -1 if not computed for a pyramid with the shape of a tet undefined, if the pyramid has the shape of a pyramid.
 
 | Field                       | Note                                                   |
 | :-------------------------- | :----------------------------------------------------- |
@@ -17582,2765 +17920,24 @@ struct t8_dpyramid
     switch_shape_at_level::Int8
 end
 
-"""This data type stores a pyramid.  The coordinates, the level and the type of a pyramid are stored in the tet-struct *pyramid*. Level, at which the shape switches from tet, to pyra. -1 if not computed for a pyramid with the shape of a tet undefined, if the pyramid has the shape of a pyramid."""
+"""This data type stores a pyramid. The coordinates, the level and the type of a pyramid are stored in the tet-struct *pyramid*. Level, at which the shape switches from tet, to pyra. -1 if not computed for a pyramid with the shape of a tet undefined, if the pyramid has the shape of a pyramid."""
 const t8_dpyramid_t = t8_dpyramid
 
 """
-    t8_dpyramid_init_linear_id(p, level, id)
+    t8_dvertex
 
-Initialize a pyramid as the pyramid with a given global id in a uniform refinement of a given level. *
+The data container describing a refined element in a refined tree for the vertex element class.
 
-# Arguments
-* `p`:\\[in,out\\] Existing pyramid whose data will be filled.
-* `level`:\\[in\\] level of uniform grid to be considered.
-* `id`:\\[in\\] Index to be considered.
-### Prototype
-```c
-void t8_dpyramid_init_linear_id (t8_dpyramid_t *p, const int level, t8_linearidx_t id);
-```
+| Field | Note                                                                  |
+| :---- | :-------------------------------------------------------------------- |
+| level | The refinement level of the element relative to the root at level 0.  |
 """
-function t8_dpyramid_init_linear_id(p, level, id)
-    @ccall libt8.t8_dpyramid_init_linear_id(p::Ptr{t8_dpyramid_t}, level::Cint, id::t8_linearidx_t)::Cvoid
+struct t8_dvertex
+    level::UInt8
 end
 
-"""
-    t8_dpyramid_get_level(p)
-
-Compute the level of a pyramid.
-
-# Arguments
-* `p`:\\[in\\] Pyramid whose level is computed.
-# Returns
-The level of *p*.
-### Prototype
-```c
-int t8_dpyramid_get_level (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_get_level(p)
-    @ccall libt8.t8_dpyramid_get_level(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_copy(source, dest)
-
-Copy the data from source to dest
-
-# Arguments
-* `source`:\\[in\\] The source-pyramid
-* `dest`:\\[in,out\\] The destination
-### Prototype
-```c
-void t8_dpyramid_copy (const t8_dpyramid_t *source, t8_dpyramid_t *dest);
-```
-"""
-function t8_dpyramid_copy(source, dest)
-    @ccall libt8.t8_dpyramid_copy(source::Ptr{t8_dpyramid_t}, dest::Ptr{t8_dpyramid_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_linear_id(p, level)
-
-Computes the linear position of a pyramid in an uniform grid.
-
-# Arguments
-* `p`:\\[in\\] pyramid whose id will be computed.
-* `level`:\\[in\\] The level on which the linear-id should be computed.
-# Returns
-Returns the linear position of this pyramid on a grid.
-### Prototype
-```c
-t8_linearidx_t t8_dpyramid_linear_id (const t8_dpyramid_t *p, const int level);
-```
-"""
-function t8_dpyramid_linear_id(p, level)
-    @ccall libt8.t8_dpyramid_linear_id(p::Ptr{t8_dpyramid_t}, level::Cint)::t8_linearidx_t
-end
-
-"""
-    t8_dpyramid_child(elem, child_id, child)
-
-Compute the child\\_id-th child in Morton order of a pyramid.
-
-# Arguments
-* `elem`:\\[in\\] Input pyramid.
-* `child_id`:\\[in,out\\] The id of the child, 0..7 in Morton order.
-* `child`:\\[out\\] Existing pyramid whose data will be filled with the date of t's child\\_id-th child.
-### Prototype
-```c
-void t8_dpyramid_child (const t8_dpyramid_t *elem, const int child_id, t8_dpyramid_t *child);
-```
-"""
-function t8_dpyramid_child(elem, child_id, child)
-    @ccall libt8.t8_dpyramid_child(elem::Ptr{t8_dpyramid_t}, child_id::Cint, child::Ptr{t8_dpyramid_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_children(p, c)
-
-Compute the children of a pyramid, array version
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `c`:\\[in,out\\] Pointers to the computed children in Morton order
-### Prototype
-```c
-void t8_dpyramid_children (const t8_dpyramid_t *p, t8_dpyramid_t **c);
-```
-"""
-function t8_dpyramid_children(p, c)
-    @ccall libt8.t8_dpyramid_children(p::Ptr{t8_dpyramid_t}, c::Ptr{Ptr{t8_dpyramid_t}})::Cvoid
-end
-
-"""
-    t8_dpyramid_children_at_face(p, face, children, num_children, child_indices)
-
-Given a pyramid and a face, compute all children touching this face
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `face`:\\[in\\] The face to compute the children at
-* `children`:\\[in,out\\] The children of *p* at *face*
-* `num_children`:\\[in\\] The number of children at this face
-* `child_indices`:\\[in,out\\] An array to be filled with the local-ids of the children.
-### Prototype
-```c
-void t8_dpyramid_children_at_face (const t8_dpyramid_t *p, const int face, t8_dpyramid_t *children[], const int num_children, int *child_indices);
-```
-"""
-function t8_dpyramid_children_at_face(p, face, children, num_children, child_indices)
-    @ccall libt8.t8_dpyramid_children_at_face(p::Ptr{t8_dpyramid_t}, face::Cint, children::Ptr{Ptr{t8_dpyramid_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dpyramid_face_child_face(p, face, face_child)
-
-Given a face of a pyramid and a child number of a child of that face, return the face number of the child of the pyramid that matches the child face.
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `face`:\\[in\\] A face of *p*
-* `face_child`:\\[in\\] A number specifying a child on the *face*
-# Returns
-The number of the face of the child *face_child*
-### Prototype
-```c
-int t8_dpyramid_face_child_face (const t8_dpyramid_t *p, const int face, const int face_child);
-```
-"""
-function t8_dpyramid_face_child_face(p, face, face_child)
-    @ccall libt8.t8_dpyramid_face_child_face(p::Ptr{t8_dpyramid_t}, face::Cint, face_child::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_face_shape(pyra, face)
-
-Given the facenumber of a pyramid, return the shape of the face
-
-# Arguments
-* `pyra`:\\[in\\] Input pyramid
-* `face`:\\[in\\] The facenumber
-# Returns
-the shape of the face
-### Prototype
-```c
-t8_element_shape_t t8_dpyramid_face_shape (const t8_dpyramid_t *pyra, int face);
-```
-"""
-function t8_dpyramid_face_shape(pyra, face)
-    @ccall libt8.t8_dpyramid_face_shape(pyra::Ptr{t8_dpyramid_t}, face::Cint)::t8_element_shape_t
-end
-
-"""
-    t8_dpyramid_get_face_corner(pyra, face, corner)
-
-Returns the corner number of a pyramid given a face of a pyramid and a corner number regarding that face.
-
-# Arguments
-* `pyra`:\\[in\\] Input pyramid
-* `face`:\\[in\\] The facenumber of a face of *pyra*
-* `corner`:\\[in\\] The cornernumber of a corner of *face*
-# Returns
-The cornernumber of *pyra*
-### Prototype
-```c
-int t8_dpyramid_get_face_corner (const t8_dpyramid_t *pyra, int face, int corner);
-```
-"""
-function t8_dpyramid_get_face_corner(pyra, face, corner)
-    @ccall libt8.t8_dpyramid_get_face_corner(pyra::Ptr{t8_dpyramid_t}, face::Cint, corner::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_boundary_face(p, face, boundary)
-
-Given a boundary element and a facenumber of this element, compute the boundary face
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `face`:\\[in\\] The face number of an element
-* `boundary`:\\[in,out\\] The boundary face
-### Prototype
-```c
-void t8_dpyramid_boundary_face (const t8_dpyramid_t *p, const int face, t8_element_t *boundary);
-```
-"""
-function t8_dpyramid_boundary_face(p, face, boundary)
-    @ccall libt8.t8_dpyramid_boundary_face(p::Ptr{t8_dpyramid_t}, face::Cint, boundary::Ptr{t8_element_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_extrude_face(face, p, root_face)
-
-Given a boundary face inside the root pyramids's face construct the element inside the root pyramid that has the  given face as a face.
-
-# Arguments
-* `face`:\\[in\\] A face element.
-* `p`:\\[in,out\\] An allocated element. The entries will be filled with the data of the element that has *face* as a face and lies within the root tree.
-* `root_face`:\\[in\\] The index of the face of the root tree in which *face* lies.
-# Returns
-The face number of the face of *p* that coincides with *face*.
-### Prototype
-```c
-int t8_dpyramid_extrude_face (const t8_element_t *face, t8_dpyramid_t *p, const int root_face);
-```
-"""
-function t8_dpyramid_extrude_face(face, p, root_face)
-    @ccall libt8.t8_dpyramid_extrude_face(face::Ptr{t8_element_t}, p::Ptr{t8_dpyramid_t}, root_face::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_compare(p1, p2)
-
-Compare two elements. returns negative if p1 < p2, zero if p1 equals p2 and positive if p1 > p2.  If p2 is a copy of p1 then the elements are equal.
-
-# Arguments
-* `p1`:\\[in\\] A pyramid
-* `p2`:\\[in\\] Another pyramid
-# Returns
-an integer describing which pyramid is larger.
-### Prototype
-```c
-int t8_dpyramid_compare (const t8_dpyramid_t *p1, const t8_dpyramid_t *p2);
-```
-"""
-function t8_dpyramid_compare(p1, p2)
-    @ccall libt8.t8_dpyramid_compare(p1::Ptr{t8_dpyramid_t}, p2::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_equal(elem1, elem2)
-
-Check if two elements are equal.
-
-# Arguments
-* `elem1`:\\[in\\] The first element.
-* `elem2`:\\[in\\] The second element.
-# Returns
-1 if the elements are equal, 0 if they are not equal
-### Prototype
-```c
-int t8_dpyramid_equal (const t8_dpyramid_t *elem1, const t8_dpyramid_t *elem2);
-```
-"""
-function t8_dpyramid_equal(elem1, elem2)
-    @ccall libt8.t8_dpyramid_equal(elem1::Ptr{t8_dpyramid_t}, elem2::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_is_family(fam)
-
-Check whether a collection of 10 pyramids is a family in Morton order.
-
-# Arguments
-* `fam`:\\[in\\] A collection of pyramids
-# Returns
-Nonzero if *fam* is a family of pyramids
-### Prototype
-```c
-int t8_dpyramid_is_family (t8_dpyramid_t **fam);
-```
-"""
-function t8_dpyramid_is_family(fam)
-    @ccall libt8.t8_dpyramid_is_family(fam::Ptr{Ptr{t8_dpyramid_t}})::Cint
-end
-
-"""
-    t8_dpyramid_is_root_boundary(p, face)
-
-Compute whether a given pyramid shares a given face with its root tree.
-
-# Arguments
-* `p`:\\[in\\] The input pyramid
-* `face`:\\[in\\] A face of *p*
-# Returns
-True, if *is* a subface of the pyramid root element.
-### Prototype
-```c
-int t8_dpyramid_is_root_boundary (const t8_dpyramid_t *p, const int face);
-```
-"""
-function t8_dpyramid_is_root_boundary(p, face)
-    @ccall libt8.t8_dpyramid_is_root_boundary(p::Ptr{t8_dpyramid_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_face_neighbor_inside(p, neigh, face, neigh_face)
-
-Compute the neighbor of p along a given face and the number of the dual face if the neighbor is inside the root pyramid. Return 0 if the neighbor is not inside, 1 ow.
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `neigh`:\\[in,out\\] The neighbor of *p*
-* `face`:\\[in\\] The face of *p* along which *neigh* is computed
-* `neigh_face`:\\[in,out\\] The dual face
-### Prototype
-```c
-int t8_dpyramid_face_neighbor_inside (const t8_dpyramid_t *p, t8_dpyramid_t *neigh, const int face, int *neigh_face);
-```
-"""
-function t8_dpyramid_face_neighbor_inside(p, neigh, face, neigh_face)
-    @ccall libt8.t8_dpyramid_face_neighbor_inside(p::Ptr{t8_dpyramid_t}, neigh::Ptr{t8_dpyramid_t}, face::Cint, neigh_face::Ptr{Cint})::Cint
-end
-
-"""
-    t8_dpyramid_child_id(p)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `p`:\\[in\\] pyramid to be considered.
-# Returns
-Returns its child id in 0..9
-### Prototype
-```c
-int t8_dpyramid_child_id (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_child_id(p)
-    @ccall libt8.t8_dpyramid_child_id(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_is_inside_root(p)
-
-Returns zero if p is not inside root, 1 ow
-
-# Arguments
-* `p`:\\[in\\] Pyramid to check
-# Returns
-0 if p is inside root, 1, ow
-### Prototype
-```c
-int t8_dpyramid_is_inside_root (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_is_inside_root(p)
-    @ccall libt8.t8_dpyramid_is_inside_root(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_tet_boundary(p, face)
-
-Check, if a tet of type 0 or 3 has a common face with its pyramid-ancestor
-
-# Arguments
-* `p`:\\[in\\] input pyramid
-* `face`:\\[in\\] A face of *p*.
-# Returns
-false if they don't share a face, true otherwise
-### Prototype
-```c
-int t8_dpyramid_tet_boundary (const t8_dpyramid_t *p, const int face);
-```
-"""
-function t8_dpyramid_tet_boundary(p, face)
-    @ccall libt8.t8_dpyramid_tet_boundary(p::Ptr{t8_dpyramid_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_tree_face(p, face)
-
-compute if a given element lies on the tree boundary and return the face number of the tree face.  If not the return value is arbitrary
-
-# Arguments
-* `p`:\\[in\\] pyramid
-* `face`:\\[in\\] a face of *p*
-# Returns
-See description
-### Prototype
-```c
-int t8_dpyramid_tree_face (const t8_dpyramid_t *p, const int face);
-```
-"""
-function t8_dpyramid_tree_face(p, face)
-    @ccall libt8.t8_dpyramid_tree_face(p::Ptr{t8_dpyramid_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_first_descendant(p, desc, level)
-
-Compute the first descendant of a pyramid at a given level. This is the descendant of the pyramid in a uniform level refinement that has the smallest id.
-
-# Arguments
-* `p`:\\[in\\] pyramid whose descendant is computed.
-* `desc`:\\[out\\] Existing pyramid whose data will be filled with the data of *p*'s first descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dpyramid_first_descendant (const t8_dpyramid_t *p, t8_dpyramid_t *desc, const int level);
-```
-"""
-function t8_dpyramid_first_descendant(p, desc, level)
-    @ccall libt8.t8_dpyramid_first_descendant(p::Ptr{t8_dpyramid_t}, desc::Ptr{t8_dpyramid_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dpyramid_first_descendant_face(p, face, first_desc, level)
-
-Construct the first descendant of a pyramid touching a given face
-
-# Arguments
-* `p`:\\[in\\] pyramid whose descendant is computed.
-* `face`:\\[in\\] The face at which the descendant is computed
-* `first_desc`:\\[out\\] Existing pyramid whose data will be filled with the data of *p*'s first descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dpyramid_first_descendant_face (const t8_dpyramid_t *p, const int face, t8_dpyramid_t *first_desc, const int level);
-```
-"""
-function t8_dpyramid_first_descendant_face(p, face, first_desc, level)
-    @ccall libt8.t8_dpyramid_first_descendant_face(p::Ptr{t8_dpyramid_t}, face::Cint, first_desc::Ptr{t8_dpyramid_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dpyramid_last_descendant(p, desc, level)
-
-Compute the last descendant of a pyramid at a given level. This is the descendant of the pyramid in a uniform level refinement that has the largest id.
-
-# Arguments
-* `p`:\\[in\\] pyramid whose descendant is computed.
-* `desc`:\\[out\\] Existing pyramid whose data will be filled with the data of *p*'s last descendant on level  *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dpyramid_last_descendant (const t8_dpyramid_t *p, t8_dpyramid_t *desc, int level);
-```
-"""
-function t8_dpyramid_last_descendant(p, desc, level)
-    @ccall libt8.t8_dpyramid_last_descendant(p::Ptr{t8_dpyramid_t}, desc::Ptr{t8_dpyramid_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dpyramid_last_descendant_face(p, face, last_desc, level)
-
-Construct the last descendant of a pyramid touching a given face
-
-# Arguments
-* `p`:\\[in\\] pyramid whose descendant is computed.
-* `face`:\\[in\\] The face at which the descendant is computed
-* `last_desc`:\\[out\\] Existing pyramid whose data will be filled with the data of *p*'s first descendant on level *level*.
-* `level`:\\[in\\] The refinement level. Must be greater than *p*'s refinement level.
-### Prototype
-```c
-void t8_dpyramid_last_descendant_face (const t8_dpyramid_t *p, const int face, t8_dpyramid_t *last_desc, const int level);
-```
-"""
-function t8_dpyramid_last_descendant_face(p, face, last_desc, level)
-    @ccall libt8.t8_dpyramid_last_descendant_face(p::Ptr{t8_dpyramid_t}, face::Cint, last_desc::Ptr{t8_dpyramid_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dpyramid_compute_integer_coords(elem, vertex, coords)
-
-Compute the coordinates of a vertex of a pyramid.
-
-# Arguments
-* `elem`:\\[in\\] Input pyramid.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coords`:\\[out\\] An array of 3 [`t8_dpyramid_coord_t`](@ref) that will be filled with the coordinates of the vertex.
-### Prototype
-```c
-void t8_dpyramid_compute_integer_coords (const t8_dpyramid_t *elem, const int vertex, int coords[]);
-```
-"""
-function t8_dpyramid_compute_integer_coords(elem, vertex, coords)
-    @ccall libt8.t8_dpyramid_compute_integer_coords(elem::Ptr{t8_dpyramid_t}, vertex::Cint, coords::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dpyramid_parent(p, parent)
-
-Compute the parent of a given pyramid
-
-# Arguments
-* `p`:\\[in\\] Input pyramid.
-* `parent`:\\[out\\] The parent of *p*.
-### Prototype
-```c
-void t8_dpyramid_parent (const t8_dpyramid_t *p, t8_dpyramid_t *parent);
-```
-"""
-function t8_dpyramid_parent(p, parent)
-    @ccall libt8.t8_dpyramid_parent(p::Ptr{t8_dpyramid_t}, parent::Ptr{t8_dpyramid_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_num_corners(p)
-
-Compute the number of corners of a pyramid. If pyramid has type less than 6, it is actually a tetrahedron.
-
-# Arguments
-* `p`:\\[in\\] Input pyramid.
-# Returns
-The number of corners of p.
-### Prototype
-```c
-int t8_dpyramid_num_corners (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_num_corners(p)
-    @ccall libt8.t8_dpyramid_num_corners(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_num_children(p)
-
-Compute the number of children of p
-
-# Arguments
-* `p`:\\[in\\] Input pyramid.
-# Returns
-The number of children of p.
-### Prototype
-```c
-int t8_dpyramid_num_children (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_num_children(p)
-    @ccall libt8.t8_dpyramid_num_children(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_num_siblings(p)
-
-Compute the number of siblings of p
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-# Returns
-The number of siblings of p.
-### Prototype
-```c
-int t8_dpyramid_num_siblings (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_num_siblings(p)
-    @ccall libt8.t8_dpyramid_num_siblings(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_num_faces(p)
-
-Return the number of faces of p
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-# Returns
-The number of faces of p
-### Prototype
-```c
-int t8_dpyramid_num_faces (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_num_faces(p)
-    @ccall libt8.t8_dpyramid_num_faces(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_max_num_faces(p)
-
-Return the maximal number of faces of an element p
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-# Returns
-The maximal number of faces of p
-### Prototype
-```c
-int t8_dpyramid_max_num_faces (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_max_num_faces(p)
-    @ccall libt8.t8_dpyramid_max_num_faces(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dpyramid_face_parent_face(elem, face)
-
-Given a face of an element return the face number of the parent of the element that matches the element's face.  Or return -1 if no face of the parent matches the face.
-
-# Arguments
-* `elem`:\\[in\\] Input pyramid
-* `face`:\\[in\\] a face of *elem*
-# Returns
-the facenumber of the parent of *elem* matching *face* or -1
-### Prototype
-```c
-int t8_dpyramid_face_parent_face (const t8_dpyramid_t *elem, const int face);
-```
-"""
-function t8_dpyramid_face_parent_face(elem, face)
-    @ccall libt8.t8_dpyramid_face_parent_face(elem::Ptr{t8_dpyramid_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_ancestor_id(p, level)
-
-Return the child-id of the ancestor of p at level level
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `level`:\\[in\\] The ancestor-level
-# Returns
-The child-id of the ancestor
-### Prototype
-```c
-int t8_dpyramid_ancestor_id (const t8_dpyramid_t *p, const int level);
-```
-"""
-function t8_dpyramid_ancestor_id(p, level)
-    @ccall libt8.t8_dpyramid_ancestor_id(p::Ptr{t8_dpyramid_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_ancestor(pyra, level, ancestor)
-
-Compute the ancestor of *pyra* at a given level
-
-# Arguments
-* `pyra`:\\[in\\] Input pyramid
-* `level`:\\[in\\] Level of the ancestor to compute
-* `ancestor`:\\[in,out\\] Allocated element that will be filled with the data of the ancestor.
-### Prototype
-```c
-void t8_dpyramid_ancestor (const t8_dpyramid_t *pyra, const int level, t8_dpyramid_t *ancestor);
-```
-"""
-function t8_dpyramid_ancestor(pyra, level, ancestor)
-    @ccall libt8.t8_dpyramid_ancestor(pyra::Ptr{t8_dpyramid_t}, level::Cint, ancestor::Ptr{t8_dpyramid_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_type_at_level(p, level)
-
-Compute the type of a pyramid at a given level. Starting from its own level, we iterate over the levels and  compute the type of this level. If p is a tetrahedron, we compute it in a tetrahedral fashion up unto the last  level where p is a tet and continue in a pyramidal fashion
-
-# Arguments
-* `p`:\\[in\\] Input pyramid
-* `level`:\\[in\\] The level at which the type is computed
-# Returns
-The type of *p* at level *level*.
-### Prototype
-```c
-int t8_dpyramid_type_at_level (const t8_dpyramid_t *p, const int level);
-```
-"""
-function t8_dpyramid_type_at_level(p, level)
-    @ccall libt8.t8_dpyramid_type_at_level(p::Ptr{t8_dpyramid_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dpyramid_shape(p)
-
-Returns the shape of the pyramid (pyramid or tetrahedron)
-
-# Arguments
-* `p`:\\[in\\] Input pyramid.
-# Returns
-The eclass of the element
-### Prototype
-```c
-t8_element_shape_t t8_dpyramid_shape (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_shape(p)
-    @ccall libt8.t8_dpyramid_shape(p::Ptr{t8_dpyramid_t})::t8_element_shape_t
-end
-
-"""
-    t8_dpyramid_successor(elem, s, level)
-
-Computes the successor of a pyramid in a uniform grid of level *level*.
-
-# Arguments
-* `elem`:\\[in\\] pyramid whose id will be computed.
-* `s`:\\[in,out\\] Existing pyramid whose data will be filled with the data of *l*'s successor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dpyramid_successor (const t8_dpyramid_t *elem, t8_dpyramid_t *s, const int level);
-```
-"""
-function t8_dpyramid_successor(elem, s, level)
-    @ccall libt8.t8_dpyramid_successor(elem::Ptr{t8_dpyramid_t}, s::Ptr{t8_dpyramid_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dpyramid_vertex_reference_coords(elem, vertex, coords)
-
-Compute the reference coordinates of a vertex of a pyramid when the tree (level 0 triangle) is embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-# Arguments
-* `elem`:\\[in\\] Input pyramid.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coords`:\\[out\\] An array of 3 double that will be filled with the reference coordinates of the vertex.
-### Prototype
-```c
-void t8_dpyramid_vertex_reference_coords (const t8_dpyramid_t *elem, const int vertex, double coords[]);
-```
-"""
-function t8_dpyramid_vertex_reference_coords(elem, vertex, coords)
-    @ccall libt8.t8_dpyramid_vertex_reference_coords(elem::Ptr{t8_dpyramid_t}, vertex::Cint, coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dpyramid_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-
-Convert points in the reference space of a pyramid element to points in the reference space of the tree (level 0) embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-```c++
- [0,1]^3 
-```
-
-)
-
-# Arguments
-* `elem`:\\[in\\] Input pyramid.
-* `ref_coords`:\\[in\\] The reference coordinates in the pyramid (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `out_coords`:\\[out\\] An array of *num_coords* x 3 x double that will be filled with the reference coordinates of the points on the pyramid.
-### Prototype
-```c
-void t8_dpyramid_compute_reference_coords (const t8_dpyramid_t *elem, const double *ref_coords, const size_t num_coords, double *out_coords);
-```
-"""
-function t8_dpyramid_compute_reference_coords(elem, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_dpyramid_compute_reference_coords(elem::Ptr{t8_dpyramid_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dpyramid_nearest_common_ancestor(pyra1, pyra2, nca)
-
-Compute the nearest common ancestor of two elements
-
-# Arguments
-* `pyra1`:\\[in\\] The first pyramid
-* `pyra2`:\\[in\\] The second pyramid
-* `nca`:\\[in,out\\] Existing pyramid whose data will be filled with the data of *pyra1* and *pyra2* nearest common ancestor.
-### Prototype
-```c
-void t8_dpyramid_nearest_common_ancestor (const t8_dpyramid_t *pyra1, const t8_dpyramid_t *pyra2, t8_dpyramid_t *nca);
-```
-"""
-function t8_dpyramid_nearest_common_ancestor(pyra1, pyra2, nca)
-    @ccall libt8.t8_dpyramid_nearest_common_ancestor(pyra1::Ptr{t8_dpyramid_t}, pyra2::Ptr{t8_dpyramid_t}, nca::Ptr{t8_dpyramid_t})::Cvoid
-end
-
-"""
-    t8_dpyramid_is_valid(p)
-
-Query whether all entries of a pyramid are in valid ranges. A pyramid is valid if and only if its triangle and line member are valid.
-
-# Arguments
-* `p`:\\[in\\] pyramid to be considered.
-# Returns
-True, if *p* is a valid pyramid and it is safe to call any function in this file on *p*. False otherwise.
-### Prototype
-```c
-int t8_dpyramid_is_valid (const t8_dpyramid_t *p);
-```
-"""
-function t8_dpyramid_is_valid(p)
-    @ccall libt8.t8_dpyramid_is_valid(p::Ptr{t8_dpyramid_t})::Cint
-end
-
-"""
-    t8_dtet_compute_integer_coords(elem, vertex, coordinates)
-
-Compute the coordinates of a vertex of a tetrahedron.
-
-# Arguments
-* `elem`:\\[in\\] Input tetrahedron.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coordinates`:\\[out\\] An array of 3 [`t8_dtet_coord_t`](@ref) that will be filled with the coordinates of the vertex.
-### Prototype
-```c
-void t8_dtet_compute_integer_coords (const t8_dtet_t *elem, int vertex, t8_dtet_coord_t coordinates[3]);
-```
-"""
-function t8_dtet_compute_integer_coords(elem, vertex, coordinates)
-    @ccall libt8.t8_dtet_compute_integer_coords(elem::Ptr{t8_dtet_t}, vertex::Cint, coordinates::Ptr{t8_dtet_coord_t})::Cvoid
-end
-
-"""
-    t8_dtet_compute_vertex_ref_coords(elem, vertex, coordinates)
-
-Compute the coordinates of a vertex of a tetrahedron when the  tree (level 0 tetrahedron) is embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-# Arguments
-* `elem`:\\[in\\] Input tetrahedron.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coordinates`:\\[out\\] An array of 3 double that will be filled with the reference coordinates of the vertex.
-### Prototype
-```c
-void t8_dtet_compute_vertex_ref_coords (const t8_dtet_t *elem, int vertex, double coordinates[3]);
-```
-"""
-function t8_dtet_compute_vertex_ref_coords(elem, vertex, coordinates)
-    @ccall libt8.t8_dtet_compute_vertex_ref_coords(elem::Ptr{t8_dtet_t}, vertex::Cint, coordinates::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dtet_compute_reference_coords(tet, ref_coords, num_coords, out_coords)
-
-Convert points in the reference space of a tet element to points in the reference space of the tree (level 0) embedded in
-
-```c++
- [0,1]^3 
-```
-
-.
-
-```c++
- [0,1]^3 
-```
-
-)
-
-# Arguments
-* `tet`:\\[in\\] Input tet.
-* `ref_coords`:\\[in\\] The reference coordinates in the tet (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `out_coords`:\\[out\\] An array of *num_coords* x 3 x double that will be filled with the reference coordinates of the points on the tet.
-### Prototype
-```c
-void t8_dtet_compute_reference_coords (const t8_dtet_t *tet, const double *ref_coords, const size_t num_coords, double *out_coords);
-```
-"""
-function t8_dtet_compute_reference_coords(tet, ref_coords, num_coords, out_coords)
-    @ccall libt8.t8_dtet_compute_reference_coords(tet::Ptr{t8_dtet_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dtet_compute_all_coords(tet, coordinates)
-
-Compute the coordinates of the four vertices of a tetrahedron.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `coordinates`:\\[out\\] An array of 4x3 [`t8_dtet_coord_t`](@ref) that will be filled with the coordinates of t's vertices.
-### Prototype
-```c
-void t8_dtet_compute_all_coords (const t8_dtet_t *tet, t8_dtet_coord_t coordinates[4][3]);
-```
-"""
-function t8_dtet_compute_all_coords(tet, coordinates)
-    @ccall libt8.t8_dtet_compute_all_coords(tet::Ptr{t8_dtet_t}, coordinates::Ptr{NTuple{3, t8_dtet_coord_t}})::Cvoid
-end
-
-"""
-    t8_dtet_copy(tet, dest)
-
-Copy the values of one tetrahedron to another.
-
-# Arguments
-* `tet`:\\[in\\] Tetrahedron whose values will be copied.
-* `dest`:\\[in,out\\] Existing tetrahedron whose data will be filled with the data of *tet*.
-### Prototype
-```c
-void t8_dtet_copy (const t8_dtet_t *tet, t8_dtet_t *dest);
-```
-"""
-function t8_dtet_copy(tet, dest)
-    @ccall libt8.t8_dtet_copy(tet::Ptr{t8_dtet_t}, dest::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_compare(tet1, tet2)
-
-Compare two tets in their linear order.
-
-# Arguments
-* `tet1`:\\[in\\] Tetrahedron one.
-* `tet2`:\\[in\\] Tetrahedron two.
-# Returns
-Returns negative if tet1 < tet2, zero if tet1 = tet2, positive if tet1 > tet2
-### Prototype
-```c
-int t8_dtet_compare (const t8_dtet_t *tet1, const t8_dtet_t *tet2);
-```
-"""
-function t8_dtet_compare(tet1, tet2)
-    @ccall libt8.t8_dtet_compare(tet1::Ptr{t8_dtet_t}, tet2::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_equal(tet1, tet2)
-
-Check if two elements are equal.
-
-# Arguments
-* `tet1`:\\[in\\] The first element.
-* `tet2`:\\[in\\] The second element.
-# Returns
-1 if the elements are equal, 0 if they are not equal
-### Prototype
-```c
-int t8_dtet_equal (const t8_dtet_t *tet1, const t8_dtet_t *tet2);
-```
-"""
-function t8_dtet_equal(tet1, tet2)
-    @ccall libt8.t8_dtet_equal(tet1::Ptr{t8_dtet_t}, tet2::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_parent(tet, parent)
-
-Compute the parent of a tetrahedron.
-
-!!! note
-
-    *t* may point to the same tetrahedron as *parent*.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `parent`:\\[in,out\\] Existing tetrahedron whose data will be filled with the data of *tet*'s parent.
-### Prototype
-```c
-void t8_dtet_parent (const t8_dtet_t *tet, t8_dtet_t *parent);
-```
-"""
-function t8_dtet_parent(tet, parent)
-    @ccall libt8.t8_dtet_parent(tet::Ptr{t8_dtet_t}, parent::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_ancestor(tet, level, ancestor)
-
-Compute the ancestor of a tetrahedron at a given level.
-
-!!! note
-
-    The tetrahedron *ancestor* may point to the same tetrahedron as *tet*.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `level`:\\[in\\] A smaller level than *tet*.
-* `ancestor`:\\[in,out\\] Existing tetrahedron whose data will be filled with the data of *tet*'s ancestor on level *level*.
-### Prototype
-```c
-void t8_dtet_ancestor (const t8_dtet_t *tet, int level, t8_dtet_t *ancestor);
-```
-"""
-function t8_dtet_ancestor(tet, level, ancestor)
-    @ccall libt8.t8_dtet_ancestor(tet::Ptr{t8_dtet_t}, level::Cint, ancestor::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_child(tet, childid, child)
-
-Compute the childid-th child in Morton order of a tetrahedron t.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `childid`:\\[in,out\\] The id of the child, 0..7 in Bey order.
-* `child`:\\[out\\] Existing tetrahedron whose data will be filled with the date of t's childid-th child.
-### Prototype
-```c
-void t8_dtet_child (const t8_dtet_t *tet, int childid, t8_dtet_t *child);
-```
-"""
-function t8_dtet_child(tet, childid, child)
-    @ccall libt8.t8_dtet_child(tet::Ptr{t8_dtet_t}, childid::Cint, child::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_childrenpv(tet, c)
-
-Compute the 8 children of a tetrahedron, array version.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `c`:\\[in,out\\] Pointers to the 8 computed children in Morton order. t may point to the same quadrant as c[0].
-### Prototype
-```c
-void t8_dtet_childrenpv (const t8_dtet_t *tet, t8_dtet_t *c[T8_DTET_CHILDREN]);
-```
-"""
-function t8_dtet_childrenpv(tet, c)
-    @ccall libt8.t8_dtet_childrenpv(tet::Ptr{t8_dtet_t}, c::Ptr{Ptr{t8_dtet_t}})::Cvoid
-end
-
-"""
-    t8_dtet_is_familypv(f)
-
-Check whether a collection of eight tetrahedra is a family in Morton order.
-
-# Arguments
-* `f`:\\[in\\] An array of eight tetrahedra.
-# Returns
-Nonzero if *f* is a family of tetrahedra.
-### Prototype
-```c
-int t8_dtet_is_familypv (const t8_dtet_t *f[]);
-```
-"""
-function t8_dtet_is_familypv(f)
-    @ccall libt8.t8_dtet_is_familypv(f::Ptr{Ptr{t8_dtet_t}})::Cint
-end
-
-"""
-    t8_dtet_sibling(tet, sibid, sibling)
-
-Compute a specific sibling of a tetrahedron.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `sibling`:\\[in,out\\] Existing tetrahedron whose data will be filled with the data of sibling no. sibling\\_id of  *tet*.
-* `sibid`:\\[in\\] The id of the sibling computed, 0..7 in Bey order.
-### Prototype
-```c
-void t8_dtet_sibling (const t8_dtet_t *tet, int sibid, t8_dtet_t *sibling);
-```
-"""
-function t8_dtet_sibling(tet, sibid, sibling)
-    @ccall libt8.t8_dtet_sibling(tet::Ptr{t8_dtet_t}, sibid::Cint, sibling::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_face_neighbour(tet, face, neigh)
-
-Compute the face neighbor of a tetrahedron.
-
-!!! note
-
-    *tet* may point to the same tetrahedron as *neigh*.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-* `face`:\\[in\\] The face across which to generate the neighbor.
-* `neigh`:\\[in,out\\] Existing tetrahedron whose data will be filled.
-### Prototype
-```c
-int t8_dtet_face_neighbour (const t8_dtet_t *tet, int face, t8_dtet_t *neigh);
-```
-"""
-function t8_dtet_face_neighbour(tet, face, neigh)
-    @ccall libt8.t8_dtet_face_neighbour(tet::Ptr{t8_dtet_t}, face::Cint, neigh::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_nearest_common_ancestor(tet1, tet2, nca)
-
-Computes the nearest common ancestor of two tetrahedra in the same tree.
-
-!!! note
-
-    *tet1*, *tet2*, *nca* may point to the same tetrahedron.
-
-# Arguments
-* `tet1`:\\[in\\] First input tetrahedron.
-* `tet2`:\\[in\\] Second input tetrahedron.
-* `nca`:\\[in,out\\] Existing tetrahedron whose data will be filled.
-### Prototype
-```c
-void t8_dtet_nearest_common_ancestor (const t8_dtet_t *tet1, const t8_dtet_t *tet2, t8_dtet_t *nca);
-```
-"""
-function t8_dtet_nearest_common_ancestor(tet1, tet2, nca)
-    @ccall libt8.t8_dtet_nearest_common_ancestor(tet1::Ptr{t8_dtet_t}, tet2::Ptr{t8_dtet_t}, nca::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_children_at_face(tet, face, children, num_children, child_indices)
-
-Given a tetrahedron and a face of the tetrahedron, compute all children of the tetrahedron that touch the face.
-
-# Arguments
-* `tet`:\\[in\\] The tetrahedron.
-* `face`:\\[in\\] A face of *tet*.
-* `children`:\\[in,out\\] Allocated tetrahedra, in which the children of *tet* that share a face with *face* are stored. They will be stored in order of their child\\_id.
-* `num_children`:\\[in\\] The number of tetrahedra in *children*. Must match the number of children that touch  *face*.
-* `child_indices`:\\[in,out\\] The indices of the children in *children*. Only filled if this is null previously.
-### Prototype
-```c
-void t8_dtet_children_at_face (const t8_dtet_t *tet, int face, t8_dtet_t *children[], int num_children, int *child_indices);
-```
-"""
-function t8_dtet_children_at_face(tet, face, children, num_children, child_indices)
-    @ccall libt8.t8_dtet_children_at_face(tet::Ptr{t8_dtet_t}, face::Cint, children::Ptr{Ptr{t8_dtet_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dtet_face_child_face(tet, face, face_child)
-
-Given a face of an tetrahedron and a child number of a child of that face, return the face number of the child of the tetrahedron that matches the child face.
-
-# Arguments
-* `tet`:\\[in\\] The tetrahedron.
-* `face`:\\[in\\] Then number of the face.
-* `face_child`:\\[in\\] The child number of a child of the face tetrahedron.
-# Returns
-The face number of the face of a child of *tetrahedron* that coincides with *face_child*.
-### Prototype
-```c
-int t8_dtet_face_child_face (const t8_dtet_t *tet, int face, int face_child);
-```
-"""
-function t8_dtet_face_child_face(tet, face, face_child)
-    @ccall libt8.t8_dtet_face_child_face(tet::Ptr{t8_dtet_t}, face::Cint, face_child::Cint)::Cint
-end
-
-"""
-    t8_dtet_face_parent_face(tet, face)
-
-Given a face of an tet return the face number of the parent of the tet that matches the tet's face. Or return -1 if no face of the parent matches the face.
-
-# Arguments
-* `tet`:\\[in\\] The tet.
-* `face`:\\[in\\] Then number of the face.
-# Returns
-If *face* of *tet* is also a face of *tet*'s parent, the face number of this face.  Otherwise -1.
-### Prototype
-```c
-int t8_dtet_face_parent_face (const t8_dtet_t *tet, int face);
-```
-"""
-function t8_dtet_face_parent_face(tet, face)
-    @ccall libt8.t8_dtet_face_parent_face(tet::Ptr{t8_dtet_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtet_tree_face(tet, face)
-
-Given a tetrahedron and a face of this tetrahedron. If the face lies on the tree boundary, return the face number  of the tree face. If not the return value is arbitrary.
-
-!!! note
-
-    For boundary tetrahedra, this function is the inverse of t8_dtet_root_face_to_face.
-
-# Arguments
-* `tet`:\\[in\\] The tetrahedron.
-* `face`:\\[in\\] The index of a face of *tet*.
-# Returns
-The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary integer if *face* is not at a tree boundary.
-### Prototype
-```c
-int t8_dtet_tree_face (t8_dtet_t *tet, int face);
-```
-"""
-function t8_dtet_tree_face(tet, face)
-    @ccall libt8.t8_dtet_tree_face(tet::Ptr{t8_dtet_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtet_root_face_to_face(tet, root_face)
-
-Given a tetrahedron and a face of the root tetrahedron. If the tetrahedron lies on the tree boundary,  return the corresponding face number of the tetrahedron. If not the return value is arbitrary.
-
-!!! note
-
-    For boundary tetrahedra, this function is the inverse of t8_dtet_tree_face.
-
-# Arguments
-* `tet`:\\[in\\] The tetrahedron.
-* `root_face`:\\[in\\] The index of a face of the root tetrahedron.
-# Returns
-The index of the face of *tet* that is a subface of *root_face*, if *tet* is on the tree boundary. Any arbitrary integer if *tet* is not at a tree boundary.
-### Prototype
-```c
-int t8_dtet_root_face_to_face (t8_dtet_t *tet, int root_face);
-```
-"""
-function t8_dtet_root_face_to_face(tet, root_face)
-    @ccall libt8.t8_dtet_root_face_to_face(tet::Ptr{t8_dtet_t}, root_face::Cint)::Cint
-end
-
-"""
-    t8_dtet_is_inside_root(tet)
-
-Test if a tetrahedron lies inside of the root tetrahedron, that is the tetrahedron of level 0, anchor node (0,0,0) and type 0.
-
-# Arguments
-* `tet`:\\[in\\] Input tetrahedron.
-# Returns
-true If *tet* lies inside of the root tetrahedron.
-### Prototype
-```c
-int t8_dtet_is_inside_root (t8_dtet_t *tet);
-```
-"""
-function t8_dtet_is_inside_root(tet)
-    @ccall libt8.t8_dtet_is_inside_root(tet::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_is_root_boundary(tet, face)
-
-Compute whether a given tetrahedron shares a given face with its root tree.
-
-# Arguments
-* `tet`:\\[in\\] The input tet.
-* `face`:\\[in\\] A face of *tet*.
-# Returns
-True if *face* is a subface of the tet's root element.
-### Prototype
-```c
-int t8_dtet_is_root_boundary (const t8_dtet_t *tet, int face);
-```
-"""
-function t8_dtet_is_root_boundary(tet, face)
-    @ccall libt8.t8_dtet_is_root_boundary(tet::Ptr{t8_dtet_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtet_is_equal(tet1, tet2)
-
-Test if two tetrahedra have the same coordinates, type and level.
-
-# Returns
-true if *tet1* describes the same tetrahedron as *tet2*.
-### Prototype
-```c
-int t8_dtet_is_equal (const t8_dtet_t *tet1, const t8_dtet_t *tet2);
-```
-"""
-function t8_dtet_is_equal(tet1, tet2)
-    @ccall libt8.t8_dtet_is_equal(tet1::Ptr{t8_dtet_t}, tet2::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_is_sibling(tet1, tet2)
-
-Test if two tetrahedra are siblings.
-
-# Arguments
-* `tet1`:\\[in\\] First tetrahedron to be tested.
-* `tet2`:\\[in\\] Second tetrahedron to be tested.
-# Returns
-true if *tet1* is equal to or a sibling of *tet2*.
-### Prototype
-```c
-int t8_dtet_is_sibling (const t8_dtet_t *tet1, const t8_dtet_t *tet2);
-```
-"""
-function t8_dtet_is_sibling(tet1, tet2)
-    @ccall libt8.t8_dtet_is_sibling(tet1::Ptr{t8_dtet_t}, tet2::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_is_parent(tet, child)
-
-Test if a tetrahedron is the parent of another tetrahedron.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron to be tested.
-* `child`:\\[in\\] Possible child tetrahedron.
-# Returns
-true if *tet* is the parent of *child*.
-### Prototype
-```c
-int t8_dtet_is_parent (const t8_dtet_t *tet, const t8_dtet_t *child);
-```
-"""
-function t8_dtet_is_parent(tet, child)
-    @ccall libt8.t8_dtet_is_parent(tet::Ptr{t8_dtet_t}, child::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_is_ancestor(tet, c)
-
-Test if a tetrahedron is an ancestor of another tetrahedron.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron to be tested.
-* `c`:\\[in\\] Descendent tetrahedron.
-# Returns
-true if *tet* is equal to or an ancestor of *c*.
-### Prototype
-```c
-int t8_dtet_is_ancestor (const t8_dtet_t *tet, const t8_dtet_t *c);
-```
-"""
-function t8_dtet_is_ancestor(tet, c)
-    @ccall libt8.t8_dtet_is_ancestor(tet::Ptr{t8_dtet_t}, c::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_linear_id(tet, level)
-
-Computes the linear position of a tetrahedron in a uniform grid.
-
-!!! note
-
-    This id is not the Morton index.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron whose id will be computed.
-* `level`:\\[in\\] level of uniform grid to be considered.
-# Returns
-Returns the linear position of this tetrahedron on a grid of level *level*.
-### Prototype
-```c
-t8_linearidx_t t8_dtet_linear_id (const t8_dtet_t *tet, int level);
-```
-"""
-function t8_dtet_linear_id(tet, level)
-    @ccall libt8.t8_dtet_linear_id(tet::Ptr{t8_dtet_t}, level::Cint)::t8_linearidx_t
-end
-
-"""
-    t8_dtet_init_linear_id_with_level(tet, id, start_level, end_level, parenttype)
-
-Same as init\\_linear\\_id, but we only consider the subtree. Used for computing the index of a tetrahedron lying in a pyramid
-
-# Arguments
-* `tet`:\\[in,out\\] Existing tet whose data will be filled
-* `id`: Index to be considered
-* `start_level`: The level of the root of the subtree
-* `end_level`: Level of uniform grid to be considered
-* `parenttype`: The type of the parent.
-### Prototype
-```c
-void t8_dtet_init_linear_id_with_level (t8_dtet_t *tet, t8_linearidx_t id, int start_level, int end_level, t8_dtet_type_t parenttype);
-```
-"""
-function t8_dtet_init_linear_id_with_level(tet, id, start_level, end_level, parenttype)
-    @ccall libt8.t8_dtet_init_linear_id_with_level(tet::Ptr{t8_dtet_t}, id::t8_linearidx_t, start_level::Cint, end_level::Cint, parenttype::t8_dtet_type_t)::Cvoid
-end
-
-"""
-    t8_dtet_init_linear_id(tet, id, level)
-
-Initialize a tetrahedron as the tetrahedron with a given global id in a uniform refinement of a given level.
-
-# Arguments
-* `tet`:\\[in,out\\] Existing tetrahedron whose data will be filled.
-* `id`:\\[in\\] Index to be considered.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtet_init_linear_id (t8_dtet_t *tet, t8_linearidx_t id, int level);
-```
-"""
-function t8_dtet_init_linear_id(tet, id, level)
-    @ccall libt8.t8_dtet_init_linear_id(tet::Ptr{t8_dtet_t}, id::t8_linearidx_t, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_init_root(tet)
-
-Initialize a tetrahedron as the root tetrahedron (type 0 at level 0)
-
-# Arguments
-* `tet`:\\[in,out\\] Existing tetrahedron whose data will be filled.
-### Prototype
-```c
-void t8_dtet_init_root (t8_dtet_t *tet);
-```
-"""
-function t8_dtet_init_root(tet)
-    @ccall libt8.t8_dtet_init_root(tet::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_successor(tet, succ, level)
-
-Computes the successor of a tetrahedron in a uniform grid of level *level*.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron whose id will be computed.
-* `succ`:\\[out\\] Existing tetrahedron whose data will be filled with the data of t's successor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtet_successor (const t8_dtet_t *tet, t8_dtet_t *succ, int level);
-```
-"""
-function t8_dtet_successor(tet, succ, level)
-    @ccall libt8.t8_dtet_successor(tet::Ptr{t8_dtet_t}, succ::Ptr{t8_dtet_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_first_descendant(tet, s, level)
-
-Compute the first descendant of a tetrahedron at a given level. This is the descendant of the tetrahedron in a uniform maxlevel refinement that has the smaller id.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron whose descendant is computed.
-* `level`:\\[in\\] A given level. Must be greater or equal to *tet*'s level.
-* `s`:\\[out\\] Existing tetrahedron whose data will be filled with the data of t's first descendant.
-### Prototype
-```c
-void t8_dtet_first_descendant (const t8_dtet_t *tet, t8_dtet_t *s, int level);
-```
-"""
-function t8_dtet_first_descendant(tet, s, level)
-    @ccall libt8.t8_dtet_first_descendant(tet::Ptr{t8_dtet_t}, s::Ptr{t8_dtet_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_last_descendant(tet, s, level)
-
-Compute the last descendant of a tetrahedron at a given level. This is the descendant of the tetrahedron in a uniform maxlevel refinement that has the biggest id.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron whose descendant is computed.
-* `level`:\\[in\\] A given level. Must be greater or equal to *tet*'s level.
-* `s`:\\[out\\] Existing tetrahedron whose data will be filled with the data of t's last descendant.
-### Prototype
-```c
-void t8_dtet_last_descendant (const t8_dtet_t *tet, t8_dtet_t *s, int level);
-```
-"""
-function t8_dtet_last_descendant(tet, s, level)
-    @ccall libt8.t8_dtet_last_descendant(tet::Ptr{t8_dtet_t}, s::Ptr{t8_dtet_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_corner_descendant(tet, s, corner, level)
-
-Compute the descendant of a tetrahedron in a given corner.
-
-# Arguments
-* `tet`:\\[in\\] Tetrahedron whose descendant is computed.
-* `s`:\\[out\\] Existing tetrahedron whose data will be filled with the data of t's descendant in *corner*.
-* `corner`:\\[in\\] The corner in which the descendant should lie.
-* `level`:\\[in\\] The refinement level of the descendant. Must be greater or equal to *tet*'s level.
-### Prototype
-```c
-void t8_dtet_corner_descendant (const t8_dtet_t *tet, t8_dtet_t *s, int corner, int level);
-```
-"""
-function t8_dtet_corner_descendant(tet, s, corner, level)
-    @ccall libt8.t8_dtet_corner_descendant(tet::Ptr{t8_dtet_t}, s::Ptr{t8_dtet_t}, corner::Cint, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_predecessor(tet, s, level)
-
-Computes the predecessor of a tetrahedron in a uniform grid of level *level*.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron whose id will be computed.
-* `s`:\\[in,out\\] Existing tetrahedron whose data will be filled with the data of t's predecessor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtet_predecessor (const t8_dtet_t *tet, t8_dtet_t *s, int level);
-```
-"""
-function t8_dtet_predecessor(tet, s, level)
-    @ccall libt8.t8_dtet_predecessor(tet::Ptr{t8_dtet_t}, s::Ptr{t8_dtet_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtet_ancestor_id(tet, level)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron to be considered.
-* `level`:\\[in\\] level to be considered.
-# Returns
-Returns its child id in 0..7
-### Prototype
-```c
-int t8_dtet_ancestor_id (const t8_dtet_t *tet, int level);
-```
-"""
-function t8_dtet_ancestor_id(tet, level)
-    @ccall libt8.t8_dtet_ancestor_id(tet::Ptr{t8_dtet_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dtet_child_id(tet)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron to be considered.
-# Returns
-Returns its child id in 0..7
-### Prototype
-```c
-int t8_dtet_child_id (const t8_dtet_t *tet);
-```
-"""
-function t8_dtet_child_id(tet)
-    @ccall libt8.t8_dtet_child_id(tet::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_get_level(tet)
-
-Return the level of a tetrahedron.
-
-# Arguments
-* `tet`:\\[in\\] tetrahedron to be considered.
-# Returns
-The level of *tet*.
-### Prototype
-```c
-int t8_dtet_get_level (const t8_dtet_t *tet);
-```
-"""
-function t8_dtet_get_level(tet)
-    @ccall libt8.t8_dtet_get_level(tet::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_is_valid(tet)
-
-Query whether all entries of a tet are in valid ranges.
-
-# Arguments
-* `tet`:\\[in\\] tet to be considered.
-# Returns
-True, if *tet* is a valid tet and it is safe to call any function on *tet*. False otherwise.
-### Prototype
-```c
-int t8_dtet_is_valid (const t8_dtet_t *tet);
-```
-"""
-function t8_dtet_is_valid(tet)
-    @ccall libt8.t8_dtet_is_valid(tet::Ptr{t8_dtet_t})::Cint
-end
-
-"""
-    t8_dtet_init(tet)
-
-Set sensible default values for a tet.
-
-# Arguments
-* `tet`:\\[in,out\\] A tet.
-### Prototype
-```c
-void t8_dtet_init (t8_dtet_t *tet);
-```
-"""
-function t8_dtet_init(tet)
-    @ccall libt8.t8_dtet_init(tet::Ptr{t8_dtet_t})::Cvoid
-end
-
-"""
-    t8_dtet_element_pack(elements, count, send_buffer, buffer_size, position, comm)
-
-### Prototype
-```c
-void t8_dtet_element_pack (t8_dtet_t **const elements, const unsigned int count, void *send_buffer, const int buffer_size, int *position, sc_MPI_Comm comm);
-```
-"""
-function t8_dtet_element_pack(elements, count, send_buffer, buffer_size, position, comm)
-    @ccall libt8.t8_dtet_element_pack(elements::Ptr{Ptr{t8_dtet_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_dtet_element_pack_size(count, comm, pack_size)
-
-### Prototype
-```c
-void t8_dtet_element_pack_size (const unsigned int count, sc_MPI_Comm comm, int *pack_size);
-```
-"""
-function t8_dtet_element_pack_size(count, comm, pack_size)
-    @ccall libt8.t8_dtet_element_pack_size(count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dtet_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
-
-### Prototype
-```c
-void t8_dtet_element_unpack (void *recvbuf, const int buffer_size, int *position, t8_dtet_t **elements, const unsigned int count, sc_MPI_Comm comm);
-```
-"""
-function t8_dtet_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
-    @ccall libt8.t8_dtet_element_unpack(recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_dtet_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_dtri_copy(element, dest)
-
-Copy the values of one triangle to another.
-
-# Arguments
-* `element`:\\[in\\] Triangle whose values will be copied.
-* `dest`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*.
-### Prototype
-```c
-void t8_dtri_copy (const t8_dtri_t *element, t8_dtri_t *dest);
-```
-"""
-function t8_dtri_copy(element, dest)
-    @ccall libt8.t8_dtri_copy(element::Ptr{t8_dtri_t}, dest::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_compare(element1, element2)
-
-Compare two triangle in their linear order.
-
-# Arguments
-* `element1`:\\[in\\] Triangle one.
-* `element2`:\\[in\\] Triangle two.
-# Returns
-Returns negative if tri1 < tri2, zero if tri1 = tri2, positive if tri1 > tri2
-### Prototype
-```c
-int t8_dtri_compare (const t8_dtri_t *element1, const t8_dtri_t *element2);
-```
-"""
-function t8_dtri_compare(element1, element2)
-    @ccall libt8.t8_dtri_compare(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_equal(element1, element2)
-
-Check if two elements are equal.
-
-# Arguments
-* `element1`:\\[in\\] The first element.
-* `element2`:\\[in\\] The second element.
-# Returns
-1 if the elements are equal, 0 if they are not equal
-### Prototype
-```c
-int t8_dtri_equal (const t8_dtri_t *element1, const t8_dtri_t *element2);
-```
-"""
-function t8_dtri_equal(element1, element2)
-    @ccall libt8.t8_dtri_equal(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_parent(element, parent)
-
-Compute the parent of a triangle.
-
-!!! note
-
-    *element* may point to the same triangle as *parent*.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `parent`:\\[in,out\\] Existing triangle whose data will be filled with the data of elem's parent.
-### Prototype
-```c
-void t8_dtri_parent (const t8_dtri_t *element, t8_dtri_t *parent);
-```
-"""
-function t8_dtri_parent(element, parent)
-    @ccall libt8.t8_dtri_parent(element::Ptr{t8_dtri_t}, parent::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_ancestor(element, level, ancestor)
-
-Compute the ancestor of a triangle at a given level.
-
-!!! note
-
-    The triangle *ancestor* may point to the same triangle as *element*.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `level`:\\[in\\] A smaller level than *element*.
-* `ancestor`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*'s ancestor on level  *level*.
-### Prototype
-```c
-void t8_dtri_ancestor (const t8_dtri_t *element, int level, t8_dtri_t *ancestor);
-```
-"""
-function t8_dtri_ancestor(element, level, ancestor)
-    @ccall libt8.t8_dtri_ancestor(element::Ptr{t8_dtri_t}, level::Cint, ancestor::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_compute_integer_coords(element, vertex, coordinates)
-
-Compute the coordinates of a vertex of a triangle.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coordinates`:\\[out\\] An array of 2 [`t8_dtri_coord_t`](@ref) that will be filled with the coordinates of the vertex.
-### Prototype
-```c
-void t8_dtri_compute_integer_coords (const t8_dtri_t *element, const int vertex, t8_dtri_coord_t coordinates[2]);
-```
-"""
-function t8_dtri_compute_integer_coords(element, vertex, coordinates)
-    @ccall libt8.t8_dtri_compute_integer_coords(element::Ptr{t8_dtri_t}, vertex::Cint, coordinates::Ptr{t8_dtri_coord_t})::Cvoid
-end
-
-"""
-    t8_dtri_compute_vertex_ref_coords(element, vertex, coordinates)
-
-Compute the reference coordinates of a vertex of a triangle when the  tree (level 0 triangle) is embedded in
-
-```c++
- [0,1]^2 
-```
-
-.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `vertex`:\\[in\\] The number of the vertex.
-* `coordinates`:\\[out\\] An array of 2 double that will be filled with the reference coordinates of the vertex.
-### Prototype
-```c
-void t8_dtri_compute_vertex_ref_coords (const t8_dtri_t *element, const int vertex, double coordinates[2]);
-```
-"""
-function t8_dtri_compute_vertex_ref_coords(element, vertex, coordinates)
-    @ccall libt8.t8_dtri_compute_vertex_ref_coords(element::Ptr{t8_dtri_t}, vertex::Cint, coordinates::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dtri_compute_reference_coords(element, ref_coords, num_coords, skip_coords, out_coords)
-
-Convert points in the reference space of a tri element to points in the reference space of the tree (level 0) embedded in
-
-```c++
- [0,1]^2 
-```
-
-.
-
-```c++
- [0,1]^2 
-```
-
-)
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `ref_coords`:\\[in\\] The reference coordinates in the triangle (*num_coords* times
-* `num_coords`:\\[in\\] Number of coordinates to evaluate
-* `skip_coords`:\\[in\\] Only used for batch computation of prisms. In all other cases 0. Skip coordinates in the *ref_coords* and *out_coords* array.
-* `out_coords`:\\[out\\] An array of *num_coords* x 2 x double that will be filled with the reference coordinates of the points on the triangle.
-### Prototype
-```c
-void t8_dtri_compute_reference_coords (const t8_dtri_t *element, const double *ref_coords, const size_t num_coords, const size_t skip_coords, double *out_coords);
-```
-"""
-function t8_dtri_compute_reference_coords(element, ref_coords, num_coords, skip_coords, out_coords)
-    @ccall libt8.t8_dtri_compute_reference_coords(element::Ptr{t8_dtri_t}, ref_coords::Ptr{Cdouble}, num_coords::Csize_t, skip_coords::Csize_t, out_coords::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dtri_compute_all_coords(element, coordinates)
-
-Compute the coordinates of the four vertices of a triangle.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `coordinates`:\\[out\\] An array of 4x3 [`t8_dtri_coord_t`](@ref) that will be filled with the coordinates of t's vertices.
-### Prototype
-```c
-void t8_dtri_compute_all_coords (const t8_dtri_t *element, t8_dtri_coord_t coordinates[3][2]);
-```
-"""
-function t8_dtri_compute_all_coords(element, coordinates)
-    @ccall libt8.t8_dtri_compute_all_coords(element::Ptr{t8_dtri_t}, coordinates::Ptr{NTuple{2, t8_dtri_coord_t}})::Cvoid
-end
-
-"""
-    t8_dtri_child(element, childid, child)
-
-Compute the childid-th child in Morton order of a triangle.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `childid`:\\[in,out\\] The id of the child, 0..7 in Morton order.
-* `child`:\\[out\\] Existing triangle whose data will be filled with the date of t's childid-th child.
-### Prototype
-```c
-void t8_dtri_child (const t8_dtri_t *element, int childid, t8_dtri_t *child);
-```
-"""
-function t8_dtri_child(element, childid, child)
-    @ccall libt8.t8_dtri_child(element::Ptr{t8_dtri_t}, childid::Cint, child::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_childrenpv(element, children)
-
-Compute the 4 children of a triangle, array version.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `children`:\\[in,out\\] Pointers to the 4 computed children in Morton order. t may point to the same quadrant as c[0].
-### Prototype
-```c
-void t8_dtri_childrenpv (const t8_dtri_t *element, t8_dtri_t *children[T8_DTRI_CHILDREN]);
-```
-"""
-function t8_dtri_childrenpv(element, children)
-    @ccall libt8.t8_dtri_childrenpv(element::Ptr{t8_dtri_t}, children::Ptr{Ptr{t8_dtri_t}})::Cvoid
-end
-
-"""
-    t8_dtri_is_familypv(f)
-
-Check whether a collection of eight triangles is a family in Morton order.
-
-# Arguments
-* `f`:\\[in\\] An array of eight triangles.
-# Returns
-Nonzero if *f* is a family of triangles.
-### Prototype
-```c
-int t8_dtri_is_familypv (const t8_dtri_t *f[]);
-```
-"""
-function t8_dtri_is_familypv(f)
-    @ccall libt8.t8_dtri_is_familypv(f::Ptr{Ptr{t8_dtri_t}})::Cint
-end
-
-"""
-    t8_dtri_sibling(element, sibid, sibling)
-
-Compute a specific sibling of a triangle.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `sibid`:\\[in\\] The id of the sibling computed, 0..7 in Bey order.
-* `sibling`:\\[in,out\\] Existing triangle whose data will be filled with the data of sibling no. sibling\\_id of  *element*.
-### Prototype
-```c
-void t8_dtri_sibling (const t8_dtri_t *element, int sibid, t8_dtri_t *sibling);
-```
-"""
-function t8_dtri_sibling(element, sibid, sibling)
-    @ccall libt8.t8_dtri_sibling(element::Ptr{t8_dtri_t}, sibid::Cint, sibling::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_face_neighbour(element, face, neigh)
-
-Compute the face neighbor of a triangle.
-
-!!! note
-
-    *element* may point to the same triangle as *neigh*.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-* `face`:\\[in\\] The face across which to generate the neighbor.
-* `neigh`:\\[in,out\\] Existing triangle whose data will be filled.
-### Prototype
-```c
-int t8_dtri_face_neighbour (const t8_dtri_t *element, int face, t8_dtri_t *neigh);
-```
-"""
-function t8_dtri_face_neighbour(element, face, neigh)
-    @ccall libt8.t8_dtri_face_neighbour(element::Ptr{t8_dtri_t}, face::Cint, neigh::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_nearest_common_ancestor(element1, element2, nca)
-
-Computes the nearest common ancestor of two triangles in the same tree.
-
-!!! note
-
-    *element1*, *element2*, *nca* may point to the same quadrant.
-
-# Arguments
-* `element1`:\\[in\\] First input triangle.
-* `element2`:\\[in\\] Second input triangle.
-* `nca`:\\[in,out\\] Existing triangle whose data will be filled.
-### Prototype
-```c
-void t8_dtri_nearest_common_ancestor (const t8_dtri_t *element1, const t8_dtri_t *element2, t8_dtri_t *nca);
-```
-"""
-function t8_dtri_nearest_common_ancestor(element1, element2, nca)
-    @ccall libt8.t8_dtri_nearest_common_ancestor(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t}, nca::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_children_at_face(element, face, children, num_children, child_indices)
-
-Given a triangle and a face of the triangle, compute all children of the triangle that touch the face.
-
-# Arguments
-* `element`:\\[in\\] The triangle.
-* `face`:\\[in\\] A face of *element*.
-* `children`:\\[in,out\\] Allocated triangles, in which the children of *element* that share a face with *face* are  stored. They will be stored in order of their child\\_id.
-* `num_children`:\\[in\\] The number of triangles in *children*. Must match the number of children that touch  *face*.
-* `child_indices`:\\[in,out\\] The indices of the children in *children*. Only filled if this is null previously.
-### Prototype
-```c
-void t8_dtri_children_at_face (const t8_dtri_t *element, int face, t8_dtri_t *children[], int num_children, int *child_indices);
-```
-"""
-function t8_dtri_children_at_face(element, face, children, num_children, child_indices)
-    @ccall libt8.t8_dtri_children_at_face(element::Ptr{t8_dtri_t}, face::Cint, children::Ptr{Ptr{t8_dtri_t}}, num_children::Cint, child_indices::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dtri_face_child_face(triangle, face, face_child)
-
-Given a face of a triangle and a child number of a child of that face, return the face number of the child of the  triangle that matches the child face.
-
-# Arguments
-* `triangle`:\\[in\\] The triangle.
-* `face`:\\[in\\] Then number of the face.
-* `face_child`:\\[in\\] The child number of a child of the face triangle.
-# Returns
-The face number of the face of a child of *triangle* that coincides with *face_child*.
-### Prototype
-```c
-int t8_dtri_face_child_face (const t8_dtri_t *triangle, int face, int face_child);
-```
-"""
-function t8_dtri_face_child_face(triangle, face, face_child)
-    @ccall libt8.t8_dtri_face_child_face(triangle::Ptr{t8_dtri_t}, face::Cint, face_child::Cint)::Cint
-end
-
-"""
-    t8_dtri_face_parent_face(triangle, face)
-
-Given a face of an triangle return the face number of the parent of the triangle that matches the triangle's face.  Or return -1 if no face of the parent matches the face.
-
-# Arguments
-* `triangle`:\\[in\\] The triangle.
-* `face`:\\[in\\] Then number of the face.
-# Returns
-If *face* of *elem* is also a face of *elem*'s parent, the face number of this face.  Otherwise -1.
-### Prototype
-```c
-int t8_dtri_face_parent_face (const t8_dtri_t *triangle, int face);
-```
-"""
-function t8_dtri_face_parent_face(triangle, face)
-    @ccall libt8.t8_dtri_face_parent_face(triangle::Ptr{t8_dtri_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtri_tree_face(element, face)
-
-Given a triangle and a face of this triangle. If the face lies on the tree boundary, return the face number of the  tree face. If not the return value is arbitrary.
-
-!!! note
-
-    For boundary triangles, this function is the inverse of t8_dtri_root_face_to_face
-
-# Arguments
-* `element`:\\[in\\] The triangle.
-* `face`:\\[in\\] The index of a face of *element*.
-# Returns
-The index of the tree face that *face* is a subface of, if *face* is on a tree boundary. Any arbitrary  integer if *element* is not at a tree boundary.
-### Prototype
-```c
-int t8_dtri_tree_face (t8_dtri_t *element, int face);
-```
-"""
-function t8_dtri_tree_face(element, face)
-    @ccall libt8.t8_dtri_tree_face(element::Ptr{t8_dtri_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtri_root_face_to_face(element, root_face)
-
-Given a triangle and a face of the root triangle. If the triangle lies on the tree boundary, return the  corresponding face number of the triangle. If not the return value is arbitrary.
-
-!!! note
-
-    For boundary triangles, this function is the inverse of t8_dtri_tree_face
-
-# Arguments
-* `element`:\\[in\\] The triangle.
-* `root_face`:\\[in\\] The index of a face of the root element.
-# Returns
-The index of the face of *element* that is a subface of *root_face*, if *element* is on the tree boundary. Any arbitrary integer if *element* is not at a tree boundary.
-### Prototype
-```c
-int t8_dtri_root_face_to_face (t8_dtri_t *element, int root_face);
-```
-"""
-function t8_dtri_root_face_to_face(element, root_face)
-    @ccall libt8.t8_dtri_root_face_to_face(element::Ptr{t8_dtri_t}, root_face::Cint)::Cint
-end
-
-"""
-    t8_dtri_transform_face(trianglein, triangle2, orientation, sign, is_smaller_face)
-
-Suppose we have two trees that share a common triangle f. Given a triangle e that is a subface of f in one of the  trees and given the orientation of the tree connection, construct the face triangle of the respective tree neighbor  that logically coincides with e but lies in the coordinate system of the neighbor tree.
-
-!!! note
-
-    *trianglein* and *triangle2* may point to the same element.
-
-# Arguments
-* `trianglein`:\\[in\\] The face triangle.
-* `triangle2`:\\[in,out\\] On return the face triangle *triangle1* with respective to the coordinate system of the  other tree.
-* `orientation`:\\[in\\] The orientation of the tree-tree connection.
-* `sign`:\\[in\\] Depending on the topological orientation of the two tree faces, either 0  (both faces have opposite orientation) or 1 (both faces have the same top. orientation). t8_eclass_face_orientation
-* `is_smaller_face`:\\[in\\] Flag to declare whether *triangle1* belongs to the smaller face. A face f of tree T is smaller than f' of T' if either the eclass of T is smaller or if the classes are equal and  f<f'. The orientation is defined in relation to the smaller face.
-# See also
-[`t8_cmesh_set_join`](@ref)
-
-### Prototype
-```c
-void t8_dtri_transform_face (const t8_dtri_t *trianglein, t8_dtri_t *triangle2, int orientation, int sign, int is_smaller_face);
-```
-"""
-function t8_dtri_transform_face(trianglein, triangle2, orientation, sign, is_smaller_face)
-    @ccall libt8.t8_dtri_transform_face(trianglein::Ptr{t8_dtri_t}, triangle2::Ptr{t8_dtri_t}, orientation::Cint, sign::Cint, is_smaller_face::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_is_inside_root(element)
-
-Test if a triangle lies inside of the root triangle, that is the triangle of level 0, anchor node (0,0) and type 0.
-
-# Arguments
-* `element`:\\[in\\] Input triangle.
-# Returns
-true If *element* lies inside of the root triangle.
-### Prototype
-```c
-int t8_dtri_is_inside_root (t8_dtri_t *element);
-```
-"""
-function t8_dtri_is_inside_root(element)
-    @ccall libt8.t8_dtri_is_inside_root(element::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_is_root_boundary(element, face)
-
-Compute whether a given triangle shares a given face with its root tree.
-
-# Arguments
-* `element`:\\[in\\] The input triangle.
-* `face`:\\[in\\] A face of *element*.
-# Returns
-True if *face* is a subface of the triangle's root element.
-### Prototype
-```c
-int t8_dtri_is_root_boundary (const t8_dtri_t *element, int face);
-```
-"""
-function t8_dtri_is_root_boundary(element, face)
-    @ccall libt8.t8_dtri_is_root_boundary(element::Ptr{t8_dtri_t}, face::Cint)::Cint
-end
-
-"""
-    t8_dtri_is_equal(element1, element2)
-
-Test if two triangles have the same coordinates, type and level.
-
-# Returns
-true if *element1* describes the same triangle as *element2*.
-### Prototype
-```c
-int t8_dtri_is_equal (const t8_dtri_t *element1, const t8_dtri_t *element2);
-```
-"""
-function t8_dtri_is_equal(element1, element2)
-    @ccall libt8.t8_dtri_is_equal(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_is_sibling(element1, element2)
-
-Test if two triangles are siblings.
-
-# Arguments
-* `element1`:\\[in\\] First triangle to be tested.
-* `element2`:\\[in\\] Second triangle to be tested.
-# Returns
-true if *element1* is equal to or a sibling of *element2*.
-### Prototype
-```c
-int t8_dtri_is_sibling (const t8_dtri_t *element1, const t8_dtri_t *element2);
-```
-"""
-function t8_dtri_is_sibling(element1, element2)
-    @ccall libt8.t8_dtri_is_sibling(element1::Ptr{t8_dtri_t}, element2::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_is_parent(element, child)
-
-Test if a triangle is the parent of another triangle.
-
-# Arguments
-* `element`:\\[in\\] triangle to be tested.
-* `child`:\\[in\\] Possible child triangle.
-# Returns
-true if *element* is the parent of *child*.
-### Prototype
-```c
-int t8_dtri_is_parent (const t8_dtri_t *element, const t8_dtri_t *child);
-```
-"""
-function t8_dtri_is_parent(element, child)
-    @ccall libt8.t8_dtri_is_parent(element::Ptr{t8_dtri_t}, child::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_is_ancestor(element, child)
-
-Test if a triangle is an ancestor of another triangle.
-
-# Arguments
-* `element`:\\[in\\] triangle to be tested.
-* `child`:\\[in\\] Descendent triangle.
-# Returns
-true if *element* is equal to or an ancestor of *child*.
-### Prototype
-```c
-int t8_dtri_is_ancestor (const t8_dtri_t *element, const t8_dtri_t *child);
-```
-"""
-function t8_dtri_is_ancestor(element, child)
-    @ccall libt8.t8_dtri_is_ancestor(element::Ptr{t8_dtri_t}, child::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_linear_id(element, level)
-
-Computes the linear position of a triangle in a uniform grid.
-
-!!! note
-
-    This id is not the Morton index.
-
-# Arguments
-* `element`:\\[in\\] triangle whose id will be computed.
-* `level`:\\[in\\] level of uniform grid to be considered.
-# Returns
-Returns the linear position of this triangle on a grid of level *level*.
-### Prototype
-```c
-t8_linearidx_t t8_dtri_linear_id (const t8_dtri_t *element, int level);
-```
-"""
-function t8_dtri_linear_id(element, level)
-    @ccall libt8.t8_dtri_linear_id(element::Ptr{t8_dtri_t}, level::Cint)::t8_linearidx_t
-end
-
-"""
-    t8_dtri_init_linear_id_with_level(element, id, start_level, end_level, parenttype)
-
-Same as init\\_linear\\_id, but we only consider the subtree. Used for computing the index of a tetrahedron lying in a  pyramid
-
-# Arguments
-* `element`:\\[in,out\\] Existing triangle whose data will be filled
-* `id`:\\[in\\] Index to be considered
-* `start_level`:\\[in\\] The level of the root of the subtree
-* `end_level`:\\[in\\] Level of uniform grid to be considered
-* `parenttype`:\\[in\\] The type of the parent.
-### Prototype
-```c
-void t8_dtri_init_linear_id_with_level (t8_dtri_t *element, t8_linearidx_t id, const int start_level, const int end_level, t8_dtri_type_t parenttype);
-```
-"""
-function t8_dtri_init_linear_id_with_level(element, id, start_level, end_level, parenttype)
-    @ccall libt8.t8_dtri_init_linear_id_with_level(element::Ptr{t8_dtri_t}, id::t8_linearidx_t, start_level::Cint, end_level::Cint, parenttype::t8_dtri_type_t)::Cvoid
-end
-
-"""
-    t8_dtri_init_linear_id(element, id, level)
-
-Initialize a triangle as the triangle with a given global id in a uniform refinement of a given level. *
-
-# Arguments
-* `element`:\\[in,out\\] Existing triangle whose data will be filled.
-* `id`:\\[in\\] Index to be considered.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtri_init_linear_id (t8_dtri_t *element, t8_linearidx_t id, int level);
-```
-"""
-function t8_dtri_init_linear_id(element, id, level)
-    @ccall libt8.t8_dtri_init_linear_id(element::Ptr{t8_dtri_t}, id::t8_linearidx_t, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_init_root(element)
-
-Initialize a triangle as the root triangle (type 0 at level 0)
-
-# Arguments
-* `element`:\\[in,out\\] Existing triangle whose data will be filled.
-### Prototype
-```c
-void t8_dtri_init_root (t8_dtri_t *element);
-```
-"""
-function t8_dtri_init_root(element)
-    @ccall libt8.t8_dtri_init_root(element::Ptr{t8_dtri_t})::Cvoid
-end
-
-"""
-    t8_dtri_successor(element, s, level)
-
-Computes the successor of a triangle in a uniform grid of level *level*.
-
-# Arguments
-* `element`:\\[in\\] triangle whose id will be computed.
-* `s`:\\[in,out\\] Existing triangle whose data will be filled with the data of t's successor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtri_successor (const t8_dtri_t *element, t8_dtri_t *s, int level);
-```
-"""
-function t8_dtri_successor(element, s, level)
-    @ccall libt8.t8_dtri_successor(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_first_descendant(element, s, level)
-
-Compute the first descendant of a triangle at a given level. This is the descendant of the triangle in a uniform maxlevel refinement that has the smaller id.
-
-# Arguments
-* `element`:\\[in\\] Triangle whose descendant is computed.
-* `level`:\\[in\\] A given level. Must be grater or equal to *element*'s level.
-* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's first descendant.
-### Prototype
-```c
-void t8_dtri_first_descendant (const t8_dtri_t *element, t8_dtri_t *s, int level);
-```
-"""
-function t8_dtri_first_descendant(element, s, level)
-    @ccall libt8.t8_dtri_first_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_last_descendant(element, s, level)
-
-Compute the last descendant of a triangle at a given level. This is the descendant of the triangle in a uniform maxlevel refinement that has the biggest id.
-
-# Arguments
-* `element`:\\[in\\] Triangle whose descendant is computed.
-* `level`:\\[in\\] A given level. Must be grater or equal to *element*'s level.
-* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's last descendant.
-### Prototype
-```c
-void t8_dtri_last_descendant (const t8_dtri_t *element, t8_dtri_t *s, int level);
-```
-"""
-function t8_dtri_last_descendant(element, s, level)
-    @ccall libt8.t8_dtri_last_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_corner_descendant(element, s, corner, level)
-
-Compute the descendant of a triangle in a given corner.
-
-# Arguments
-* `element`:\\[in\\] Triangle whose descendant is computed.
-* `s`:\\[out\\] Existing triangle whose data will be filled with the data of t's descendant in *corner*.
-* `corner`:\\[in\\] The corner in which the descendant should lie.
-* `level`:\\[in\\] The refinement level of the descendant. Must be greater or equal to *element*'s level.
-### Prototype
-```c
-void t8_dtri_corner_descendant (const t8_dtri_t *element, t8_dtri_t *s, int corner, int level);
-```
-"""
-function t8_dtri_corner_descendant(element, s, corner, level)
-    @ccall libt8.t8_dtri_corner_descendant(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, corner::Cint, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_predecessor(element, s, level)
-
-Computes the predecessor of a triangle in a uniform grid of level *level*.
-
-# Arguments
-* `element`:\\[in\\] triangle whose id will be computed.
-* `s`:\\[in,out\\] Existing triangle whose data will be filled with the data of *element*'s predecessor on level *level*.
-* `level`:\\[in\\] level of uniform grid to be considered.
-### Prototype
-```c
-void t8_dtri_predecessor (const t8_dtri_t *element, t8_dtri_t *s, int level);
-```
-"""
-function t8_dtri_predecessor(element, s, level)
-    @ccall libt8.t8_dtri_predecessor(element::Ptr{t8_dtri_t}, s::Ptr{t8_dtri_t}, level::Cint)::Cvoid
-end
-
-"""
-    t8_dtri_ancestor_id(element, level)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `element`:\\[in\\] triangle to be considered.
-* `level`:\\[in\\] level to be considered.
-# Returns
-Returns its child id in 0..3
-### Prototype
-```c
-int t8_dtri_ancestor_id (const t8_dtri_t *element, int level);
-```
-"""
-function t8_dtri_ancestor_id(element, level)
-    @ccall libt8.t8_dtri_ancestor_id(element::Ptr{t8_dtri_t}, level::Cint)::Cint
-end
-
-"""
-    t8_dtri_child_id(element)
-
-Compute the position of the ancestor of this child at level *level* within its siblings.
-
-# Arguments
-* `element`:\\[in\\] triangle to be considered.
-# Returns
-Returns its child id in 0..3
-### Prototype
-```c
-int t8_dtri_child_id (const t8_dtri_t *element);
-```
-"""
-function t8_dtri_child_id(element)
-    @ccall libt8.t8_dtri_child_id(element::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_get_level(element)
-
-Return the level of a triangle.
-
-# Arguments
-* `element`:\\[in\\] triangle to be considered.
-# Returns
-The level of *element*.
-### Prototype
-```c
-int t8_dtri_get_level (const t8_dtri_t *element);
-```
-"""
-function t8_dtri_get_level(element)
-    @ccall libt8.t8_dtri_get_level(element::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_is_valid(element)
-
-Query whether all entries of a triangle are in valid ranges.
-
-# Arguments
-* `element`:\\[in\\] triangle to be considered.
-# Returns
-True, if *element* is a valid triangle and it is safe to call any function on *element*. False otherwise.
-### Prototype
-```c
-int t8_dtri_is_valid (const t8_dtri_t *element);
-```
-"""
-function t8_dtri_is_valid(element)
-    @ccall libt8.t8_dtri_is_valid(element::Ptr{t8_dtri_t})::Cint
-end
-
-"""
-    t8_dtri_element_pack(elements, count, send_buffer, buffer_size, position, comm)
-
-### Prototype
-```c
-void t8_dtri_element_pack (t8_dtri_t **const elements, const unsigned int count, void *send_buffer, const int buffer_size, int *position, sc_MPI_Comm comm);
-```
-"""
-function t8_dtri_element_pack(elements, count, send_buffer, buffer_size, position, comm)
-    @ccall libt8.t8_dtri_element_pack(elements::Ptr{Ptr{t8_dtri_t}}, count::Cuint, send_buffer::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_dtri_element_pack_size(count, comm, pack_size)
-
-### Prototype
-```c
-void t8_dtri_element_pack_size (const unsigned int count, sc_MPI_Comm comm, int *pack_size);
-```
-"""
-function t8_dtri_element_pack_size(count, comm, pack_size)
-    @ccall libt8.t8_dtri_element_pack_size(count::Cuint, comm::MPI_Comm, pack_size::Ptr{Cint})::Cvoid
-end
-
-"""
-    t8_dtri_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
-
-### Prototype
-```c
-void t8_dtri_element_unpack (void *recvbuf, const int buffer_size, int *position, t8_dtri_t **elements, const unsigned int count, sc_MPI_Comm comm);
-```
-"""
-function t8_dtri_element_unpack(recvbuf, buffer_size, position, elements, count, comm)
-    @ccall libt8.t8_dtri_element_unpack(recvbuf::Ptr{Cvoid}, buffer_size::Cint, position::Ptr{Cint}, elements::Ptr{Ptr{t8_dtri_t}}, count::Cuint, comm::MPI_Comm)::Cvoid
-end
-
-"""
-    t8_norm(vec)
-
-Vector norm.
-
-# Arguments
-* `vec`:\\[in\\] A 3D vector.
-# Returns
-The norm of *vec*.
-### Prototype
-```c
-double t8_norm (const double vec[3]);
-```
-"""
-function t8_norm(vec)
-    @ccall libt8.t8_norm(vec::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_normalize(vec)
-
-Normalize a vector.
-
-# Arguments
-* `vec`:\\[in,out\\] A 3D vector.
-### Prototype
-```c
-void t8_normalize (double vec[3]);
-```
-"""
-function t8_normalize(vec)
-    @ccall libt8.t8_normalize(vec::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_copy(dimensional_in, dimensional_out)
-
-Make a copy of a dimensional object.
-
-# Arguments
-* `dimensional_in`:\\[in\\]
-* `dimensional_out`:\\[out\\]
-### Prototype
-```c
-void t8_copy (const double dimensional_in[3], double dimensional_out[3]);
-```
-"""
-function t8_copy(dimensional_in, dimensional_out)
-    @ccall libt8.t8_copy(dimensional_in::Ptr{Cdouble}, dimensional_out::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_dist(vec_x, vec_y)
-
-Euclidean distance of X and Y.
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-# Returns
-The euclidean distance. Equivalent to norm (X-Y).
-### Prototype
-```c
-double t8_dist (const double vec_x[3], const double vec_y[3]);
-```
-"""
-function t8_dist(vec_x, vec_y)
-    @ccall libt8.t8_dist(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_ax(vec_x, alpha)
-
-Compute X = alpha * X
-
-# Arguments
-* `vec_x`:\\[in,out\\] A 3D vector. On output set to *alpha* * *vec_x*.
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_ax (double vec_x[3], const double alpha);
-```
-"""
-function t8_ax(vec_x, alpha)
-    @ccall libt8.t8_ax(vec_x::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_axy(vec_x, vec_y, alpha)
-
-Compute Y = alpha * X
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[out\\] On output set to *alpha* * *vec_x*.
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_axy (const double vec_x[3], double vec_y[3], const double alpha);
-```
-"""
-function t8_axy(vec_x, vec_y, alpha)
-    @ccall libt8.t8_axy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_axb(vec_x, vec_y, alpha, b)
-
-Y = alpha * X + b
-
-!!! note
-
-    It is possible that vec\\_x = vec\\_y on input to overwrite x
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[out\\] On input, a 3D vector. On output set to *alpha* * *vec_x* + *b*.
-* `alpha`:\\[in\\] A factor.
-* `b`:\\[in\\] An offset.
-### Prototype
-```c
-void t8_axb (const double vec_x[3], double vec_y[3], const double alpha, const double b);
-```
-"""
-function t8_axb(vec_x, vec_y, alpha, b)
-    @ccall libt8.t8_axb(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble, b::Cdouble)::Cvoid
-end
-
-"""
-    t8_axpy(vec_x, vec_y, alpha)
-
-Y = Y + alpha * X
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in,out\\] On input, a 3D vector. On output set *to* vec\\_y + *alpha* * *vec_x*
-* `alpha`:\\[in\\] A factor.
-### Prototype
-```c
-void t8_axpy (const double vec_x[3], double vec_y[3], const double alpha);
-```
-"""
-function t8_axpy(vec_x, vec_y, alpha)
-    @ccall libt8.t8_axpy(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_axpyz(vec_x, vec_y, vec_z, alpha)
-
-Z = Y + alpha * X
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-* `vec_z`:\\[out\\] On output set *to* vec\\_y + *alpha* * *vec_x*
-* `alpha`:\\[in\\] A factor for the multiplication of *vec_x*.
-### Prototype
-```c
-void t8_axpyz (const double vec_x[3], const double vec_y[3], double vec_z[3], const double alpha);
-```
-"""
-function t8_axpyz(vec_x, vec_y, vec_z, alpha)
-    @ccall libt8.t8_axpyz(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, vec_z::Ptr{Cdouble}, alpha::Cdouble)::Cvoid
-end
-
-"""
-    t8_dot(vec_x, vec_y)
-
-Dot product of X and Y.
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-# Returns
-The dot product *vec_x* * *vec_y*
-### Prototype
-```c
-double t8_dot (const double vec_x[3], const double vec_y[3]);
-```
-"""
-function t8_dot(vec_x, vec_y)
-    @ccall libt8.t8_dot(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_cross_3D(vec_x, vec_y, cross)
-
-Cross product of X and Y
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-* `cross`:\\[out\\] On output, the cross product of *vec_x* and *vec_y*.
-### Prototype
-```c
-void t8_cross_3D (const double vec_x[3], const double vec_y[3], double cross[3]);
-```
-"""
-function t8_cross_3D(vec_x, vec_y, cross)
-    @ccall libt8.t8_cross_3D(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, cross::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_cross_2D(vec_x, vec_y)
-
-Cross product of X and Y
-
-# Arguments
-* `vec_x`:\\[in\\] A 2D vector.
-* `vec_y`:\\[in\\] A 2D vector.
-# Returns
-The cross product of *vec_x* and *vec_y*.
-### Prototype
-```c
-double t8_cross_2D (const double vec_x[2], const double vec_y[2]);
-```
-"""
-function t8_cross_2D(vec_x, vec_y)
-    @ccall libt8.t8_cross_2D(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble})::Cdouble
-end
-
-"""
-    t8_diff(vec_x, vec_y, diff)
-
-Compute the difference of two vectors.
-
-# Arguments
-* `vec_x`:\\[in\\] A 3D vector.
-* `vec_y`:\\[in\\] A 3D vector.
-* `diff`:\\[out\\] On output, the difference of *vec_x* and *vec_y*.
-### Prototype
-```c
-void t8_diff (const double vec_x[3], const double vec_y[3], double diff[3]);
-```
-"""
-function t8_diff(vec_x, vec_y, diff)
-    @ccall libt8.t8_diff(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, diff::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_eq(vec_x, vec_y, tol)
-
-Check the equality of two vectors elementwise
-
-# Arguments
-* `vec_x`:\\[in\\]
-* `vec_y`:\\[in\\]
-* `tol`:\\[in\\]
-# Returns
-true, if the vectors are equal up to *tol*
-### Prototype
-```c
-int t8_eq (const double vec_x[3], const double vec_y[3], const double tol);
-```
-"""
-function t8_eq(vec_x, vec_y, tol)
-    @ccall libt8.t8_eq(vec_x::Ptr{Cdouble}, vec_y::Ptr{Cdouble}, tol::Cdouble)::Cint
-end
-
-"""
-    t8_rescale(vec, new_length)
-
-Rescale a vector to a new length.
-
-# Arguments
-* `vec`:\\[in,out\\] A 3D vector.
-* `new_length`:\\[in\\] New length of the vector.
-### Prototype
-```c
-void t8_rescale (double vec[3], const double new_length);
-```
-"""
-function t8_rescale(vec, new_length)
-    @ccall libt8.t8_rescale(vec::Ptr{Cdouble}, new_length::Cdouble)::Cvoid
-end
-
-"""
-    t8_normal_of_tri(p1, p2, p3, normal)
-
-Compute the normal of a triangle given by its three vertices.
-
-# Arguments
-* `p1`:\\[in\\] A 3D vector.
-* `p2`:\\[in\\] A 3D vector.
-* `p3`:\\[in\\] A 3D vector.
-* `normal`:\\[out\\] vector of the triangle. (Not necessarily of length 1!)
-### Prototype
-```c
-void t8_normal_of_tri (const double p1[3], const double p2[3], const double p3[3], double normal[3]);
-```
-"""
-function t8_normal_of_tri(p1, p2, p3, normal)
-    @ccall libt8.t8_normal_of_tri(p1::Ptr{Cdouble}, p2::Ptr{Cdouble}, p3::Ptr{Cdouble}, normal::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_orthogonal_tripod(v1, v2, v3)
-
-Compute an orthogonal coordinate system from a given vector.
-
-# Arguments
-* `v1`:\\[in\\] 3D vector.
-* `v2`:\\[out\\] 3D vector.
-* `v3`:\\[out\\] 3D vector.
-### Prototype
-```c
-void t8_orthogonal_tripod (const double v1[3], double v2[3], double v3[3]);
-```
-"""
-function t8_orthogonal_tripod(v1, v2, v3)
-    @ccall libt8.t8_orthogonal_tripod(v1::Ptr{Cdouble}, v2::Ptr{Cdouble}, v3::Ptr{Cdouble})::Cvoid
-end
-
-"""
-    t8_swap(p1, p2)
-
-Swap the components of two vectors.
-
-# Arguments
-* `p1`:\\[in,out\\] A 3D vector.
-* `p2`:\\[in,out\\] A 3D vector.
-### Prototype
-```c
-void t8_swap (double p1[3], double p2[3]);
-```
-"""
-function t8_swap(p1, p2)
-    @ccall libt8.t8_swap(p1::Ptr{Cdouble}, p2::Ptr{Cdouble})::Cvoid
-end
+"""The data container describing a refined element in a refined tree for the vertex element class."""
+const t8_dvertex_t = t8_dvertex
 
 """
     vtk_file_type
@@ -20391,120 +17988,6 @@ end
 const vtk_read_success_t = vtk_read_success
 
 """
-    t8_forest_adapt(forest)
-
-Adapt a forest.
-
-# Arguments
-* `forest`:\\[in,out\\] The forest to be adapted
-### Prototype
-```c
-void t8_forest_adapt (t8_forest_t forest);
-```
-"""
-function t8_forest_adapt(forest)
-    @ccall libt8.t8_forest_adapt(forest::t8_forest_t)::Cvoid
-end
-
-"""
-    t8_profile
-
-This struct holds profiling information, such as timings or statistics about communication.
-
-| Field                          | Note                                                                                                           |
-| :----------------------------- | :------------------------------------------------------------------------------------------------------------- |
-| partition\\_elements\\_shipped | The number of elements this process has sent to other in the last partition call.                              |
-| partition\\_elements\\_recv    | The number of elements this process has received from other in the last partition call.                        |
-| partition\\_bytes\\_sent       | The total number of bytes sent to other processes in the last partition call.                                  |
-| partition\\_procs\\_sent       | The number of different processes this process has send local elements to in the last partition call.          |
-| ghosts\\_shipped               | The number of ghost elements this process has sent to other processes.                                         |
-| ghosts\\_received              | The number of ghost elements this process has received from other processes.                                   |
-| ghosts\\_remotes               | The number of processes this process have sent ghost elements to (and received from).                          |
-| balance\\_rounds               | The number of iterations during balance.                                                                       |
-| adapt\\_runtime                | The runtime of the last call to [`t8_forest_adapt`](@ref) (not counting adaptation in t8\\_forest\\_balance).  |
-| partition\\_runtime            | The runtime of the last call to *t8_cmesh_partition* (not count in partition in t8\\_forest\\_balance).        |
-| ghost\\_runtime                | The runtime of the last call to *t8_forest_ghost_create*.                                                      |
-| ghost\\_waittime               | Amount of synchronisation time in ghost.                                                                       |
-| balance\\_runtime              | The runtime of the last call to *t8_forest_balance*.                                                           |
-| commit\\_runtime               | The runtime of the last call to [`t8_cmesh_commit`](@ref).                                                     |
-| cmesh\\_offsets\\_runtime      | The runtime of the last call to [`t8_forest_partition_create_tree_offsets`](@ref).                             |
-| forest\\_offsets\\_runtime     | The runtime of the last call to [`t8_forest_partition_create_offsets`](@ref).                                  |
-| first\\_descendant\\_runtime   | The runtime of the last call to [`t8_forest_partition_create_first_desc`](@ref).                               |
-"""
-struct t8_profile
-    partition_elements_shipped::t8_locidx_t
-    partition_elements_recv::t8_locidx_t
-    partition_bytes_sent::Csize_t
-    partition_procs_sent::Cint
-    ghosts_shipped::t8_locidx_t
-    ghosts_received::t8_locidx_t
-    ghosts_remotes::Cint
-    balance_rounds::Cint
-    adapt_runtime::Cdouble
-    partition_runtime::Cdouble
-    ghost_runtime::Cdouble
-    ghost_waittime::Cdouble
-    balance_runtime::Cdouble
-    commit_runtime::Cdouble
-    cmesh_offsets_runtime::Cdouble
-    forest_offsets_runtime::Cdouble
-    first_descendant_runtime::Cdouble
-end
-
-"""This struct holds profiling information, such as timings or statistics about communication."""
-const t8_profile_t = t8_profile
-
-"""
-    t8_forest_ghost
-
-This struct stores various information about a forest's ghost elements and ghost trees.
-
-| Field                             | Note                                                                                                                                                                                                                                                                                                                                                      |
-| :-------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| rc                                | The reference counter.                                                                                                                                                                                                                                                                                                                                    |
-| num\\_ghosts\\_elements           | The count of non-local ghost leaf elements                                                                                                                                                                                                                                                                                                                |
-| num\\_remote\\_elements           | The count of local leaf elements that are ghost to another process.                                                                                                                                                                                                                                                                                       |
-| ghost\\_type                      | Describes which neighbors are considered ghosts.                                                                                                                                                                                                                                                                                                          |
-| ghost\\_trees                     | ghost tree data: global\\_id. eclass. elements. In linear id order                                                                                                                                                                                                                                                                                        |
-| global\\_tree\\_to\\_ghost\\_tree | Indexes into ghost\\_trees. Given a global tree id I give the index i such that the tree is in ghost\\_trees[i]                                                                                                                                                                                                                                           |
-| process\\_offsets                 | Given a process, return the first ghost tree and within it the first element of that process.                                                                                                                                                                                                                                                             |
-| remote\\_ghosts                   | array of local trees that have ghost elements for another process. for each tree an array of [`t8_element_t`](@ref) * of the local ghost elements. Also an array of [`t8_locidx_t`](@ref) of the local indices of these elements within the tree. It is a hash table, hashed with the rank of a remote process. Sorted within each process by linear id.  |
-| remote\\_processes                | The ranks of the processes for which local elements are ghost. Array of int's.                                                                                                                                                                                                                                                                            |
-| glo\\_tree\\_mempool              | The global tree memory pool.                                                                                                                                                                                                                                                                                                                              |
-| proc\\_offset\\_mempool           | The process offset memory pool.                                                                                                                                                                                                                                                                                                                           |
-"""
-struct t8_forest_ghost
-    rc::t8_refcount_t
-    num_ghosts_elements::t8_locidx_t
-    num_remote_elements::t8_locidx_t
-    ghost_type::t8_ghost_type_t
-    ghost_trees::Ptr{sc_array_t}
-    global_tree_to_ghost_tree::Ptr{sc_hash_t}
-    process_offsets::Ptr{sc_hash_t}
-    remote_ghosts::Ptr{sc_hash_array_t}
-    remote_processes::Ptr{sc_array_t}
-    glo_tree_mempool::Ptr{sc_mempool_t}
-    proc_offset_mempool::Ptr{sc_mempool_t}
-end
-
-const t8_forest_ghost_t = Ptr{t8_forest_ghost}
-
-"""If a forest is to be derived from another forest, there are different possibilities how the original forest is modified. Currently we support: Copying, adapting, partitioning, and balancing a forest. The latter 3 can be combined, in which case the order is 1. Adapt, 2. Partition, 3. Balance. We store the methods in an int8\\_t and use these defines to distinguish between them."""
-const t8_forest_from_t = Int8
-
-"""This structure is private to the implementation."""
-const t8_forest_struct_t = t8_forest
-
-"""The t8 tree datatype"""
-const t8_tree_struct_t = t8_tree
-
-"""This struct holds profiling information, such as timings or statistics about communication."""
-const t8_profile_struct_t = t8_profile
-
-"""This struct stores various information about a forest's ghost elements and ghost trees."""
-const t8_forest_ghost_struct_t = t8_forest_ghost
-
-"""
     t8_forest_vtk_write_file_via_API(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, curved_flag, write_ghosts, num_data, data)
 
 Write the forest in .pvtu file format. Writes one .vtu file per process and a meta .pvtu file. This function uses the vtk library. t8code must be configured with "-DT8CODE\\_ENABLE\\_VTK=ON" in order to use it. Currently does not support pyramid elements.
@@ -20531,8 +18014,15 @@ True if successful, false if not (process local).
 int t8_forest_vtk_write_file_via_API (t8_forest_t forest, const char *fileprefix, const int write_treeid, const int write_mpirank, const int write_level, const int write_element_id, const int curved_flag, const int write_ghosts, const int num_data, t8_vtk_data_field_t *data);
 ```
 """
-function t8_forest_vtk_write_file_via_API(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, curved_flag, write_ghosts, num_data, data)
-    @ccall libt8.t8_forest_vtk_write_file_via_API(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, curved_flag::Cint, write_ghosts::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_forest_vtk_write_file_via_API(forest, fileprefix, write_treeid, write_mpirank,
+                                          write_level, write_element_id, curved_flag,
+                                          write_ghosts, num_data, data)
+    @ccall libt8.t8_forest_vtk_write_file_via_API(forest::t8_forest_t, fileprefix::Cstring,
+                                                  write_treeid::Cint, write_mpirank::Cint,
+                                                  write_level::Cint, write_element_id::Cint,
+                                                  curved_flag::Cint, write_ghosts::Cint,
+                                                  num_data::Cint,
+                                                  data::Ptr{t8_vtk_data_field_t})::Cint
 end
 
 """
@@ -20557,8 +18047,14 @@ True if successful, false if not (process local).
 int t8_forest_vtk_write_file (t8_forest_t forest, const char *fileprefix, const int write_treeid, const int write_mpirank, const int write_level, const int write_element_id, int write_ghosts, const int num_data, t8_vtk_data_field_t *data);
 ```
 """
-function t8_forest_vtk_write_file(forest, fileprefix, write_treeid, write_mpirank, write_level, write_element_id, write_ghosts, num_data, data)
-    @ccall libt8.t8_forest_vtk_write_file(forest::t8_forest_t, fileprefix::Cstring, write_treeid::Cint, write_mpirank::Cint, write_level::Cint, write_element_id::Cint, write_ghosts::Cint, num_data::Cint, data::Ptr{t8_vtk_data_field_t})::Cint
+function t8_forest_vtk_write_file(forest, fileprefix, write_treeid, write_mpirank,
+                                  write_level, write_element_id, write_ghosts, num_data,
+                                  data)
+    @ccall libt8.t8_forest_vtk_write_file(forest::t8_forest_t, fileprefix::Cstring,
+                                          write_treeid::Cint, write_mpirank::Cint,
+                                          write_level::Cint, write_element_id::Cint,
+                                          write_ghosts::Cint, num_data::Cint,
+                                          data::Ptr{t8_vtk_data_field_t})::Cint
 end
 
 """
@@ -20570,7 +18066,8 @@ int t8_cmesh_vtk_write_file_via_API (t8_cmesh_t cmesh, const char *fileprefix, s
 ```
 """
 function t8_cmesh_vtk_write_file_via_API(cmesh, fileprefix, comm)
-    @ccall libt8.t8_cmesh_vtk_write_file_via_API(cmesh::t8_cmesh_t, fileprefix::Cstring, comm::MPI_Comm)::Cint
+    @ccall libt8.t8_cmesh_vtk_write_file_via_API(cmesh::t8_cmesh_t, fileprefix::Cstring,
+                                                 comm::MPI_Comm)::Cint
 end
 
 """
@@ -20656,21 +18153,21 @@ const SC_PACKAGE_BUGREPORT = "p4est@ins.uni-bonn.de"
 
 const SC_PACKAGE_NAME = "libsc"
 
-const SC_PACKAGE_STRING = "libsc 0.0.0"
+const SC_PACKAGE_STRING = "libsc 2.8.7.999"
 
 const SC_PACKAGE_TARNAME = "libsc"
 
 const SC_PACKAGE_URL = ""
 
-const SC_PACKAGE_VERSION = "0.0.0"
+const SC_PACKAGE_VERSION = "2.8.7.999"
 
-const SC_VERSION = "0.0.0"
+const SC_VERSION = "2.8.7.999"
 
-const SC_VERSION_MAJOR = 0
+const SC_VERSION_MAJOR = 2
 
-const SC_VERSION_MINOR = 0
+const SC_VERSION_MINOR = 8
 
-const SC_VERSION_POINT = 0
+const SC_VERSION_POINT = 7
 
 # Skipping MacroDefinition: _sc_const const
 
@@ -20992,6 +18489,8 @@ const T8_VTK_FLOAT_TYPE = Float32
 
 const T8_VTK_FORMAT_STRING = "ascii"
 
+const T8_VTK_MAX_STRING_LENGTH = 1024
+
 const T8_DHEX_CHILDREN = 8
 
 const T8_DHEX_FACES = 6
@@ -21013,16 +18512,6 @@ const T8_DLINE_FACE_CHILDREN = 1
 const T8_DLINE_MAXLEVEL = 30
 
 const T8_DLINE_ROOT_LEN = 1 << T8_DLINE_MAXLEVEL
-
-const T8_DVERTEX_CHILDREN = 1
-
-const T8_DVERTEX_FACES = 0
-
-const T8_DVERTEX_FACE_CHILDREN = 0
-
-const T8_DVERTEX_ROOT_LEN = 0
-
-const T8_DVERTEX_MAXLEVEL = 254
 
 const T8_DTRI_CHILDREN = 4
 
@@ -21114,29 +18603,19 @@ const T8_DTRI_DIM = 2
 
 # Skipping MacroDefinition: t8_dtri_face_corner t8_face_vertex_to_tree_vertex [ T8_ECLASS_TRIANGLE ]
 
-const T8_FOREST_FROM_FIRST = 0
+const T8_DVERTEX_CHILDREN = 1
 
-const T8_FOREST_FROM_COPY = 0
+const T8_DVERTEX_FACES = 0
 
-const T8_FOREST_FROM_ADAPT = 0x01
+const T8_DVERTEX_FACE_CHILDREN = 0
 
-const T8_FOREST_FROM_PARTITION = 0x02
+const T8_DVERTEX_ROOT_LEN = 0
 
-const T8_FOREST_FROM_BALANCE = 0x04
-
-const T8_FOREST_FROM_NONE = 0x08
-
-const T8_FOREST_FROM_LAST = T8_FOREST_FROM_NONE
-
-const T8_FOREST_BALANCE_REPART = 1
-
-const T8_FOREST_BALANCE_NO_REPART = 2
-
-const T8_PROFILE_NUM_STATS = 17
+const T8_DVERTEX_MAXLEVEL = 254
 
 # exports
 const PREFIXES = ["t8_", "T8_"]
-for name in names(@__MODULE__; all=true), prefix in PREFIXES
+for name in names(@__MODULE__; all = true), prefix in PREFIXES
     if startswith(string(name), prefix)
         @eval export $name
     end
